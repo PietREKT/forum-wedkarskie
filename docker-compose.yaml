@@ -4,13 +4,23 @@ services:
   backend:
     build:
       context: ./forum-backend
+    image: forum_backend
+    command: ["mvn", "spring-boot:run"]
     container_name: forum_backend
     environment:
       # - SPRING_PROFILES_ACTIVE=${SPRING_PROFILE}
+      - POSTGRES_DB=${POSTGRES_DB}
       - POSTGRES_USER=${POSTGRES_USER}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
     ports:
       - "8080:8080"
+    develop:
+      watch:
+        - action: sync
+          path: ./backend/src
+          target: /app/src
+        - action: restart
+          path: ./backend/pom.xml
     depends_on:
       - postgres
     networks:
