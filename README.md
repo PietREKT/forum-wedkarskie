@@ -35,7 +35,7 @@ frontend:
 * [Dokumentacja Vue](https://vuejs.org/guide/introduction)
 * [Dokumentacja Pinia](https://pinia.vuejs.org/core-concepts)
 * [Dokumentacja Vue Router](https://router.vuejs.org/guide)
----
+
 ## Obsługa gita:
 
 #### Zasady:
