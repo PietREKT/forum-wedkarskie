@@ -1,0 +1,45 @@
+version: '3.9'
+
+services:
+  backend:
+    build:
+      context: ./forum-backend
+    container_name: forum_backend
+    environment:
+      # - SPRING_PROFILES_ACTIVE=${SPRING_PROFILE}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+    ports:
+      - "8080:8080"
+    depends_on:
+      - postgres
+    networks:
+      - forum_net
+  frontend:
+    build:
+      context: ./frontend
+    container_name: forum_frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - forum_net
+  postgres:
+    image: postgres:16
+    container_name: forum_postgres
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - forum_net
+volumes:
+  postgres_data:
+
+networks:
+  forum_net:
