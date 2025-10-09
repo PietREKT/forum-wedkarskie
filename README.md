@@ -1,13 +1,47 @@
 # Forum wędkarskie
+## Szczegóły projektu:
+#### Zasady:
+1. W Jirze na tablicy zadań należy oznaczać nad czym pracujesz. **NIE PRACUJ NAD TYM SAMYM CO INNA OSOBA**
+2. Implementacja funkcjonalności na frontendzie powinna odbyć się __po__ implementacji tejże na backendzie. Minimum potrzebne do rozpoczęcia pracy to ustalenie pól DTO przekazywanych przez backend.
+---
+#### Struktura projektu:
+```
+forum-wedkarskie:
+|   README.md
+|   .env
+|   .env.example
+└── frontend
+└── forum-backend
+└── Zasoby
+```
+Folder `Zasoby` zawiera zasoby przydatne do organizacji pracy. 
+---
+#### Organizacja pracy nad frontendem:
+```
+frontend:
+└── src
+    └── components
+    └── resources
+    └── stores
+    └── utils
+```
+* Components - folder w którym powinny być umieszczane komponenty aplikacji. Każdy widok powinien mieć swój własny folder. Komponentów można używać pomiędzy różnymi widokami.
+* Resources - statyczne pliki potrzebne do obsługi innych skryptów - np. pliki JSON z tłumaczeniami
+* Stores - folder na magazyny pinia. Jedyne miejsce w którym możesz wykonywać żądania do API
+* Utils - folder na klasy inicjalizujące lub inne skrypty bez widoku
+
+#### Przydatne linki:
+* [Jira](https://piotrstoinski.atlassian.net/jira/software/projects/IN/boards/3)
+* [Dokumentacja Vue](https://vuejs.org/guide/introduction)
+* [Dokumentacja Pinia](https://pinia.vuejs.org/core-concepts)
+* [Dokumentacja Vue Router](https://router.vuejs.org/guide)
+---
 ## Obsługa gita:
 
 #### Zasady:
----
 1. Nie używać brancha `main`!
 2. Wszystkie feature'y powinny być implementowane na osobnych branchach
 3. Gałęzie będą merge'owane przeze mnie (Piotrka). **TY NIC NIE MERGUJESZ**
-4. W Jirze na tablicy zadań należy oznaczać nad czym pracujesz. **NIE PRACUJ NAD TYM SAMYM CO INNA OSOBA**
-5. Implementacja funkcjonalności na frontendzie powinna odbyć się __po__ implementacji tejże na backendzie. Minimum potrzebne do rozpoczęcia pracy to ustalenie pól DTO przekazywanych przez backend.
 ---
 #### Zasady nazywania commitów:
 1. Wiadomości powinny zaczynać się od słowa kluczowego `FIX:` lub `FEAT:`
