@@ -8,4 +8,13 @@ export default defineConfig({
     vue(),
     tailwindcss()
   ],
+  server: {
+    proxy: {
+      '/api': {
+        target: 'http://forum_backend:8080',
+        changeOrigin: true,
+        secure: false,
+      }
+    }
+  }
 })
