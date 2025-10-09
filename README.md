@@ -1,4 +1,4 @@
-# forum-wedkarskie
+# Forum wędkarskie
 ## Obsługa gita:
 
 #### Zasady:
@@ -7,6 +7,7 @@
 2. Wszystkie feature'y powinny być implementowane na osobnych branchach
 3. Gałęzie będą merge'owane przeze mnie (Piotrka). **TY NIC NIE MERGUJESZ**
 4. W Jirze na tablicy zadań należy oznaczać nad czym pracujesz. **NIE PRACUJ NAD TYM SAMYM CO INNA OSOBA**
+5. Implementacja funkcjonalności na frontendzie powinna odbyć się __po__ implementacji tejże na backendzie. Minimum potrzebne do rozpoczęcia pracy to ustalenie pól DTO przekazywanych przez backend.
 ---
 #### Zasady nazywania commitów:
 1. Wiadomości powinny zaczynać się od słowa kluczowego `FIX:` lub `FEAT:`
@@ -22,10 +23,14 @@
 2. Utworzyć nowego brancha:  
 `$ git branch <nazwa>`\
 Nazwy branchy powinny nawiązywać do feature'ów, np:\
-`$ git branch login`
+`$ git branch backend_login` \
+`$ git branch frontend_login`
 3. Przełączyć się na nowego brancha:\
 `$ git checkout <nazwa>` 
-4. Programować
+4. Upewnić się, że znajdujecie się na odpowiednim branchu. Po wykonaniu polecenia\
+`$ git branch` \
+wasz obecny branch zostanie oznaczony symoblem '**\***'
+5. Programować
 ___
 #### Po implementacji nowej funkcjonalności należy w kolejności:
 1. Upewnić się, że znajdujemy się na branchu docelowym:\
@@ -34,3 +39,4 @@ ___
 `$ git commit -m "<wiadomość>"`
 3. Wypchnąć zmiany na zdalne repozytorium: \
 `$ git push -u origin <branch>`
+4. **NIE MERGE'UJ BRANCHY**
