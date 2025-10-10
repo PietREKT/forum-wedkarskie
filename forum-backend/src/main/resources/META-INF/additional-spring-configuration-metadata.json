@@ -1,0 +1,33 @@
+{
+  "properties": [
+    {
+      "name": "forum.security.JWT_KEY",
+      "type": "java.lang.String",
+      "description": "Secret key used for signing and verifying the JWT."
+    },
+    {
+      "name": "forum.security.jwt.expirySeconds",
+      "type": "java.lang.Long",
+      "description": "Expiration time in seconds."
+    },
+    {
+      "name": "forum.security.jwt.issuer",
+      "type": "java.lang.String",
+      "description": "Name of the organization."
+    },
+    {
+      "name": "forum.security.cookies.name",
+      "type": "java.lang.String",
+      "description": "Authentication cookie name."
+    },
+    {
+      "name": "forum.security.cookies.domain",
+      "type": "java.lang.String",
+      "description": "Cookie domain."
+    },
+    {
+      "name": "forum.security.cookies.expiresAfterSeconds",
+      "type": "java.lang.String",
+      "description": "Expiration time in seconds."
+    }
+  ] }

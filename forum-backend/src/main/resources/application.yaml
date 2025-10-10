@@ -15,3 +15,13 @@ spring:
       enabled: false
     livereload:
       enabled: true
+forum:
+  security:
+    jwt:
+      secret: ${JWT_SECRET}
+      issuer: ${JWT_ISSUER}
+      expirySeconds: ${JWT_EXPIRY}
+    cookies:
+      name: ${COOKIE_NAME}
+      domain: ${COOKIE_DOMAIN}
+      expiresAfterSeconds: ${JWT_EXPIRY}
