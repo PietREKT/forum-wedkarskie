@@ -1,26 +1,24 @@
-version: '3.9'
-
 services:
   backend:
     build:
       context: ./forum-backend
     image: forum_backend
-    command: ["mvn", "spring-boot:run"]
+    # command: ["mvn", "spring-boot:run"]
     container_name: forum_backend
-    environment:
-      # - SPRING_PROFILES_ACTIVE=${SPRING_PROFILE}
-      - POSTGRES_DB=${POSTGRES_DB}
-      - POSTGRES_USER=${POSTGRES_USER}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+    env_file:
+      - .env
+    volumes:
+      - ./forum-backend/src:/app/src
+      - ~/.m2:/root/.m2
     ports:
       - "8080:8080"
-    develop:
-      watch:
-        - action: sync+restart
-          path: ./forum-backend/src
-          target: /app/src
-        - action: rebuild
-          path: ./forum-backend/pom.xml
+    # develop:
+    #   watch:
+    #     - action: sync
+    #       path: ./backend/src
+    #       target: /app/src
+    #     - action: restart
+    #       path: ./backend/pom.xml
     depends_on:
       - postgres
     networks:
@@ -31,6 +29,9 @@ services:
     container_name: forum_frontend
     ports:
       - "80:80"
+
+    volumes:
+      - ./frontend:/app
     depends_on:
       - backend
     networks:

@@ -10,8 +10,21 @@ spring:
     hibernate:
       ddl-auto: update
     defer-datasource-initialization: true
-  devtools:
-    restart:
-      enabled: false
-    livereload:
-      enabled: true
+  sql:
+    init:
+      mode: always
+#  devtools:
+#    restart:
+#      enabled: false
+#    livereload:
+#      enabled: true
+forum:
+  security:
+    jwt:
+      secret: ${JWT_SECRET}
+      issuer: ${JWT_ISSUER}
+      expirySeconds: ${JWT_EXPIRY}
+    cookies:
+      name: ${COOKIE_NAME}
+      domain: ${COOKIE_DOMAIN}
+      expiresAfterSeconds: ${JWT_EXPIRY}

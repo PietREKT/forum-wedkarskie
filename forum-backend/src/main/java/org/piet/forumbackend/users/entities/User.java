@@ -8,6 +8,7 @@ import org.piet.forumbackend.events.entites.UserEvent;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
+import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
 
@@ -30,7 +31,9 @@ public class User implements UserDetails {
     String password;
     String phone;
 
-    @ManyToMany
+    Instant createdAt = Instant.now();
+
+    @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(
             name = "user_roles",
             joinColumns = @JoinColumn(name = "user_id")
