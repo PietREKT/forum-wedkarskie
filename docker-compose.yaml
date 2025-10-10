@@ -16,11 +16,11 @@ services:
       - "8080:8080"
     develop:
       watch:
-        - action: sync
-          path: ./backend/src
+        - action: sync+restart
+          path: ./forum-backend/src
           target: /app/src
-        - action: restart
-          path: ./backend/pom.xml
+        - action: rebuild
+          path: ./forum-backend/pom.xml
     depends_on:
       - postgres
     networks:
