@@ -133,6 +133,10 @@
                     </excludes>
                 </configuration>
             </plugin>
+            <plugin>
+                <groupId>de.qaware.maven</groupId>
+                <artifactId>go-offline-maven-plugin</artifactId>
+            </plugin>
         </plugins>
     </build>
 

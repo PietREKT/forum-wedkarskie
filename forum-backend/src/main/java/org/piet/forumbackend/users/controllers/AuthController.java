@@ -10,7 +10,6 @@ import org.piet.forumbackend.users.dtos.LoginUserDto;
 import org.piet.forumbackend.users.dtos.RegisterUserDto;
 import org.piet.forumbackend.users.dtos.UsersDtoMapper;
 import org.piet.forumbackend.users.entities.User;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -52,6 +51,6 @@ public class AuthController {
     public ResponseEntity<?> logout(HttpServletRequest req, HttpServletResponse res){
         boolean secure = req.isSecure() || "https".equalsIgnoreCase(req.getHeader("X-Forwarded-Proto"));
         cookieBuilder.clearAuthCookie(res, secure);
-        return ResponseEntity.ok().build();
+        return ResponseEntity.ok("Logged out");
     }
 }

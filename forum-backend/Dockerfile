@@ -1,10 +1,18 @@
-FROM maven:3.9-eclipse-temurin-21 AS dev
+FROM maven:3.9-eclipse-temurin-21 AS deps
+
 WORKDIR /app
-COPY pom.xml .
+COPY pom.xml /app
 
-# RUN mvn -B dependency:go-offline
+RUN mvn -B dependency:go-offline dependency:resolve-plugins
+FROM maven:3.9-eclipse-temurin-21 AS build
 
-COPY src ./src
+WORKDIR /app
+COPY --from=deps /root/.m2/repository /root/.m2/repository
+COPY ./entrypoint.sh /entrypoint.sh
+COPY . .
 
-EXPOSE 8080
-ENTRYPOINT ["mvn", "spring-boot:run"]
+RUN apt-get update && apt-get install -y inotify-tools
+RUN chmod +x /entrypoint.sh
+
+
+ENTRYPOINT [ "/entrypoint.sh"]
