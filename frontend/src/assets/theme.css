@@ -1,0 +1,70 @@
+:root {
+    --color-primary:       #14b8a6;
+    --color-primary-600:   #0d9488;
+    --color-accent:        #22d3ee;
+    --color-accent-600:    #06b6d4;
+
+    /* Tła i teksty  */
+    --color-bg:            #e9eef5;
+    --color-surface:       #ffffff;
+    --color-border:        #cfd8e3;
+    --color-text:          #1f2937;
+    --color-muted:         #667085;
+
+    /* Baner  */
+    --header-from:         #60a5fa;
+    --header-to:           #14b8a6;
+
+    /* Stopka */
+    --footer-from:         #374151;
+    --footer-to:           #1f2937;
+
+    /* Stany */
+    --color-success:       #10b981;
+    --color-warning:       #f59e0b;
+    --color-danger:        #ef4444;
+}
+
+.dark {
+    --color-primary:       #2dd4bf;
+    --color-primary-600:   #14b8a6;
+    --color-accent:        #67e8f9;
+    --color-accent-600:    #22d3ee;
+
+    /* Tła i teksty */
+    --color-bg:            #0f1115;
+    --color-surface:       #161a22;
+    --color-border:        #232a36;
+    --color-text:          #e6e9ef;
+    --color-muted:         #9aa3b2;
+
+    /* Baner i stopka */
+    --header-from:         #1b2532;
+    --header-to:           #14b8a6;
+    --footer-from:         #0f172a;
+    --footer-to:           #111827;
+}
+
+.theme-bg     { background-color: var(--color-bg); }
+.theme-card   { background-color: var(--color-surface); }
+.theme-text   { color: var(--color-text); }
+.theme-muted  { color: var(--color-muted); }
+.theme-border { border-color: var(--color-border); }
+.theme-primary{ background-color: var(--color-primary); color: white; }
+.theme-accent { background-color: var(--color-accent); color: white; }
+
+/* style dla banera i stopki */
+.site-header {
+    background-image: linear-gradient(90deg, var(--header-from), var(--header-to));
+    color: #fff;
+}
+.site-footer {
+    background-image: linear-gradient(90deg, var(--footer-from), var(--footer-to));
+    color: #e5e7eb;
+}
+
+/* tło */
+body {
+    background: var(--color-bg);
+    color: var(--color-text);
+}
