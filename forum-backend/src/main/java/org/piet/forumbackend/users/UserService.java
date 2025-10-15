@@ -1,9 +1,11 @@
 package org.piet.forumbackend.users;
 
 import lombok.RequiredArgsConstructor;
+import org.piet.forumbackend.security.SecurityUserDto;
 import org.piet.forumbackend.users.dtos.RegisterUserDto;
 import org.piet.forumbackend.users.entities.User;
 import org.piet.forumbackend.users.repos.UserRepository;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -27,5 +29,12 @@ public class UserService {
         u.setUsername(dto.getUsername());
 
         return userRepository.save(u);
+    }
+
+    public User getUserFromAuth(Authentication auth) throws UserNotLoggedInException{
+        if (auth == null || !(auth.getPrincipal() instanceof SecurityUserDto su)){
+            throw new UserNotLoggedInException();
+        }
+        return userRepository.findById(su.getId()).orElseThrow(() -> new UsernameNotFoundException("User with id: " + su.getId() + " doesn't exist."));
     }
 }
