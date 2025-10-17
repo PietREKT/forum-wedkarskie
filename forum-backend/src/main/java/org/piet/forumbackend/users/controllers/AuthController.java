@@ -1,5 +1,6 @@
 package org.piet.forumbackend.users.controllers;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -21,6 +22,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
+@Tag(name = "Auth", description = "Endpoints for user authentication")
 public class AuthController {
     private final UserService userService;
     private final PasswordEncoder encoder;

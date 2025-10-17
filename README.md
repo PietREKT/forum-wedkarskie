@@ -31,10 +31,19 @@ frontend:
 * Utils - folder na klasy inicjalizujące lub inne skrypty bez widoku
 
 #### Przydatne linki:
+* [API Docs (wymaga uruchomionego backendu)](http://localhost:8080/swagger-ui/index.html#/)
 * [Jira](https://piotrstoinski.atlassian.net/jira/software/projects/IN/boards/3)
 * [Dokumentacja Vue](https://vuejs.org/guide/introduction)
 * [Dokumentacja Pinia](https://pinia.vuejs.org/core-concepts)
 * [Dokumentacja Vue Router](https://router.vuejs.org/guide)
+
+
+#### Uruchamianie aplikacji
+1. Otworzyć folder 'forum-backend' w IDE wspierającym Javę
+2. Uruchomić projekt
+
+3. Otworzyć folder 'frontend' w IDE/konsoli
+4. W konsoli/terminalu IDE wpisać `npm run dev`
 
 ## Obsługa gita:
 

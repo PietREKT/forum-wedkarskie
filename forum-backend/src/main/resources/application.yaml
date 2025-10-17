@@ -1,4 +1,6 @@
 spring:
+  config:
+    import: file:../.env[.properties]
   application:
     name: forum-backend
   datasource:
@@ -21,6 +23,11 @@ spring:
 #      enabled: false
     livereload:
       enabled: true
+  docker:
+    compose:
+      enabled: true
+      file: ../docker-compose.yaml
+
 forum:
   security:
     jwt:

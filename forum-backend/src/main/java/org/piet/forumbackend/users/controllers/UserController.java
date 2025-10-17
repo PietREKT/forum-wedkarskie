@@ -1,5 +1,7 @@
 package org.piet.forumbackend.users.controllers;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.piet.forumbackend.users.UserNotLoggedInException;
 import org.piet.forumbackend.users.UserService;
@@ -14,9 +16,11 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/users")
 @RequiredArgsConstructor
+@Tag(name = "Users", description = "Endpoints for user operations")
 public class UserController {
     private final UserService userService;
 
+    @Operation(summary = "Get user info")
     @GetMapping("/me")
     public ResponseEntity<?> getUserInfo(Authentication auth) throws UserNotLoggedInException {
         UserDto dto = UsersDtoMapper.toUserDto(userService.getUserFromAuth(auth));

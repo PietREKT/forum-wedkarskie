@@ -1,45 +1,46 @@
 services:
-  backend:
-    build:
-      context: ./forum-backend
-    # image: forum-wedkarskie-backend
-    container_name: forum_backend
-    env_file:
-      - .env
-    # volumes:
-    #   - ./forum-backend:/app
-    #   - ~/.m2:/root/.m2
-    ports:
-      - 8080:8080
-      # - 35729:35729
-      # - 5005:5005
-    develop:
-      watch:
-        - action: sync
-          path: ./forum-backend/
-          target: /app/
-    #     - action: restart
-    #       path: ./backend/pom.xml
-    depends_on:
-      - postgres
-    networks:
-      - forum_net
-  frontend:
-    build:
-      context: ./frontend
-    container_name: forum_frontend
-    ports:
-      - "80:80"
+  # backend:
+  #   build:
+  #     context: ./forum-backend
+  #   # image: forum-wedkarskie-backend
+  #   container_name: forum_backend
+  #   env_file:
+  #     - .env
+  #   # volumes:
+  #   #   - ./forum-backend:/app
+  #   #   - ~/.m2:/root/.m2
+  #   ports:
+  #     - 8080:8080
+  #     # - 35729:35729
+  #     # - 5005:5005
+  #   develop:
+  #     watch:
+  #       - action: sync
+  #         path: ./forum-backend/
+  #         target: /app/
+  #   #     - action: restart
+  #   #       path: ./backend/pom.xml
+  #   depends_on:
+  #     - postgres
+  #   networks:
+  #     - forum_net
+  # frontend:
+  #   build:
+  #     context: ./frontend
+  #   container_name: forum_frontend
+  #   ports:
+  #     - "80:80"
+  #     - "5173:5173"
 
-    volumes:
-      - ./frontend:/app
-    depends_on:
-      - backend
-    networks:
-      - forum_net
+  #   volumes:
+  #     - ./frontend:/app
+  #   depends_on:
+  #     - backend
+  #   networks:
+  #     - forum_net
   postgres:
     image: postgres:16
-    container_name: forum_postgres
+    container_name: postgres
     environment:
       - POSTGRES_DB=${POSTGRES_DB}
       - POSTGRES_USER=${POSTGRES_USER}
