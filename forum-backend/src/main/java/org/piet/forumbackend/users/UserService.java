@@ -33,7 +33,7 @@ public class UserService {
 
     public User getUserFromAuth(Authentication auth) throws UserNotLoggedInException{
         if (auth == null || !(auth.getPrincipal() instanceof SecurityUserDto su)){
-            throw new UserNotLoggedInException();
+            throw new UserNotLoggedInException("You must be logged in to do that");
         }
         return userRepository.findById(su.getId()).orElseThrow(() -> new UsernameNotFoundException("User with id: " + su.getId() + " doesn't exist."));
     }

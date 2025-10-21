@@ -1,5 +1,6 @@
 package org.piet.forumbackend.users.entities;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -26,9 +27,14 @@ public class User implements UserDetails {
     String username;
 
     String name;
+
     String surname;
+
     String email;
+
+    @JsonIgnore
     String password;
+
     String phone;
 
     Instant createdAt = Instant.now();
@@ -67,5 +73,9 @@ public class User implements UserDetails {
     @Override
     public boolean isEnabled() {
         return UserDetails.super.isEnabled();
+    }
+
+    public boolean equals(User anotherUser) {
+        return anotherUser.id.equals(this.id);
     }
 }

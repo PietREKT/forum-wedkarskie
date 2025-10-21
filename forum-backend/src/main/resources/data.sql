@@ -1,13 +1,13 @@
-insert into app_roles(name) select 'USER' where not exists(
+insert into app_roles(name, perm_level) select 'USER', 1 where not exists(
     select 1 from app_roles r where r.name = 'USER'
 );
-insert into app_roles(name) select 'OWNER' where not exists(
+insert into app_roles(name, perm_level) select 'OWNER', 2 where not exists(
     select 1 from app_roles r where r.name = 'OWNER'
 );
-insert into app_roles(name) select 'MOD' where not exists(
+insert into app_roles(name, perm_level) select 'MOD', 3 where not exists(
     select 1 from app_roles r where r.name = 'MOD'
 );
-insert into app_roles(name) select 'ADMIN' where not exists(
+insert into app_roles(name, perm_level) select 'ADMIN', 4 where not exists(
     select 1 from app_roles r where r.name = 'ADMIN'
 );
 

@@ -10,7 +10,7 @@ public class Tutorial extends Post{
     String rejectReason;
 
     @Enumerated(EnumType.STRING)
-    TUTORIAL_STATUS status;
+    TUTORIAL_STATUS status = TUTORIAL_STATUS.IN_REVIEW;
 
     public enum TUTORIAL_STATUS {
         IN_REVIEW,

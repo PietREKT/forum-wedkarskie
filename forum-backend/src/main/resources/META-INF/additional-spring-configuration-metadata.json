@@ -29,5 +29,15 @@
       "name": "forum.security.cookies.expiresAfterSeconds",
       "type": "java.lang.String",
       "description": "Expiration time in seconds."
+    },
+    {
+      "name": "forum.files.defaultFolder",
+      "type": "java.lang.String",
+      "description": "Default folder containing default images for users. Child of \"main_folder\" folder."
+    },
+    {
+      "name": "forum.files.main_folder",
+      "type": "java.lang.String",
+      "description": "Main folder for user folders."
     }
   ] }

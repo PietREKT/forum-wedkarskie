@@ -6,7 +6,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
-public class Beans {
+public class OpenApiConfig {
     @Bean
     public OpenAPI forumAPi(){
         return new OpenAPI()

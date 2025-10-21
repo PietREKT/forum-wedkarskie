@@ -18,6 +18,12 @@ public class UsersDtoMapper {
         );
     }
 
+    public static PostUserDto toPostUserDto(User user){
+        return new PostUserDto(
+                user.getUsername()
+        );
+    }
+
     public static RoleDto toRoleDto(Role role){
         return new RoleDto(role.getName());
     }

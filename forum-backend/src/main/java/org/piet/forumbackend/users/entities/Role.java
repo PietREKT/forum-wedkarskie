@@ -17,6 +17,8 @@ public class Role {
 
     String name;
 
+    Long permLevel; //The bigger the more perms
+
     public GrantedAuthority getAsAuthority(){
         return new SimpleGrantedAuthority(this.name);
     }

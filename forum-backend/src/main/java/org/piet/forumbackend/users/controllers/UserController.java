@@ -22,7 +22,7 @@ public class UserController {
 
     @Operation(summary = "Get user info")
     @GetMapping("/me")
-    public ResponseEntity<?> getUserInfo(Authentication auth) throws UserNotLoggedInException {
+    public ResponseEntity<UserDto> getUserInfo(Authentication auth) throws UserNotLoggedInException {
         UserDto dto = UsersDtoMapper.toUserDto(userService.getUserFromAuth(auth));
         return ResponseEntity.ok(dto);
 
