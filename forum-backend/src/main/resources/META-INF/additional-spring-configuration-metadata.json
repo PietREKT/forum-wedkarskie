@@ -39,5 +39,10 @@
       "name": "forum.files.main_folder",
       "type": "java.lang.String",
       "description": "Main folder for user folders."
+    },
+    {
+      "name": "forum.constants.comments.pageSize",
+      "type": "java.lang.Integer",
+      "description": "Page size of comments page."
     }
   ] }

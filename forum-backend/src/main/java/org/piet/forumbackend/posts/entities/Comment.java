@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.piet.forumbackend.users.entities.User;
 
 import java.time.Instant;
 
@@ -22,4 +23,7 @@ public class Comment {
 
     @ManyToOne(targetEntity = Post.class)
     Post post;
+
+    @ManyToOne(targetEntity = User.class)
+    User author;
 }

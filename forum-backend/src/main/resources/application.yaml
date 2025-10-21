@@ -42,3 +42,6 @@ forum:
   files:
     main_folder: user-files
     defaultFolder: default
+  constants:
+    comments:
+      pageSize: 20

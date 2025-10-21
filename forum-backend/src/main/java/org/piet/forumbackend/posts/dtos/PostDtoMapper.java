@@ -32,6 +32,9 @@ public class PostDtoMapper {
     }
 
     public static CommentDto toCommentDto(Comment comment) {
-        return new CommentDto(comment.getId(), comment.getContent(), comment.getCreatedAt());
+        return new CommentDto(comment.getId(),
+                comment.getContent(),
+                comment.getCreatedAt(),
+                UsersDtoMapper.toPostUserDto(comment.getAuthor()));
     }
 }

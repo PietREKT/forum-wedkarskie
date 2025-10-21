@@ -82,7 +82,7 @@ public class PostController {
     @GetMapping("/{postId}")
     public ResponseEntity<PostWithCommentsDto> getPostDetails(@PathVariable Long postId) throws PostNotFoundException {
         Post p = postService.getPostById(postId);
-        List<Comment> comments = commentsService.getCommentsByPostId(postId);
+        List<Comment> comments = commentsService.getCommentsByPostId(postId, null);
         return ResponseEntity.ok(PostDtoMapper.toPostWithCommentsDto(p, comments));
     }
 }
