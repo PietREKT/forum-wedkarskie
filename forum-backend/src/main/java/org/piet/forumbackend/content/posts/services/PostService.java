@@ -34,8 +34,7 @@ public class PostService implements ContentBaseServiceInt<Post> {
     @Override
     public Post getContentById(Long postId) throws PostNotFoundException {
         return postRepository.findById(postId).orElseThrow(() -> new PostNotFoundException(
-                messageSource.getMessage(
-                        "error.posts.not_found",
+                messageSource.getMessage("error.posts.not_found",
                         new Object[]{postId},
                         LocaleContextHolder.getLocale()
                 )

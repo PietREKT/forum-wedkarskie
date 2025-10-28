@@ -43,13 +43,15 @@ public class ContentService {
         this.defaultFolder = defaultPath.toFile();
 
         if (!mainFolder.exists() && !mainFolder.mkdir()) {
-            throw new IllegalStateException(messageSource.getMessage(
-                    "error.folders.creation.default.main", null, LocaleContextHolder.getLocale()
+            throw new IllegalStateException(
+                    messageSource.getMessage("error.folders.creation.default.main",
+                            null, LocaleContextHolder.getLocale()
             ));
         }
         if (!defaultFolder.exists() && !defaultFolder.mkdir()) {
-            throw new IllegalStateException(messageSource.getMessage(
-                    "error.folders.creation.default.user", null, LocaleContextHolder.getLocale()
+            throw new IllegalStateException(
+                    messageSource.getMessage("error.folders.creation.default.user",
+                            null, LocaleContextHolder.getLocale()
             ));
         }
     }

@@ -35,9 +35,9 @@ public class AuthController {
 
 
     @PostMapping("/login")
-    public ResponseEntity<UserDto> login(HttpServletRequest req, HttpServletResponse res, @RequestBody LoginUserDto dto){
+    public ResponseEntity<UserDto> login(HttpServletRequest req, HttpServletResponse res, @RequestBody LoginUserDto dto) {
         User u = userService.getUserByUsername(dto.getUsername());
-        if (encoder.matches(dto.getPassword(), u.getPassword())){
+        if (encoder.matches(dto.getPassword(), u.getPassword())) {
             boolean secure = req.isSecure() || "https".equalsIgnoreCase(req.getHeader("X-Forwarded-Proto"));
             cookieBuilder.writeAuthCookie(res, jwtService.generate(u), secure);
             return ResponseEntity.ok(UsersDtoMapper.toUserDto(u));
@@ -48,7 +48,7 @@ public class AuthController {
     }
 
     @PostMapping("/register")
-    public ResponseEntity<UserDto> register(HttpServletRequest req, HttpServletResponse res, @RequestBody RegisterUserDto dto){
+    public ResponseEntity<UserDto> register(HttpServletRequest req, HttpServletResponse res, @RequestBody RegisterUserDto dto) {
         User u = userService.registerUser(dto);
         boolean secure = req.isSecure() || "https".equalsIgnoreCase(req.getHeader("X-Forwarded-Proto"));
         cookieBuilder.writeAuthCookie(res, jwtService.generate(u), secure);
@@ -56,9 +56,12 @@ public class AuthController {
     }
 
     @PostMapping("/logout")
-    public ResponseEntity<String> logout(HttpServletRequest req, HttpServletResponse res){
+    public ResponseEntity<String> logout(HttpServletRequest req, HttpServletResponse res) {
         boolean secure = req.isSecure() || "https".equalsIgnoreCase(req.getHeader("X-Forwarded-Proto"));
         cookieBuilder.clearAuthCookie(res, secure);
-        return ResponseEntity.ok(messageSource.getMessage("users.logged_out", null, LocaleContextHolder.getLocale()));
+        return ResponseEntity.ok(
+                messageSource.getMessage("users.logged_out",
+                        null, LocaleContextHolder.getLocale())
+        );
     }
 }

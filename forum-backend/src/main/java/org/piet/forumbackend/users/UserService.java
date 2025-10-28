@@ -22,8 +22,7 @@ public class UserService {
 
     public User getUserByUsername(String username){
         return userRepository.findByUsername(username).orElseThrow(() -> new UsernameNotFoundException(
-                messageSource.getMessage(
-                        "error.users.username_not_found",
+                messageSource.getMessage("error.users.username_not_found",
                         new Object[]{username},
                         LocaleContextHolder.getLocale()
                 )
@@ -48,8 +47,7 @@ public class UserService {
             );
         }
         return userRepository.findById(su.getId()).orElseThrow(() -> new UsernameNotFoundException(
-                messageSource.getMessage(
-                        "error.users.id_not_found",
+                messageSource.getMessage("error.users.id_not_found",
                         new Object[]{su.getId()},
                         LocaleContextHolder.getLocale()
                 )

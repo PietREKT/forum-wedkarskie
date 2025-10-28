@@ -29,8 +29,7 @@ public class CommentsService implements ContentBaseServiceInt<Comment> {
     @Override
     public Comment getContentById(Long commentId) throws CommentNotFoundException {
         return commentRepository.findById(commentId).orElseThrow(() -> new CommentNotFoundException(
-                messageSource.getMessage(
-                        "errors.comments.not_found",
+                messageSource.getMessage("errors.comments.not_found",
                         new Object[]{commentId},
                         LocaleContextHolder.getLocale()
                 )
@@ -91,7 +90,9 @@ public class CommentsService implements ContentBaseServiceInt<Comment> {
     public void deleteContent(Long commentId, User u) throws CommentNotFoundException{
         Comment c = getContentById(commentId);
         if (!c.getAuthor().equals(u) && u.hasPermLevelAtLeast(Role.MOD)){
-            throw new IllegalAccessError(messageSource.getMessage("error.comments.no_perms_for_deletion", null, LocaleContextHolder.getLocale()));
+            throw new IllegalAccessError(
+                    messageSource.getMessage("error.comments.no_perms_for_deletion",
+                            null, LocaleContextHolder.getLocale()));
         }
         commentRepository.delete(c);
     }

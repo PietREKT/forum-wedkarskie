@@ -31,8 +31,7 @@ public class CommentReportService implements ContentReportServiceInt<CommentRepo
     @Override
     public CommentReport getReportById(Long id) throws ContentReportNotFoundException {
         return commentReportRepository.findById(id).orElseThrow(() -> new ContentReportNotFoundException(
-                messageSource.getMessage(
-                        "errors.comments.reports.not_found",
+                messageSource.getMessage("errors.comments.reports.not_found",
                         new Object[]{id},
                         LocaleContextHolder.getLocale()
                 )

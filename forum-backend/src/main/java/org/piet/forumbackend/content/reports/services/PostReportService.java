@@ -25,8 +25,8 @@ public class PostReportService implements ContentReportServiceInt<PostReport, Po
 
     @Override
     public PostReport getReportById(Long id) throws ContentReportNotFoundException {
-        return postReportRepository.findById(id).orElseThrow(() -> new ContentReportNotFoundException(messageSource.getMessage(
-                "errors.posts.reports.not_found",
+        return postReportRepository.findById(id).orElseThrow(() -> new ContentReportNotFoundException(
+                messageSource.getMessage("errors.posts.reports.not_found",
                 new Object[]{id},
                 LocaleContextHolder.getLocale()
         )));
