@@ -6,6 +6,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.piet.forumbackend.events.entites.UserEvent;
+import org.piet.forumbackend.utils.RoleConverter;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
@@ -39,12 +40,9 @@ public class User implements UserDetails {
 
     Instant createdAt = Instant.now();
 
-    @ManyToMany(fetch = FetchType.EAGER)
-    @JoinTable(
-            name = "user_roles",
-            joinColumns = @JoinColumn(name = "user_id")
-    )
-    List<Role> roles;
+    @Enumerated(EnumType.STRING)
+    @Convert(converter = RoleConverter.class)
+    Role role;
 
     @OneToMany
     @JoinColumn(name = "user_event_id")
@@ -52,7 +50,7 @@ public class User implements UserDetails {
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return roles.stream().map(Role::getAsAuthority).toList();
+        return List.of(role.getAsAuthority());
     }
 
     @Override
@@ -77,5 +75,9 @@ public class User implements UserDetails {
 
     public boolean equals(User anotherUser) {
         return anotherUser.id.equals(this.id);
+    }
+
+    public boolean hasPermLevelAtLeast(Role other) {
+        return role.hasAtLeast(other);
     }
 }

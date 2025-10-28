@@ -3,8 +3,6 @@ package org.piet.forumbackend.users.dtos;
 import org.piet.forumbackend.users.entities.Role;
 import org.piet.forumbackend.users.entities.User;
 
-import java.util.ArrayList;
-
 public class UsersDtoMapper {
     public static UserDto toUserDto(User user){
         return new UserDto(
@@ -14,7 +12,7 @@ public class UsersDtoMapper {
                 user.getSurname(),
                 user.getEmail(),
                 user.getPhone(),
-                user.getRoles() != null  ? user.getRoles().stream().map(UsersDtoMapper::toRoleDto).toList() : new ArrayList<>()
+                user.getRole() != null ? UsersDtoMapper.toRoleDto(user.getRole()) : null
         );
     }
 
@@ -25,6 +23,6 @@ public class UsersDtoMapper {
     }
 
     public static RoleDto toRoleDto(Role role){
-        return new RoleDto(role.getName());
+        return new RoleDto(role.name());
     }
 }

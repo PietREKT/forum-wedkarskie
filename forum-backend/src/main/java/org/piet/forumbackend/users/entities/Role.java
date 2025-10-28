@@ -1,25 +1,24 @@
 package org.piet.forumbackend.users.entities;
 
-import jakarta.persistence.*;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
+public enum Role {
+    USER(0),
+    MOD(1),
+    ADMIN(2),
+    ROOT(3);
 
-@Entity
-@Getter
-@NoArgsConstructor
-@Table(name = "app_roles")
-public class Role {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    Long id;
+    private final int permLevel;
 
-    String name;
+    Role(int permLevel) {
+        this.permLevel = permLevel;
+    }
 
-    Long permLevel; //The bigger the more perms
+    public boolean hasAtLeast(Role other){
+        return this.permLevel >= other.permLevel;
+    }
 
     public GrantedAuthority getAsAuthority(){
-        return new SimpleGrantedAuthority(this.name);
+        return new SimpleGrantedAuthority("ROLE_" + this.name());
     }
 }

@@ -44,5 +44,10 @@
       "name": "forum.constants.comments.pageSize",
       "type": "java.lang.Integer",
       "description": "Page size of comments page."
+    },
+    {
+      "name": "forum.api.prefix",
+      "type": "java.lang.String",
+      "description": "Prefix for api requests."
     }
   ] }

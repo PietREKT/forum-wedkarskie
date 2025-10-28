@@ -10,9 +10,7 @@ import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
-import java.security.Key;
 import java.time.Instant;
-import java.util.Base64;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
@@ -30,7 +28,7 @@ public class JwtService {
         Instant instant = Instant.now();
         Map<String, Object> claims = new HashMap<>();
         claims.put("username", user.getUsername());
-        claims.put("roles", user.getRoles());
+        claims.put("role", user.getRole().name());
 
         return Jwts.builder()
                 .subject(user.getId().toString())

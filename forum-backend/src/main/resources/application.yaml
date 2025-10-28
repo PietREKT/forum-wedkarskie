@@ -10,7 +10,7 @@ spring:
     driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: create-drop
     defer-datasource-initialization: true
   sql:
     init:
@@ -45,3 +45,5 @@ forum:
   constants:
     comments:
       pageSize: 20
+  api:
+    prefix: /api
