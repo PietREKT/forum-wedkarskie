@@ -1,6 +1,6 @@
 <template>
   <div class="min-h-[70vh] grid grid-cols-1 md:grid-cols-2 gap-8">
-    <!--lewo -->
+    <!-- LEWA -->
     <section class="bg-[var(--color-surface)] text-[var(--color-text)] rounded-2xl shadow p-8">
       <h1 class="text-3xl font-semibold mb-6">Rejestracja</h1>
 
@@ -95,12 +95,11 @@
       </form>
     </section>
 
-    <!-- ban prawy -->
+    <!-- PRAWA -->
     <aside
         class="relative overflow-hidden rounded-2xl p-0 md:p-8 bg-gradient-to-br
              from-[var(--header-from)] to-[var(--header-to)]"
     >
-      <!-- kropki ciemne jasne -->
       <div class="absolute inset-0 opacity-20 dark:opacity-10 pointer-events-none"
            style="background-image: radial-gradient(#fff 1px, transparent 1px);
                   background-size: 14px 14px;"></div>
@@ -134,7 +133,9 @@
 <script setup>
 import { ref } from 'vue'
 import { useAuthStore } from '../stores/auth'
+import { useRouter } from 'vue-router'
 
+const router = useRouter()
 const auth = useAuthStore()
 
 const name = ref('')
@@ -159,14 +160,12 @@ async function onSubmit() {
     await auth.register({
       username: username.value,
       password: password.value,
-      name: name.value || undefined,
-      surname: surname.value || undefined,
+      firstName: name.value || undefined,
+      lastName: surname.value || undefined,
       email: email.value || undefined,
     })
-    // do zrobienia można tu wywołać:
-    // await auth.bootstrapSession()
-  } catch {
-  }
+    router.push({ path: '/login', query: { registered: '1' } })
+  } catch {}
 }
 
 const avatars = ref([
