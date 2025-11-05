@@ -5,9 +5,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.piet.forumbackend.content.comments.Comment;
 import org.piet.forumbackend.content.comments.CommentsService;
-import org.piet.forumbackend.content.comments.exceptions.CommentNotFoundException;
 import org.piet.forumbackend.content.reports.dtos.CreateCommentReportDto;
 import org.piet.forumbackend.content.reports.services.CommentReportService;
+import org.piet.forumbackend.exceptions.NotFoundException;
 import org.piet.forumbackend.users.UserService;
 import org.piet.forumbackend.users.entities.User;
 import org.piet.forumbackend.users.exceptions.UserNotLoggedInException;
@@ -31,7 +31,7 @@ public class CommentReportController {
     private final UserService userService;
 
     @PostMapping("/report")
-    ResponseEntity<?> createCommentReport(@RequestBody CreateCommentReportDto dto, Authentication auth) throws CommentNotFoundException {
+    ResponseEntity<?> createCommentReport(@RequestBody CreateCommentReportDto dto, Authentication auth) throws NotFoundException {
         Comment comment = commentsService.getContentById(dto.getCommentId());
         User user = null;
         try {

@@ -1,13 +1,11 @@
 package org.piet.forumbackend.fishing_spots.entities;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
+import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import lombok.Value;
+
+import java.util.List;
 
 @Entity
 @NoArgsConstructor
@@ -18,9 +16,24 @@ public class Fish {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     Long id;
 
+    @Column(unique = true, updatable = false)
     String name;
     String species;
 
     Float avgLength;
     Float avgMass;
+
+    String photoUrl;
+    String description;
+
+    boolean isPredatory;
+
+    @ElementCollection
+    @CollectionTable(name = "fishing_methods", joinColumns = @JoinColumn(name = "fish_id"))
+    @Column(name = "method")
+    @Enumerated(EnumType.STRING)
+    List<FishingMethod> methods;
+
+    @Enumerated(EnumType.STRING)
+    private WaterType waterType;
 }

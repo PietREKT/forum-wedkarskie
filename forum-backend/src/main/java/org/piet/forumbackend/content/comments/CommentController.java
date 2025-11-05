@@ -7,8 +7,8 @@ import org.piet.forumbackend.content.comments.dtos.CommentDtoMapper;
 import org.piet.forumbackend.content.comments.dtos.CreateCommentDto;
 import org.piet.forumbackend.content.comments.dtos.EditCommentDto;
 import org.piet.forumbackend.content.posts.entities.Post;
-import org.piet.forumbackend.content.posts.exceptions.PostNotFoundException;
 import org.piet.forumbackend.content.posts.services.PostService;
+import org.piet.forumbackend.exceptions.NotFoundException;
 import org.piet.forumbackend.users.UserService;
 import org.piet.forumbackend.users.entities.User;
 import org.piet.forumbackend.users.exceptions.UserNotLoggedInException;
@@ -24,7 +24,8 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.util.List;
 
-@RestController("${forum.api.prefix}/comments")
+@RestController
+@RequestMapping("${forum.api.prefix}/comments")
 @RequiredArgsConstructor
 @Tag(name = "Comments", description = "Endpoint for comments management")
 public class CommentController {
@@ -36,7 +37,7 @@ public class CommentController {
     Integer PAGE_SIZE;
 
     @PostMapping
-    public ResponseEntity<CommentDto> createComment(@RequestPart("data") CreateCommentDto dto, @RequestPart(name = "attachment", required = false) MultipartFile attachment, Authentication auth) throws UserNotLoggedInException, PostNotFoundException, IOException {
+    public ResponseEntity<CommentDto> createComment(@RequestPart("data") CreateCommentDto dto, @RequestPart(name = "attachment", required = false) MultipartFile attachment, Authentication auth) throws UserNotLoggedInException, NotFoundException, IOException {
         User author = userService.getUserFromAuth(auth);
         Post p = postService.getContentById(dto.getPost().getId());
         Comment comment = commentsService.createComment(p, dto.getContent(), author, attachment);
@@ -55,14 +56,14 @@ public class CommentController {
     }
 
     @PatchMapping
-    public ResponseEntity<CommentDto> editComment(@RequestBody EditCommentDto dto, Authentication auth) throws UserNotLoggedInException {
+    public ResponseEntity<CommentDto> editComment(@RequestBody EditCommentDto dto, Authentication auth) throws UserNotLoggedInException, NotFoundException {
         User u = userService.getUserFromAuth(auth);
         Comment comment = commentsService.editContent(u, dto.getId(), dto.getContent());
         return ResponseEntity.ok(CommentDtoMapper.toCommentDto(comment));
     }
 
     @DeleteMapping("/{commentId}")
-    public ResponseEntity<?> deleteComment(@PathVariable Long commentId, Authentication auth) throws UserNotLoggedInException {
+    public ResponseEntity<?> deleteComment(@PathVariable Long commentId, Authentication auth) throws UserNotLoggedInException, NotFoundException {
         User u = userService.getUserFromAuth(auth);
         commentsService.deleteContent(commentId, u);
         return ResponseEntity.ok().build();

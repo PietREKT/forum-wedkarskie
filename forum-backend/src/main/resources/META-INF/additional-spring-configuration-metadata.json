@@ -49,5 +49,35 @@
       "name": "forum.api.prefix",
       "type": "java.lang.String",
       "description": "Prefix for api requests."
+    },
+    {
+      "name": "forum.files.fish.defaultFolder",
+      "type": "java.lang.String",
+      "description": "Path to folder with fish images."
+    },
+    {
+      "name": "forum.files.fish.defaultPhoto",
+      "type": "java.lang.String",
+      "description": "Name of the default fish photo."
+    },
+    {
+      "name": "forum.api.tomtom_key",
+      "type": "java.lang.String",
+      "description": "API Key for TomTomAPI."
+    },
+    {
+      "name": "forum.api.tomtom_minimum_precision",
+      "type": "java.lang.Double",
+      "description": "Confidence of TomTom's results that may be returned."
+    },
+    {
+      "name": "forum.constants.pagination.defaultSize",
+      "type": "java.lang.Integer",
+      "description": "Default page size for all repos."
+    },
+    {
+      "name": "forum.constants.pagination.defaultPage",
+      "type": "java.lang.Integer",
+      "description": "Default page number for all repos."
     }
   ] }

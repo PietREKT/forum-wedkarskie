@@ -1,17 +1,24 @@
 package org.piet.forumbackend.utils;
 
-import org.springframework.beans.factory.annotation.Value;
+import lombok.RequiredArgsConstructor;
+import org.piet.forumbackend.properties.FileProperties;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
+import java.io.File;
+
 @Configuration
+@RequiredArgsConstructor
 public class ResourceHandlersConfig implements WebMvcConfigurer {
-    @Value("${forum.files.main_folder}")
-    String userParentDir;
+
+    private final FileProperties fileProperties;
+
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
         registry.addResourceHandler("/uploads/**")
-                .addResourceLocations("file:" + userParentDir + '/');
+                    .addResourceLocations("file:" + fileProperties.getUserFilesFolder().getAbsolutePath() + File.separator);
+        registry.addResourceHandler("/fish/**")
+                    .addResourceLocations("file:" + fileProperties.getFishFolder().getAbsolutePath() + File.separator);
     }
 }

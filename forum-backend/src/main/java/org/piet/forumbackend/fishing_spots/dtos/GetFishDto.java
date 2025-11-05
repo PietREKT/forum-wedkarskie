@@ -11,13 +11,9 @@ import java.util.List;
  * DTO for {@link org.piet.forumbackend.fishing_spots.entities.Fish}
  */
 @Value
-public class FishDto implements Serializable {
+public class GetFishDto implements Serializable {
+    Long id;
     String name;
-    Float avgLength;
-    Float avgMass;
-    String photoUrl;
-    String description;
-    boolean isPredatory;
     List<FishingMethod> methods;
     WaterType waterType;
 }

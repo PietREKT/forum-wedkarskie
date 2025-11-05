@@ -16,12 +16,12 @@ import java.util.List;
 public class Post extends ContentBase {
 
     @ElementCollection
-            @CollectionTable(name = "post_photos", joinColumns = @JoinColumn(name = "post_id"))
-            @Column(name = "photo_url")
+    @CollectionTable(name = "post_photos", joinColumns = @JoinColumn(name = "post_id"))
+    @Column(name = "photo_url")
     List<String> attachedPhotos = new ArrayList<>();
 
     @PrePersist
-    private void onCreate(){
+    private void onCreate() {
         super.initEditHistory();
     }
 }

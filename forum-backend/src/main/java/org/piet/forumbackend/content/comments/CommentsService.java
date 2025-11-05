@@ -3,8 +3,8 @@ package org.piet.forumbackend.content.comments;
 import lombok.RequiredArgsConstructor;
 import org.piet.forumbackend.content.ContentBaseServiceInt;
 import org.piet.forumbackend.content.ContentService;
-import org.piet.forumbackend.content.comments.exceptions.CommentNotFoundException;
 import org.piet.forumbackend.content.posts.entities.Post;
+import org.piet.forumbackend.exceptions.NotFoundException;
 import org.piet.forumbackend.users.entities.Role;
 import org.piet.forumbackend.users.entities.User;
 import org.springframework.context.MessageSource;
@@ -27,8 +27,8 @@ public class CommentsService implements ContentBaseServiceInt<Comment> {
     private final ContentService contentService;
 
     @Override
-    public Comment getContentById(Long commentId) throws CommentNotFoundException {
-        return commentRepository.findById(commentId).orElseThrow(() -> new CommentNotFoundException(
+    public Comment getContentById(Long commentId) throws NotFoundException {
+        return commentRepository.findById(commentId).orElseThrow(() -> new NotFoundException(
                 messageSource.getMessage("errors.comments.not_found",
                         new Object[]{commentId},
                         LocaleContextHolder.getLocale()
@@ -53,7 +53,7 @@ public class CommentsService implements ContentBaseServiceInt<Comment> {
     }
 
     @Override
-    public Comment editContent(User currentUser, Long commentId, String newContent){
+    public Comment editContent(User currentUser, Long commentId, String newContent) throws NotFoundException {
         Comment comment = getContentById(commentId);
 
         if (!comment.getAuthor().equals(currentUser)){
@@ -87,7 +87,7 @@ public class CommentsService implements ContentBaseServiceInt<Comment> {
     }
 
     @Override
-    public void deleteContent(Long commentId, User u) throws CommentNotFoundException{
+    public void deleteContent(Long commentId, User u) throws NotFoundException{
         Comment c = getContentById(commentId);
         if (!c.getAuthor().equals(u) && u.hasPermLevelAtLeast(Role.MOD)){
             throw new IllegalAccessError(

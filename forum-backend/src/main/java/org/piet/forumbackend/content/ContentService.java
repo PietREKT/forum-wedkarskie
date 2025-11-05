@@ -1,7 +1,7 @@
 package org.piet.forumbackend.content;
 
-import org.piet.forumbackend.content.posts.repostitories.PostRepository;
-import org.springframework.beans.factory.annotation.Value;
+import lombok.RequiredArgsConstructor;
+import org.piet.forumbackend.properties.FileProperties;
 import org.springframework.context.MessageSource;
 import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.stereotype.Service;
@@ -10,55 +10,18 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 
 @Service
+@RequiredArgsConstructor
 public class ContentService {
     private final MessageSource messageSource;
-
-
-    File mainFolder;
-
-    File defaultFolder;
-
-    public ContentService(
-            PostRepository postRepository,
-            @Value("${forum.files.main_folder}") String mainFolderName,
-            @Value("${forum.files.defaultFolder}") String defaultFolderName, MessageSource messageSource
-    ) {
-        this.messageSource = messageSource;
-
-        Path mainPath = Paths.get(mainFolderName).toAbsolutePath().normalize();
-        Path defaultPath = mainPath.resolve(defaultFolderName).normalize();
-
-        if (!defaultPath.startsWith(mainPath)) {
-            throw new IllegalStateException(
-                    messageSource.getMessage("error.folders.path.not_relative", null, LocaleContextHolder.getLocale())
-            );
-        }
-
-        this.mainFolder = mainPath.toFile();
-        this.defaultFolder = defaultPath.toFile();
-
-        if (!mainFolder.exists() && !mainFolder.mkdir()) {
-            throw new IllegalStateException(
-                    messageSource.getMessage("error.folders.creation.default.main",
-                            null, LocaleContextHolder.getLocale()
-            ));
-        }
-        if (!defaultFolder.exists() && !defaultFolder.mkdir()) {
-            throw new IllegalStateException(
-                    messageSource.getMessage("error.folders.creation.default.user",
-                            null, LocaleContextHolder.getLocale()
-            ));
-        }
-    }
+    private final FileProperties fileProperties;
 
     private File getUserFolder(Long userId) {
-        Path mainPath = mainFolder.toPath();
-        Path userPath = mainPath.resolve("user-" + userId).normalize();
+        Path userFilesPath = fileProperties.getUserFilesFolder().toPath();
+        Path userPath = userFilesPath.resolve("user-" + userId).normalize();
         File userFolder = userPath.toFile();
 
         if (!userFolder.exists() && !userFolder.mkdir()) {
