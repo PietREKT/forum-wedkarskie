@@ -42,7 +42,7 @@ public class User implements UserDetails {
 
     @Enumerated(EnumType.STRING)
     @Convert(converter = RoleConverter.class)
-    Role role;
+    Role role = Role.USER;
 
     @OneToMany
     @JoinColumn(name = "user_event_id")

@@ -39,7 +39,7 @@ services:
   #   networks:
   #     - forum_net
   postgres:
-    image: postgres:16
+    image: postgis/postgis:16-3.4
     container_name: postgres
     environment:
       - POSTGRES_DB=${POSTGRES_DB}
@@ -49,8 +49,8 @@ services:
       - postgres_data:/var/lib/postgresql/data
     ports:
       - "5432:5432"
-    networks:
-      - forum_net
+    # networks:
+    #   - forum_net
 volumes:
   postgres_data:
 
