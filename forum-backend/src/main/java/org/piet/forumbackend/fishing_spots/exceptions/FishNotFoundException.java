@@ -1,6 +1,8 @@
 package org.piet.forumbackend.fishing_spots.exceptions;
 
-public class FishNotFoundException extends RuntimeException {
+import org.piet.forumbackend.exceptions.NotFoundException;
+
+public class FishNotFoundException extends NotFoundException {
     public FishNotFoundException(String message) {
         super(message);
     }

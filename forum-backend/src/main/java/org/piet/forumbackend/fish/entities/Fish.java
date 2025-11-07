@@ -1,4 +1,4 @@
-package org.piet.forumbackend.fishing_spots.entities;
+package org.piet.forumbackend.fish.entities;
 
 import jakarta.persistence.*;
 import lombok.Getter;

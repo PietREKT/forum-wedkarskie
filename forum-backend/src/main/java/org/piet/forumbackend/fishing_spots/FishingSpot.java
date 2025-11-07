@@ -1,4 +1,4 @@
-package org.piet.forumbackend.fishing_spots.entities;
+package org.piet.forumbackend.fishing_spots;
 
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -6,6 +6,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.locationtech.jts.geom.Point;
 import org.piet.forumbackend.content.VerificationStatus;
+import org.piet.forumbackend.fish.entities.Fish;
 import org.piet.forumbackend.users.entities.User;
 
 import java.util.List;
@@ -17,19 +18,21 @@ import java.util.List;
 public class FishingSpot {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    Long id;
+    private Long id;
 
-    String name;
-    String description;
+    private String name;
+    private String description;
 
     @Column(columnDefinition = "geometry(Point, 4326)")
-    Point location;
+    private Point location;
 
     @Enumerated(EnumType.STRING)
-    FISHING_SPOT_TYPE type;
+    private FISHING_SPOT_TYPE type;
 
     @Enumerated(EnumType.STRING)
-    VerificationStatus verificationStatus = VerificationStatus.IN_REVIEW;
+    private VerificationStatus verificationStatus = VerificationStatus.IN_REVIEW;
+
+    private String statuteUrl;
 
     @ManyToMany
     @JoinTable(
@@ -37,7 +40,7 @@ public class FishingSpot {
             joinColumns = @JoinColumn(name = "spot_id"),
             inverseJoinColumns = @JoinColumn(name = "owner_id")
     )
-    List<User> managers;
+    private List<User> managers;
 
     @ManyToMany
     @JoinTable(
@@ -45,7 +48,7 @@ public class FishingSpot {
             joinColumns = @JoinColumn(name = "spot_id"),
             inverseJoinColumns = @JoinColumn(name = "fish_id")
     )
-    List<Fish> fish;
+    private List<Fish> fish;
 
     public enum FISHING_SPOT_TYPE{
         PRIVATE,

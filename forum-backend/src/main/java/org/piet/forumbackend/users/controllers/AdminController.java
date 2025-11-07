@@ -5,11 +5,11 @@ import lombok.RequiredArgsConstructor;
 import org.piet.forumbackend.content.reports.dtos.CommentReportSummaryDto;
 import org.piet.forumbackend.content.reports.services.CommentReportService;
 import org.piet.forumbackend.exceptions.UnauthorizedAccessException;
-import org.piet.forumbackend.fishing_spots.dtos.CreateFishDto;
-import org.piet.forumbackend.fishing_spots.dtos.FishDto;
-import org.piet.forumbackend.fishing_spots.dtos.FishingSpotsDtoMapper;
-import org.piet.forumbackend.fishing_spots.entities.Fish;
-import org.piet.forumbackend.fishing_spots.services.FishService;
+import org.piet.forumbackend.fish.FishService;
+import org.piet.forumbackend.fish.dtos.CreateFishDto;
+import org.piet.forumbackend.fish.dtos.FishDto;
+import org.piet.forumbackend.fish.dtos.FishDtoMapper;
+import org.piet.forumbackend.fish.entities.Fish;
 import org.piet.forumbackend.users.UserService;
 import org.piet.forumbackend.users.entities.User;
 import org.piet.forumbackend.users.exceptions.UserNotLoggedInException;
@@ -55,7 +55,7 @@ public class AdminController {
                 fishDto.getPhoto(),
                 fishDto.getMethods(),
                 fishDto.getWaterType(), user);
-        return ResponseEntity.ok(FishingSpotsDtoMapper.toFishDto(fish));
+        return ResponseEntity.ok(FishDtoMapper.toFishDto(fish));
     }
 
     @DeleteMapping("/fish/delete")

@@ -8,6 +8,8 @@ public class CommentDtoMapper {
         return new CommentDto(comment.getId(),
                 comment.getContent(),
                 comment.getCreatedAt(),
+                comment.getPost().getId(),
+                comment.getParent() != null ? comment.getParent().getId() : null,
                 UsersDtoMapper.toPostUserDto(comment.getAuthor()));
     }
 }

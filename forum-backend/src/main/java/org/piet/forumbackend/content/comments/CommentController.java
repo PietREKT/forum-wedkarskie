@@ -4,10 +4,10 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.piet.forumbackend.content.comments.dtos.CommentDto;
 import org.piet.forumbackend.content.comments.dtos.CommentDtoMapper;
-import org.piet.forumbackend.content.comments.dtos.CreateCommentDto;
 import org.piet.forumbackend.content.comments.dtos.EditCommentDto;
 import org.piet.forumbackend.content.posts.entities.Post;
 import org.piet.forumbackend.content.posts.services.PostService;
+import org.piet.forumbackend.exceptions.BadRequestException;
 import org.piet.forumbackend.exceptions.NotFoundException;
 import org.piet.forumbackend.users.UserService;
 import org.piet.forumbackend.users.entities.User;
@@ -16,6 +16,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
@@ -36,11 +37,16 @@ public class CommentController {
     @Value("${forum.constants.comments.pageSize}")
     Integer PAGE_SIZE;
 
-    @PostMapping
-    public ResponseEntity<CommentDto> createComment(@RequestPart("data") CreateCommentDto dto, @RequestPart(name = "attachment", required = false) MultipartFile attachment, Authentication auth) throws UserNotLoggedInException, NotFoundException, IOException {
+    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<CommentDto> createComment(
+            @RequestParam("content") String content,
+            @RequestParam(value = "postId") Long postId,
+            @RequestParam(value = "commentId", required = false) Long commentId,
+            @RequestPart(name = "attachment", required = false) MultipartFile attachment, Authentication auth) throws UserNotLoggedInException, NotFoundException, IOException, BadRequestException {
         User author = userService.getUserFromAuth(auth);
-        Post p = postService.getContentById(dto.getPost().getId());
-        Comment comment = commentsService.createComment(p, dto.getContent(), author, attachment);
+        Post post = postService.getContentById(postId);
+        Comment parent = commentsService.getContentByIdOrNull(commentId);
+        Comment comment = commentsService.createComment(post, parent, content, author, attachment);
 
         return ResponseEntity.ok(CommentDtoMapper.toCommentDto(comment));
     }

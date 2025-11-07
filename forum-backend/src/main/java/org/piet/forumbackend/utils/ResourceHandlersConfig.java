@@ -20,5 +20,7 @@ public class ResourceHandlersConfig implements WebMvcConfigurer {
                     .addResourceLocations("file:" + fileProperties.getUserFilesFolder().getAbsolutePath() + File.separator);
         registry.addResourceHandler("/fish/**")
                     .addResourceLocations("file:" + fileProperties.getFishFolder().getAbsolutePath() + File.separator);
+        registry.addResourceHandler("/spots/**")
+                .addResourceLocations("file:" + fileProperties.getSpotsFolder().getAbsolutePath() + File.separator);
     }
 }

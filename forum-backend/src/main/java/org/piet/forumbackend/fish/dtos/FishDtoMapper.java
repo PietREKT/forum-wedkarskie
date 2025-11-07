@@ -1,8 +1,8 @@
-package org.piet.forumbackend.fishing_spots.dtos;
+package org.piet.forumbackend.fish.dtos;
 
-import org.piet.forumbackend.fishing_spots.entities.Fish;
+import org.piet.forumbackend.fish.entities.Fish;
 
-public class FishingSpotsDtoMapper {
+public class FishDtoMapper {
     public static FishDto toFishDto(Fish fish) {
         return new FishDto(
                 fish.getName(),

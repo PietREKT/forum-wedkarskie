@@ -10,6 +10,7 @@ import org.springframework.context.i18n.LocaleContextHolder;
 import java.io.File;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Map;
 
 @ConfigurationProperties(prefix = "forum.files.default.folders")
 @Getter
@@ -20,14 +21,16 @@ public class FileProperties {
     File userFilesFolder;
     File defaultUserFolder;
     File fishFolder;
+    File spotsFolder;
 
     private final MessageSource messageSource;
 
-    public FileProperties(String main, String userFiles, String defaultUser, String fish, MessageSource messageSrc) {
+    public FileProperties(String main, String userFiles, String defaultUser, String fish, String spots, MessageSource messageSrc) {
         Path mainPath = Paths.get(main).toAbsolutePath().normalize();
         Path userFilesPath = mainPath.resolve(userFiles).normalize();
         Path fishPath = mainPath.resolve(fish).normalize();
         Path defaultPath = userFilesPath.resolve(defaultUser).normalize();
+        Path spotsPath = mainPath.resolve(spots).normalize();
         this.messageSource = messageSrc;
 
         if (!defaultPath.startsWith(userFilesPath)) {
@@ -53,35 +56,33 @@ public class FileProperties {
         this.userFilesFolder = userFilesPath.toFile();
         this.defaultUserFolder = defaultPath.toFile();
         this.fishFolder = fishPath.toFile();
+        this.spotsFolder = spotsPath.toFile();
 
-        if (!mainDataFolder.exists() && !mainDataFolder.mkdir()) {
-            log.error("Error while creating \"main_data\" directory.");
-            throw new IllegalStateException(
-                    messageSource.getMessage("error.folders.creation.default.main",
-                            null, LocaleContextHolder.getLocale()
-                    ));
-        }
-        if (!userFilesFolder.exists() && !userFilesFolder.mkdir()) {
-            log.error("Error while creating \"user_files\" directory.");
-            throw new IllegalStateException(
-                    messageSource.getMessage("error.folders.creation.default.user_files",
-                            null, LocaleContextHolder.getLocale()
-                    ));
-        }
-        if (!defaultUserFolder.exists() && !defaultUserFolder.mkdir()) {
-            log.error("Error while creating \"default_user\" directory.");
-            throw new IllegalStateException(
-                    messageSource.getMessage("error.folders.creation.default.user",
-                            null, LocaleContextHolder.getLocale()
-                    ));
-        }
+        Map<File, String> files = Map.of(
+                mainDataFolder, "main",
+                userFilesFolder, "user_files",
+                defaultUserFolder, "user",
+                fishFolder, "fish",
+                spotsFolder, "spots"
+        );
 
-        if (!fishFolder.exists() && !fishFolder.mkdir()) {
-            log.error("Error while creating \"fish\" directory.");
-            throw new IllegalStateException(
-                    messageSource.getMessage("error.folders.creation.default.user",
-                            null, LocaleContextHolder.getLocale()
-                    ));
+        files.forEach((k, v) -> {
+            if (!k.exists() && !k.mkdir()) {
+                log.error("Error while creating \"{}\" directory.", k.getName());
+                throw new IllegalStateException(
+                        messageSource.getMessage("error.folders.creation.default." + v,
+                                null, LocaleContextHolder.getLocale()
+                        ));
+            }
+        });
+    }
+
+    public static String getFileExtension(String filename){
+        if (filename == null) throw new IllegalArgumentException("Filename can not be null!");
+        if (!filename.contains(".")) {
+            log.error("Filename: {} without extension provided for file extension getter.", filename);
+            throw new IllegalArgumentException("Filename without extension provided");
         }
+        return filename.substring(filename.lastIndexOf('.'));
     }
 }

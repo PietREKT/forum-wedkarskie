@@ -70,7 +70,7 @@ public class ContentService {
     private List<String> saveToUserContentFolder(Long authorId, Long id, String prefix, List<MultipartFile> toSave) throws IOException {
         File contentFolder = getUserContentFolder(authorId, id, prefix);
         List<String> paths = new ArrayList<>();
-        if (toSave == null)
+        if (toSave == null || toSave.isEmpty())
             return paths;
 
         for (MultipartFile file : toSave){

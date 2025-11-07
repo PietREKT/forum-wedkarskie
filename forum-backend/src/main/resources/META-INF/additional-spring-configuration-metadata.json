@@ -79,5 +79,10 @@
       "name": "forum.constants.pagination.defaultPage",
       "type": "java.lang.Integer",
       "description": "Default page number for all repos."
+    },
+    {
+      "name": "forum.files.default.folders.spots",
+      "type": "java.lang.String",
+      "description": "Relative path to fishing spots directory."
     }
   ] }

@@ -15,5 +15,7 @@ public class CommentDto implements Serializable {
     Long id;
     String content;
     Instant createdAt;
+    Long postId;
+    Long parentId;
     PostUserDto author;
 }

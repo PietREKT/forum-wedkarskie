@@ -36,11 +36,11 @@ public class PostController {
     @PostMapping(value = "/create", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<PostDto> createPost(
             Authentication auth,
-            @RequestPart("data") String content,
+            @RequestParam("content") String content,
             @RequestPart(name = "photos", required = false) List<MultipartFile> photos) throws UserNotLoggedInException, IOException {
         User user = userService.getUserFromAuth(auth);
         Post post = postService.createPost(user, content, photos);
-        log.info("User: {} added new post: {}", user, post);
+        log.info("User with id: {} added new post: {}", user.getId(), post.toLogString());
         return ResponseEntity.ok(PostDtoMapper.toPostDto(post));
     }
 

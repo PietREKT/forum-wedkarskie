@@ -1,14 +1,15 @@
-package org.piet.forumbackend.fishing_spots.dtos;
+package org.piet.forumbackend.fish.dtos;
 
 import lombok.Value;
-import org.piet.forumbackend.fishing_spots.entities.FishingMethod;
-import org.piet.forumbackend.fishing_spots.entities.WaterType;
+import org.piet.forumbackend.fish.entities.Fish;
+import org.piet.forumbackend.fish.entities.FishingMethod;
+import org.piet.forumbackend.fish.entities.WaterType;
 
 import java.io.Serializable;
 import java.util.List;
 
 /**
- * DTO for {@link org.piet.forumbackend.fishing_spots.entities.Fish}
+ * DTO for {@link Fish}
  */
 @Value
 public class FishDto implements Serializable {

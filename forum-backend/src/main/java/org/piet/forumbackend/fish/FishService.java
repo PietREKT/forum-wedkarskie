@@ -1,14 +1,13 @@
-package org.piet.forumbackend.fishing_spots.services;
+package org.piet.forumbackend.fish;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.piet.forumbackend.exceptions.NotFoundException;
 import org.piet.forumbackend.exceptions.UnauthorizedAccessException;
-import org.piet.forumbackend.fishing_spots.entities.Fish;
-import org.piet.forumbackend.fishing_spots.entities.FishingMethod;
-import org.piet.forumbackend.fishing_spots.entities.WaterType;
+import org.piet.forumbackend.fish.entities.Fish;
+import org.piet.forumbackend.fish.entities.FishingMethod;
+import org.piet.forumbackend.fish.entities.WaterType;
 import org.piet.forumbackend.fishing_spots.exceptions.FishNotFoundException;
-import org.piet.forumbackend.fishing_spots.repositories.FishRepository;
 import org.piet.forumbackend.properties.FileProperties;
 import org.piet.forumbackend.users.entities.Role;
 import org.piet.forumbackend.users.entities.User;
@@ -22,6 +21,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.List;
 
 @Service
@@ -36,7 +36,7 @@ public class FishService {
     @Value("${forum.files.fish.defaultPhoto}")
     String defaultFishPhotoPath;
 
-    public Fish getFishByName(String name) {
+    public Fish getFishByName(String name) throws FishNotFoundException {
         return fishRepository.findByName(name.trim().toLowerCase()).orElseThrow(() -> new FishNotFoundException(
                 messageSource.getMessage("error.fish.name_not_found",
                         new Object[]{name},
@@ -118,5 +118,17 @@ public class FishService {
             log.info("Set custom photo url: \"{}\" for fish '{}'", fish.getPhotoUrl(), StringUtils.capitalize(fish.getName()));
         }
         return fishRepository.save(fish);
+    }
+
+    public List<Fish> getFish(Pageable pageable) {
+        return fishRepository.findAll(pageable).getContent();
+    }
+
+    public List<FishingMethod> getMethods() {
+        return Arrays.stream(FishingMethod.values()).toList();
+    }
+
+    public List<WaterType> getWaterTypes(){
+        return Arrays.stream(WaterType.values()).toList();
     }
 }
