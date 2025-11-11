@@ -9,6 +9,10 @@ import org.piet.forumbackend.users.entities.Role;
 import org.piet.forumbackend.users.entities.User;
 import org.springframework.context.MessageSource;
 import org.springframework.context.i18n.LocaleContextHolder;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -80,6 +84,11 @@ public class PostService implements ContentBaseServiceInt<Post> {
         p.setContent(newContent);
         p.setEditHistory(editHistory);
         return postRepository.save(p);
+    }
+
+    public Page<Post> getRecentPosts(int pageNo, int pageSize){
+        Pageable pageable = PageRequest.of(pageNo, pageSize, Sort.by(Sort.Direction.DESC, "createdAt"));
+        return postRepository.findAll(pageable);
     }
 
     private void updateRating(Post p, Long rating) {

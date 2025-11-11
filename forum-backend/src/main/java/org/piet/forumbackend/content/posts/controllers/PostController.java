@@ -10,9 +10,12 @@ import org.piet.forumbackend.content.posts.dtos.UpdatePostDto;
 import org.piet.forumbackend.content.posts.entities.Post;
 import org.piet.forumbackend.content.posts.services.PostService;
 import org.piet.forumbackend.exceptions.NotFoundException;
+import org.piet.forumbackend.pagination.PageDto;
+import org.piet.forumbackend.pagination.PaginationDto;
 import org.piet.forumbackend.users.UserService;
 import org.piet.forumbackend.users.entities.User;
 import org.piet.forumbackend.users.exceptions.UserNotLoggedInException;
+import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -80,5 +83,12 @@ public class PostController {
     public ResponseEntity<PostDto> getPostDetails(@PathVariable Long postId) throws NotFoundException {
         Post p = postService.getContentById(postId);
         return ResponseEntity.ok(PostDtoMapper.toPostDto(p));
+    }
+
+    @GetMapping("/recent")
+    public ResponseEntity<PageDto<PostDto>> getRecentPosts(@ParameterObject PaginationDto paginationDto){
+        var page = postService.getRecentPosts(paginationDto.getPage(), paginationDto.getSize());
+
+        return ResponseEntity.ok(PageDto.createDto(page.map(PostDtoMapper::toPostDto)));
     }
 }
