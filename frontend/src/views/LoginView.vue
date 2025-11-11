@@ -4,33 +4,36 @@
     <section class="bg-[var(--color-surface)] text-[var(--color-text)] rounded-2xl shadow p-8">
       <h1 class="text-3xl font-semibold mb-6">Logowanie</h1>
 
+      <p
+          v-if="justRegistered"
+          class="mb-4 rounded-xl border border-green-300 bg-green-50 text-green-800 px-3 py-2 text-sm"
+      >
+        Konto zostało utworzone. Możesz się teraz zalogować.
+      </p>
+
       <form @submit.prevent="onSubmit" class="space-y-5">
         <div>
           <label class="block text-sm text-[var(--color-muted)] mb-1">Nazwa użytkownika</label>
-          <div class="relative">
-            <input
-                v-model="username"
-                type="text"
-                autocomplete="username"
-                required
-                class="w-full rounded-xl border border-[var(--color-border)] bg-transparent px-3 py-2.5
-                     outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
-            />
-          </div>
+          <input
+              v-model="username"
+              type="text"
+              autocomplete="username"
+              required
+              class="w-full rounded-xl border border-[var(--color-border)] bg-transparent px-3 py-2.5
+                   outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
+          />
         </div>
 
         <div>
           <label class="block text-sm text-[var(--color-muted)] mb-1">Hasło</label>
-          <div class="relative">
-            <input
-                v-model="password"
-                type="password"
-                autocomplete="current-password"
-                required
-                class="w-full rounded-xl border border-[var(--color-border)] bg-transparent px-3 py-2.5
-                     outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
-            />
-          </div>
+          <input
+              v-model="password"
+              type="password"
+              autocomplete="current-password"
+              required
+              class="w-full rounded-xl border border-[var(--color-border)] bg-transparent px-3 py-2.5
+                   outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
+          />
         </div>
 
         <div class="flex items-center justify-between">
@@ -63,7 +66,7 @@
       </form>
     </section>
 
-    <!-- PRAWA-->
+    <!-- PRAWA -->
     <aside
         class="relative overflow-hidden rounded-2xl p-0 md:p-8 bg-gradient-to-br
              from-[var(--header-from)] to-[var(--header-to)]"
@@ -78,7 +81,6 @@
           <p class="opacity-90 mt-1">Dołącz do społeczności, dziel się połowami i poradami.</p>
         </header>
 
-        <!-- siatka avatarów -->
         <div class="mt-6 grid grid-cols-4 sm:grid-cols-6 gap-3 md:gap-4 auto-rows-fr">
           <div v-for="a in avatars" :key="a.id"
                class="aspect-square rounded-xl flex items-center justify-center text-sm font-semibold
@@ -87,7 +89,6 @@
           </div>
         </div>
 
-        <!-- dolny pasek informacji -->
         <div class="mt-auto pt-6 text-white/90 text-sm">
           <ul class="space-y-1">
             <li>• Posty z łowisk w całej Polsce</li>
@@ -101,18 +102,23 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { useAuthStore } from '../stores/auth'
+import { useRouter, useRoute } from 'vue-router'
 
 const auth = useAuthStore()
+const router = useRouter()
+const route = useRoute()
 const username = ref('')
 const password = ref('')
+
+const justRegistered = computed(() => route.query.registered === '1')
 
 async function onSubmit() {
   try {
     await auth.login(username.value, password.value)
-  } catch {
-  }
+    router.push('/profile') // przekierowanie do profilu po zalogowaniu
+  } catch {}
 }
 
 const avatars = ref([
@@ -122,4 +128,3 @@ const avatars = ref([
   { id: 10, initials: 'EW' }, { id: 11, initials: 'RS' }, { id: 12, initials: 'DK' },
 ])
 </script>
-

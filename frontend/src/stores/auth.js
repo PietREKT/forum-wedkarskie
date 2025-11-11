@@ -5,8 +5,6 @@ import { apiClient } from '../utils/axios.js'
 const LS_KEY = 'fw_user'
 
 export const useAuthStore = defineStore('auth', () => {
-
-    // obiekt zalogowanego użytkownika
     const user = ref(
         typeof localStorage !== 'undefined'
             ? JSON.parse(localStorage.getItem(LS_KEY) || 'null')
@@ -15,14 +13,13 @@ export const useAuthStore = defineStore('auth', () => {
     const status = ref('idle')
     const error = ref(null)
 
-    //czy zalogowany
     const isAuthenticated = computed(() => !!user.value)
 
     function _setUser(u) {
         user.value = u
         if (typeof localStorage !== 'undefined') {
-            if (u) localStorage.setItem(LS_KEY, JSON.stringify(u)) // zapisujemy zalogowanego
-            else localStorage.removeItem(LS_KEY)                   // czyścimy przy wylogowaniu
+            if (u) localStorage.setItem(LS_KEY, JSON.stringify(u))
+            else localStorage.removeItem(LS_KEY)
         }
     }
 
@@ -30,45 +27,44 @@ export const useAuthStore = defineStore('auth', () => {
         return user.value
     }
 
-    //login
+    // LOGIN
     async function login(username, password) {
         status.value = 'loading'
         error.value = null
         try {
-            const { data } = await apiClient.post('/api/auth/login', { username, password })
+            const { data } = await apiClient.post('/auth/login', { username, password })
             const u = data && data.user ? data.user : data
             _setUser(u)
             status.value = 'idle'
             return u
         } catch (err) {
             status.value = 'error'
-            error.value = (err && err.message) ? err.message : 'Login failed'
+            error.value = err?.response?.data?.message || err?.message || 'Nie udało się zalogować.'
             _setUser(null)
             throw err
         }
     }
 
-    //register
+    // REGISTER
     async function register(payload) {
         status.value = 'loading'
         error.value = null
         try {
-            const { data } = await apiClient.post('/api/auth/register', payload)
+            const { data } = await apiClient.post('/auth/register', payload)
             const u = data && data.user ? data.user : data
-            _setUser(u)
             status.value = 'idle'
             return u
         } catch (err) {
             status.value = 'error'
-            error.value = (err && err.message) ? err.message : 'Registration failed'
+            error.value = err?.response?.data?.message || err?.message || 'Nie udało się zarejestrować.'
             throw err
         }
     }
 
-    // logout
+    // LOGOUT
     async function logout() {
         try {
-            await apiClient.post('/api/auth/logout')
+            await apiClient.post('/auth/logout')
         } finally {
             _setUser(null)
             status.value = 'idle'
