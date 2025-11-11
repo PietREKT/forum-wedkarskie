@@ -1,7 +1,6 @@
 <template>
   <div
-      class="rounded-lg border bg-white text-zinc-900 dark:bg-zinc-900 dark:text-zinc-100
-           px-3 py-3 md:px-4 md:py-3"
+      class="rounded-lg border bg-white text-zinc-900 dark:bg-zinc-900 dark:text-zinc-100 px-3 py-3 md:px-4 md:py-3"
   >
     <h3 class="font-medium mb-2 text-sm md:text-base">Nowy post</h3>
 
@@ -17,7 +16,7 @@
         placeholder="Napisz coś..."
     ></textarea>
 
-    <!-- Strefa zdjęć-->
+    <!-- Strefa zdjęć -->
     <div
         class="mt-2 rounded-md border-2 border-dashed cursor-pointer select-none
              border-zinc-300 hover:border-zinc-400 bg-zinc-50
@@ -44,7 +43,7 @@
       />
     </div>
 
-    <!-- Podglądy  -->
+    <!-- Podglądy -->
     <div v-if="previews.length" class="mt-2 grid grid-cols-3 sm:grid-cols-4 gap-2">
       <img
           v-for="(src, i) in previews"
@@ -82,6 +81,7 @@
 
 <script setup>
 import { ref, computed } from 'vue'
+//jeśli plik jest w src/components → '../stores/posts' jeśli w src/views → '../../stores/posts'
 import { usePostsStore } from '../../stores/posts'
 
 const emit = defineEmits(['done', 'cancel'])
@@ -104,7 +104,8 @@ function openFile() {
 }
 
 function onFiles(e) {
-  const list = Array.from(e.target.files || [])
+  const all = Array.from(e.target.files || [])
+  const list = all.filter(f => f.type.startsWith('image/'))
   setFiles(list)
 }
 

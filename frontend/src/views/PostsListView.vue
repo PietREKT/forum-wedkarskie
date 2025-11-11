@@ -2,7 +2,11 @@
   <div class="max-w-5xl mx-auto">
     <header class="mb-4 flex items-center justify-between">
       <h1 class="text-2xl font-semibold">Posty</h1>
-      <button v-if="isAuth" class="px-3 py-1.5 border rounded-md text-sm" @click="composerOpen = !composerOpen">
+      <button
+          v-if="isAuth"
+          class="px-3 py-1.5 border rounded-md text-sm"
+          @click="composerOpen = !composerOpen"
+      >
         {{ composerOpen ? 'Schowaj formularz' : 'Dodaj post' }}
       </button>
     </header>
@@ -14,7 +18,7 @@
     <section class="space-y-4">
       <PostCard
           v-for="p in posts.items"
-          :key="posts.getId(p) || JSON.stringify(p)"
+          :key="posts.getId(p) ?? p.postedAt"
           :post="p"
           :current-user="currentUser"
       />
@@ -24,6 +28,7 @@
       <button
           v-if="!posts.loading && posts.items.length < posts.total"
           class="px-4 py-2 border rounded-md text-sm"
+          :disabled="posts.loading"
           @click="loadMore"
       >
         Wczytaj więcej
@@ -37,16 +42,16 @@
 <script setup>
 import { onMounted, ref, computed } from 'vue'
 import { usePostsStore } from '../stores/posts'
+import { useAuthStore } from '../stores/auth'
 import PostCard from '../components/posts/PostCard.vue'
 import PostComposer from '../components/posts/PostComposer.vue'
 
 const posts = usePostsStore()
+const auth = useAuthStore()
 const composerOpen = ref(false)
 
-const currentUser = computed(() => {
-  try { return JSON.parse(localStorage.getItem('fw_user') || 'null') } catch { return null }
-})
-const isAuth = computed(() => !!currentUser.value)
+const currentUser = computed(() => auth.user)
+const isAuth = computed(() => !!auth.user)
 
 onMounted(() => {
   if (!posts.items.length) {
@@ -56,8 +61,9 @@ onMounted(() => {
 })
 
 function loadMore() {
-  posts.fetchNext()
+  if (!posts.loading) posts.fetchNext()
 }
+
 function onCreated() {
   composerOpen.value = false
 }

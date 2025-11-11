@@ -7,5 +7,17 @@ const baseURL = import.meta.env.DEV
 export const apiClient = axios.create({
     baseURL,
     withCredentials: true,
-    headers: { 'Content-Type': 'application/json' },
+    timeout: 15000,
 })
+
+apiClient.defaults.headers.common['Accept'] = 'application/json'
+
+apiClient.interceptors.response.use(
+    r => r,
+    err => {
+        if (err?.response?.status === 401) {
+            try { localStorage.removeItem('fw_user') } catch {}
+        }
+        return Promise.reject(err)
+    }
+)
