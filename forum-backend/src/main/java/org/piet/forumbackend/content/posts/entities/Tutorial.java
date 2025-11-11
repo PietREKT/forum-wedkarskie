@@ -3,6 +3,7 @@ package org.piet.forumbackend.content.posts.entities;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
+import org.piet.forumbackend.content.VerificationStatus;
 
 @Entity
 public class Tutorial extends Post{
@@ -10,11 +11,5 @@ public class Tutorial extends Post{
     String rejectReason;
 
     @Enumerated(EnumType.STRING)
-    TUTORIAL_STATUS status = TUTORIAL_STATUS.IN_REVIEW;
-
-    public enum TUTORIAL_STATUS {
-        IN_REVIEW,
-        ACCEPTED,
-        REJECTED
-    }
+    VerificationStatus status = VerificationStatus.IN_REVIEW;
 }

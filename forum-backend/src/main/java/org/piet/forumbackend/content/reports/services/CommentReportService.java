@@ -6,8 +6,8 @@ import org.piet.forumbackend.content.reports.ReportReason;
 import org.piet.forumbackend.content.reports.dtos.CommentReportSummaryDto;
 import org.piet.forumbackend.content.reports.entities.CommentReport;
 import org.piet.forumbackend.content.reports.entities.ContentReport;
-import org.piet.forumbackend.content.reports.exceptions.ContentReportNotFoundException;
 import org.piet.forumbackend.content.reports.repositories.CommentReportRepository;
+import org.piet.forumbackend.exceptions.NotFoundException;
 import org.piet.forumbackend.users.entities.User;
 import org.springframework.context.MessageSource;
 import org.springframework.context.i18n.LocaleContextHolder;
@@ -29,8 +29,8 @@ public class CommentReportService implements ContentReportServiceInt<CommentRepo
     }
 
     @Override
-    public CommentReport getReportById(Long id) throws ContentReportNotFoundException {
-        return commentReportRepository.findById(id).orElseThrow(() -> new ContentReportNotFoundException(
+    public CommentReport getReportById(Long id) throws NotFoundException {
+        return commentReportRepository.findById(id).orElseThrow(() -> new NotFoundException(
                 messageSource.getMessage("errors.comments.reports.not_found",
                         new Object[]{id},
                         LocaleContextHolder.getLocale()
@@ -53,7 +53,7 @@ public class CommentReportService implements ContentReportServiceInt<CommentRepo
     }
 
     @Override
-    public List<User> getUsersWhoReportedContent(Long contentId) throws ContentReportNotFoundException {
+    public List<User> getUsersWhoReportedContent(Long contentId) throws NotFoundException {
         return commentReportRepository.findByReportedComment_Id(contentId).stream().map(ContentReport::getReportedBy).toList();
     }
 

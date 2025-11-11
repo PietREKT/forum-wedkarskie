@@ -4,11 +4,11 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.piet.forumbackend.content.comments.dtos.CommentDto;
 import org.piet.forumbackend.content.comments.dtos.CommentDtoMapper;
-import org.piet.forumbackend.content.comments.dtos.CreateCommentDto;
 import org.piet.forumbackend.content.comments.dtos.EditCommentDto;
 import org.piet.forumbackend.content.posts.entities.Post;
-import org.piet.forumbackend.content.posts.exceptions.PostNotFoundException;
 import org.piet.forumbackend.content.posts.services.PostService;
+import org.piet.forumbackend.exceptions.BadRequestException;
+import org.piet.forumbackend.exceptions.NotFoundException;
 import org.piet.forumbackend.users.UserService;
 import org.piet.forumbackend.users.entities.User;
 import org.piet.forumbackend.users.exceptions.UserNotLoggedInException;
@@ -16,6 +16,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
@@ -24,7 +25,8 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.util.List;
 
-@RestController("${forum.api.prefix}/comments")
+@RestController
+@RequestMapping("${forum.api.prefix}/comments")
 @RequiredArgsConstructor
 @Tag(name = "Comments", description = "Endpoint for comments management")
 public class CommentController {
@@ -35,11 +37,16 @@ public class CommentController {
     @Value("${forum.constants.comments.pageSize}")
     Integer PAGE_SIZE;
 
-    @PostMapping
-    public ResponseEntity<CommentDto> createComment(@RequestPart("data") CreateCommentDto dto, @RequestPart(name = "attachment", required = false) MultipartFile attachment, Authentication auth) throws UserNotLoggedInException, PostNotFoundException, IOException {
+    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<CommentDto> createComment(
+            @RequestParam("content") String content,
+            @RequestParam(value = "postId") Long postId,
+            @RequestParam(value = "commentId", required = false) Long commentId,
+            @RequestPart(name = "attachment", required = false) MultipartFile attachment, Authentication auth) throws UserNotLoggedInException, NotFoundException, IOException, BadRequestException {
         User author = userService.getUserFromAuth(auth);
-        Post p = postService.getContentById(dto.getPost().getId());
-        Comment comment = commentsService.createComment(p, dto.getContent(), author, attachment);
+        Post post = postService.getContentById(postId);
+        Comment parent = commentsService.getContentByIdOrNull(commentId);
+        Comment comment = commentsService.createComment(post, parent, content, author, attachment);
 
         return ResponseEntity.ok(CommentDtoMapper.toCommentDto(comment));
     }
@@ -55,14 +62,14 @@ public class CommentController {
     }
 
     @PatchMapping
-    public ResponseEntity<CommentDto> editComment(@RequestBody EditCommentDto dto, Authentication auth) throws UserNotLoggedInException {
+    public ResponseEntity<CommentDto> editComment(@RequestBody EditCommentDto dto, Authentication auth) throws UserNotLoggedInException, NotFoundException {
         User u = userService.getUserFromAuth(auth);
         Comment comment = commentsService.editContent(u, dto.getId(), dto.getContent());
         return ResponseEntity.ok(CommentDtoMapper.toCommentDto(comment));
     }
 
     @DeleteMapping("/{commentId}")
-    public ResponseEntity<?> deleteComment(@PathVariable Long commentId, Authentication auth) throws UserNotLoggedInException {
+    public ResponseEntity<?> deleteComment(@PathVariable Long commentId, Authentication auth) throws UserNotLoggedInException, NotFoundException {
         User u = userService.getUserFromAuth(auth);
         commentsService.deleteContent(commentId, u);
         return ResponseEntity.ok().build();

@@ -14,6 +14,7 @@ import java.util.Map;
  */
 @Value
 public class PostDto implements Serializable {
+    Long id;
     PostUserDto author;
     String content;
     List<String> attachedPhotos;

@@ -1,6 +1,8 @@
 package org.piet.forumbackend.security;
 
+import lombok.RequiredArgsConstructor;
 import org.piet.forumbackend.security.jwt.JwtFilter;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -12,22 +14,26 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 @Configuration
+@RequiredArgsConstructor
 public class SecurityConfig {
     private final JwtFilter jwtFilter;
 
-    public SecurityConfig(JwtFilter jwtFilter) {
-        this.jwtFilter = jwtFilter;
-    }
+    @Value("${forum.api.prefix}")
+    private String apiPrefix;
 
     @Bean
     SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         return http
                 .authorizeHttpRequests(req ->
-                     req
-                            .requestMatchers("/api/health/**", "/api/auth/**")
-                                .permitAll()
-                            .anyRequest()
-                                .permitAll()
+                        req
+                                .requestMatchers("/api/health/**", "/api/auth/**")
+                                    .permitAll()
+                                .requestMatchers(apiPrefix + "/mod/**")
+                                    .hasRole("MOD")
+                                .requestMatchers(apiPrefix + "/admin/**")
+                                    .hasRole("ADMIN")
+                                .anyRequest()
+                                    .permitAll()
                 )
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
@@ -37,7 +43,7 @@ public class SecurityConfig {
     }
 
     @Bean
-    PasswordEncoder encoder(){
+    PasswordEncoder encoder() {
         return new BCryptPasswordEncoder();
     }
 }

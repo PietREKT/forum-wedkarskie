@@ -4,10 +4,10 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.piet.forumbackend.content.posts.entities.Post;
-import org.piet.forumbackend.content.posts.exceptions.PostNotFoundException;
 import org.piet.forumbackend.content.posts.services.PostService;
 import org.piet.forumbackend.content.reports.dtos.CreatePostReportDto;
 import org.piet.forumbackend.content.reports.services.PostReportService;
+import org.piet.forumbackend.exceptions.NotFoundException;
 import org.piet.forumbackend.users.UserService;
 import org.piet.forumbackend.users.entities.User;
 import org.piet.forumbackend.users.exceptions.UserNotLoggedInException;
@@ -31,7 +31,7 @@ public class PostReportController {
     private final PostService postService;
 
     @PostMapping("/report")
-    ResponseEntity<?> createCommentReport(@RequestBody CreatePostReportDto dto, Authentication auth) throws PostNotFoundException {
+    ResponseEntity<?> createCommentReport(@RequestBody CreatePostReportDto dto, Authentication auth) throws NotFoundException {
         Post post = postService.getContentById(dto.getPostId());
         User user = null;
         try {

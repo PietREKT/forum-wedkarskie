@@ -4,7 +4,7 @@ spring:
   application:
     name: forum-backend
   datasource:
-    url: jdbc:postgresql://forum_postgres:5432/${POSTGRES_DB}
+    url: jdbc:postgresql://localhost:5432/${POSTGRES_DB:forum_dev}
     username: ${POSTGRES_USER}
     password: ${POSTGRES_PASSWORD}
     driver-class-name: org.postgresql.Driver
@@ -12,9 +12,15 @@ spring:
     hibernate:
       ddl-auto: create-drop
     defer-datasource-initialization: true
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
   sql:
     init:
-      mode: ALWAYS
+      mode: always
+      schema-locations: classpath:schema.sql
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 15MB
   devtools:
     restart:
       # poll-interval: 2s
@@ -40,10 +46,22 @@ forum:
       domain: ${COOKIE_DOMAIN}
       expiresAfterSeconds: ${JWT_EXPIRY}
   files:
-    main_folder: user-files
-    defaultFolder: default
+    default:
+      folders:
+        main: resources
+        user_files: user-files
+        default-user: default-user
+        fish: fish
+        spots: spots
+    fish:
+      defaultPhoto: fish.jpg
   constants:
+    pagination:
+      default_size: 20
+      default_page: 0
     comments:
       pageSize: 20
   api:
     prefix: /api
+    tomtom_key: ${TOMTOM_API_KEY}
+    tomtom_minimum_precision: 80

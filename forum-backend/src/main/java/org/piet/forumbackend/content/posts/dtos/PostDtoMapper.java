@@ -6,6 +6,7 @@ import org.piet.forumbackend.users.dtos.UsersDtoMapper;
 public class PostDtoMapper {
     public static PostDto toPostDto(Post post) {
         return new PostDto(
+                post.getId(),
                 UsersDtoMapper.toPostUserDto(post.getAuthor()),
                 post.getContent(),
                 post.getAttachedPhotos(),

@@ -1,6 +1,8 @@
 package org.piet.forumbackend.content.comments.exceptions;
 
-public class CommentNotFoundException extends RuntimeException {
+import org.piet.forumbackend.exceptions.NotFoundException;
+
+public class CommentNotFoundException extends NotFoundException {
     public CommentNotFoundException(String message) {
         super(message);
     }

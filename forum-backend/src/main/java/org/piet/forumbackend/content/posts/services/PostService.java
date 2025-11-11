@@ -3,12 +3,16 @@ package org.piet.forumbackend.content.posts.services;
 import org.piet.forumbackend.content.ContentBaseServiceInt;
 import org.piet.forumbackend.content.ContentService;
 import org.piet.forumbackend.content.posts.entities.Post;
-import org.piet.forumbackend.content.posts.exceptions.PostNotFoundException;
 import org.piet.forumbackend.content.posts.repostitories.PostRepository;
+import org.piet.forumbackend.exceptions.NotFoundException;
 import org.piet.forumbackend.users.entities.Role;
 import org.piet.forumbackend.users.entities.User;
 import org.springframework.context.MessageSource;
 import org.springframework.context.i18n.LocaleContextHolder;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -32,8 +36,8 @@ public class PostService implements ContentBaseServiceInt<Post> {
     }
 
     @Override
-    public Post getContentById(Long postId) throws PostNotFoundException {
-        return postRepository.findById(postId).orElseThrow(() -> new PostNotFoundException(
+    public Post getContentById(Long postId) throws NotFoundException {
+        return postRepository.findById(postId).orElseThrow(() -> new NotFoundException(
                 messageSource.getMessage("error.posts.not_found",
                         new Object[]{postId},
                         LocaleContextHolder.getLocale()
@@ -53,7 +57,7 @@ public class PostService implements ContentBaseServiceInt<Post> {
     }
 
     @Override
-    public void deleteContent(Long postId, User user) throws PostNotFoundException {
+    public void deleteContent(Long postId, User user) throws NotFoundException {
         Post p = getContentById(postId);
         //TODO Make sure admins can delete posts
         if (!Objects.equals(p.getAuthor().getId(), user.getId()) && !user.hasPermLevelAtLeast(Role.MOD)) {
@@ -66,7 +70,7 @@ public class PostService implements ContentBaseServiceInt<Post> {
     }
 
     @Override
-    public Post editContent(User currentUser, Long postId, String newContent) throws PostNotFoundException {
+    public Post editContent(User currentUser, Long postId, String newContent) throws NotFoundException {
         Post p = getContentById(postId);
 
         if (!p.getAuthor().equals(currentUser)) {
@@ -82,19 +86,24 @@ public class PostService implements ContentBaseServiceInt<Post> {
         return postRepository.save(p);
     }
 
+    public Page<Post> getRecentPosts(int pageNo, int pageSize){
+        Pageable pageable = PageRequest.of(pageNo, pageSize, Sort.by(Sort.Direction.DESC, "createdAt"));
+        return postRepository.findAll(pageable);
+    }
+
     private void updateRating(Post p, Long rating) {
         p.setRating(rating);
         postRepository.save(p);
     }
 
     @Override
-    public void upvote(Long postId) throws PostNotFoundException {
+    public void upvote(Long postId) throws NotFoundException {
         Post p = getContentById(postId);
         updateRating(p, p.getRating() + 1);
     }
 
     @Override
-    public void downvote(Long postId) throws PostNotFoundException {
+    public void downvote(Long postId) throws NotFoundException {
         Post p = getContentById(postId);
         updateRating(p, p.getRating() - 1);
     }

@@ -8,11 +8,14 @@ import org.piet.forumbackend.content.posts.dtos.PostDto;
 import org.piet.forumbackend.content.posts.dtos.PostDtoMapper;
 import org.piet.forumbackend.content.posts.dtos.UpdatePostDto;
 import org.piet.forumbackend.content.posts.entities.Post;
-import org.piet.forumbackend.content.posts.exceptions.PostNotFoundException;
 import org.piet.forumbackend.content.posts.services.PostService;
+import org.piet.forumbackend.exceptions.NotFoundException;
+import org.piet.forumbackend.pagination.PageDto;
+import org.piet.forumbackend.pagination.PaginationDto;
 import org.piet.forumbackend.users.UserService;
 import org.piet.forumbackend.users.entities.User;
 import org.piet.forumbackend.users.exceptions.UserNotLoggedInException;
+import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -26,7 +29,7 @@ import java.util.List;
 @RequestMapping("${forum.api.prefix}/posts")
 @RequiredArgsConstructor
 @Log4j2
-@Tag(name = "Posts", description = "Endpoints for posts managment")
+@Tag(name = "Posts", description = "Endpoints for posts management.")
 public class PostController {
 
     private final UserService userService;
@@ -36,16 +39,16 @@ public class PostController {
     @PostMapping(value = "/create", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<PostDto> createPost(
             Authentication auth,
-            @RequestPart("data") String content,
+            @RequestParam("content") String content,
             @RequestPart(name = "photos", required = false) List<MultipartFile> photos) throws UserNotLoggedInException, IOException {
         User user = userService.getUserFromAuth(auth);
         Post post = postService.createPost(user, content, photos);
-        log.info("User: {} added new post: {}", user, post);
+        log.info("User with id: {} added new post: {}", user.getId(), post.toLogString());
         return ResponseEntity.ok(PostDtoMapper.toPostDto(post));
     }
 
     @PatchMapping("/edit")
-    public ResponseEntity<PostDto> updatePost(Authentication auth, @RequestBody UpdatePostDto dto) throws UserNotLoggedInException, PostNotFoundException {
+    public ResponseEntity<PostDto> updatePost(Authentication auth, @RequestBody UpdatePostDto dto) throws UserNotLoggedInException, NotFoundException {
         User u = userService.getUserFromAuth(auth);
         Post updated = postService.editContent(u, dto.getId(), dto.getContent());
         log.info("User {} changed post's content with id {} to {}", u, updated.getId(), updated.getContent());
@@ -53,7 +56,7 @@ public class PostController {
     }
 
     @DeleteMapping("/{postId}")
-    public ResponseEntity<?> deletePost(Authentication auth, @PathVariable() Long postId) throws UserNotLoggedInException, PostNotFoundException {
+    public ResponseEntity<?> deletePost(Authentication auth, @PathVariable() Long postId) throws UserNotLoggedInException, NotFoundException {
         User u = userService.getUserFromAuth(auth);
         postService.deleteContent(postId, u);
         log.info("User {} deleted post with id: {}", u, postId);
@@ -61,7 +64,7 @@ public class PostController {
     }
 
     @PatchMapping("/{postId}/upvote")
-    public ResponseEntity<?> upvotePost(@PathVariable Long postId, Authentication auth) throws PostNotFoundException, UserNotLoggedInException {
+    public ResponseEntity<?> upvotePost(@PathVariable Long postId, Authentication auth) throws NotFoundException, UserNotLoggedInException {
         User u = userService.getUserFromAuth(auth);
         postService.upvote(postId);
         log.info("User: {} upvoted post with id: {}", u, postId);
@@ -69,7 +72,7 @@ public class PostController {
     }
 
     @PatchMapping("/{postId}/downvote")
-    public ResponseEntity<?> downvotePost(@PathVariable Long postId, Authentication auth) throws PostNotFoundException, UserNotLoggedInException {
+    public ResponseEntity<?> downvotePost(@PathVariable Long postId, Authentication auth) throws NotFoundException, UserNotLoggedInException {
         User u = userService.getUserFromAuth(auth);
         postService.downvote(postId);
         log.info("User: {} downvoted post with id: {}", u, postId);
@@ -77,8 +80,15 @@ public class PostController {
     }
 
     @GetMapping("/{postId}")
-    public ResponseEntity<PostDto> getPostDetails(@PathVariable Long postId) throws PostNotFoundException {
+    public ResponseEntity<PostDto> getPostDetails(@PathVariable Long postId) throws NotFoundException {
         Post p = postService.getContentById(postId);
         return ResponseEntity.ok(PostDtoMapper.toPostDto(p));
+    }
+
+    @GetMapping("/recent")
+    public ResponseEntity<PageDto<PostDto>> getRecentPosts(@ParameterObject PaginationDto paginationDto){
+        var page = postService.getRecentPosts(paginationDto.getPage(), paginationDto.getSize());
+
+        return ResponseEntity.ok(PageDto.createDto(page.map(PostDtoMapper::toPostDto)));
     }
 }

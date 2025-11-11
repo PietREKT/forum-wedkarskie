@@ -3,8 +3,9 @@ package org.piet.forumbackend.content.comments;
 import lombok.RequiredArgsConstructor;
 import org.piet.forumbackend.content.ContentBaseServiceInt;
 import org.piet.forumbackend.content.ContentService;
-import org.piet.forumbackend.content.comments.exceptions.CommentNotFoundException;
 import org.piet.forumbackend.content.posts.entities.Post;
+import org.piet.forumbackend.exceptions.BadRequestException;
+import org.piet.forumbackend.exceptions.NotFoundException;
 import org.piet.forumbackend.users.entities.Role;
 import org.piet.forumbackend.users.entities.User;
 import org.springframework.context.MessageSource;
@@ -27,8 +28,8 @@ public class CommentsService implements ContentBaseServiceInt<Comment> {
     private final ContentService contentService;
 
     @Override
-    public Comment getContentById(Long commentId) throws CommentNotFoundException {
-        return commentRepository.findById(commentId).orElseThrow(() -> new CommentNotFoundException(
+    public Comment getContentById(Long commentId) throws NotFoundException {
+        return commentRepository.findById(commentId).orElseThrow(() -> new NotFoundException(
                 messageSource.getMessage("errors.comments.not_found",
                         new Object[]{commentId},
                         LocaleContextHolder.getLocale()
@@ -40,23 +41,27 @@ public class CommentsService implements ContentBaseServiceInt<Comment> {
         return commentRepository.findByPost_Id(postId, pageable);
     }
 
-    public Comment createComment(Post post, String content, User author, MultipartFile attachment) throws IOException {
+    public Comment createComment(Post post, Comment parent, String content, User author, MultipartFile attachment) throws IOException, BadRequestException {
         Comment comment = new Comment();
-        comment.setPost(post);
         comment.setContent(content);
+        comment.setPost(post);
         comment.setAuthor(author);
-        comment = commentRepository.save(comment);
-        if (attachment != null){
-            comment.setAttachmentUrl(contentService.saveToCommentsFolder(author.getId(), comment.getId(), attachment));
+        if (parent != null){
+            comment.setParent(parent);
         }
-        return commentRepository.save(comment);
+        comment = commentRepository.save(comment);
+        if (attachment != null) {
+            comment.setAttachmentUrl(contentService.saveToCommentsFolder(author.getId(), comment.getId(), attachment));
+            comment = commentRepository.save(comment);
+        }
+        return comment;
     }
 
     @Override
-    public Comment editContent(User currentUser, Long commentId, String newContent){
+    public Comment editContent(User currentUser, Long commentId, String newContent) throws NotFoundException {
         Comment comment = getContentById(commentId);
 
-        if (!comment.getAuthor().equals(currentUser)){
+        if (!comment.getAuthor().equals(currentUser)) {
             throw new IllegalAccessError(
                     messageSource.getMessage("error.comments.no_perms_for_edition", null, LocaleContextHolder.getLocale())
             );
@@ -87,13 +92,18 @@ public class CommentsService implements ContentBaseServiceInt<Comment> {
     }
 
     @Override
-    public void deleteContent(Long commentId, User u) throws CommentNotFoundException{
+    public void deleteContent(Long commentId, User u) throws NotFoundException {
         Comment c = getContentById(commentId);
-        if (!c.getAuthor().equals(u) && u.hasPermLevelAtLeast(Role.MOD)){
+        if (!c.getAuthor().equals(u) && u.hasPermLevelAtLeast(Role.MOD)) {
             throw new IllegalAccessError(
                     messageSource.getMessage("error.comments.no_perms_for_deletion",
                             null, LocaleContextHolder.getLocale()));
         }
         commentRepository.delete(c);
+    }
+
+    public Comment getContentByIdOrNull(Long commentId) {
+        if (commentId == null) return null;
+        return commentRepository.findById(commentId).orElse(null);
     }
 }

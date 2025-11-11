@@ -7,8 +7,6 @@ import lombok.Setter;
 import org.piet.forumbackend.users.entities.User;
 
 import java.time.Instant;
-import java.util.HashMap;
-import java.util.Map;
 
 @MappedSuperclass
 @Getter
@@ -24,23 +22,15 @@ public class ContentBase {
 
     String content;
 
-    @ElementCollection
-    @CollectionTable(
-            name = "content_edit_history",
-            joinColumns = @JoinColumn(name = "post_id")
-    )
-    @MapKeyColumn(name = "edited_at")
-    @Column(name = "edited_content", columnDefinition = "TEXT")
-    Map<Instant, String> editHistory;
-
     Instant createdAt;
 
     Long rating = 0L;
 
-    protected void initEditHistory(){
-        Instant now = Instant.now();
-        editHistory = new HashMap<>();
-        editHistory.put(now, content);
-        createdAt = now;
+    public String toLogString() {
+        return "{ " +
+                "ID: " +
+                id +
+                ", createdAt: " +
+                createdAt + " }";
     }
 }

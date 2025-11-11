@@ -5,6 +5,7 @@ import io.jsonwebtoken.Jws;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import lombok.RequiredArgsConstructor;
+import org.piet.forumbackend.properties.JwtProperties;
 import org.piet.forumbackend.users.entities.User;
 import org.springframework.stereotype.Component;
 
@@ -18,10 +19,10 @@ import java.util.Map;
 @Component
 @RequiredArgsConstructor
 public class JwtService {
-    private final JwtProps jwtProps;
+    private final JwtProperties jwtProperties;
 
     private SecretKey getKey(){
-        return Keys.hmacShaKeyFor(jwtProps.getSecret().getBytes(StandardCharsets.UTF_8));
+        return Keys.hmacShaKeyFor(jwtProperties.getSecret().getBytes(StandardCharsets.UTF_8));
     }
 
     public String generate(User user){
@@ -32,9 +33,9 @@ public class JwtService {
 
         return Jwts.builder()
                 .subject(user.getId().toString())
-                .issuer(jwtProps.getIssuer())
+                .issuer(jwtProperties.getIssuer())
                 .issuedAt(Date.from(instant))
-                .expiration(Date.from(instant.plusSeconds(jwtProps.getExpirySeconds())))
+                .expiration(Date.from(instant.plusSeconds(jwtProperties.getExpirySeconds())))
                 .claims(claims)
                 .signWith(getKey())
                 .compact();
