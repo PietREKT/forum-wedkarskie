@@ -1,0 +1,96 @@
+package org.piet.forumbackend.content.controllers;
+
+import io.swagger.v3.oas.annotations.tags.Tag;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.log4j.Log4j2;
+import org.piet.forumbackend.content.dtos.ContentDto;
+import org.piet.forumbackend.content.dtos.ContentDtoMapper;
+import org.piet.forumbackend.content.dtos.CreateContentDto;
+import org.piet.forumbackend.content.dtos.EditContentDto;
+import org.piet.forumbackend.content.entities.Content;
+import org.piet.forumbackend.content.entities.enums.ContentType;
+import org.piet.forumbackend.content.entities.enums.VoteType;
+import org.piet.forumbackend.content.services.ContentService;
+import org.piet.forumbackend.exceptions.BadRequestException;
+import org.piet.forumbackend.exceptions.NotFoundException;
+import org.piet.forumbackend.exceptions.UnauthorizedAccessException;
+import org.piet.forumbackend.pagination.PageDto;
+import org.piet.forumbackend.pagination.PaginationDto;
+import org.piet.forumbackend.users.UserService;
+import org.piet.forumbackend.users.entities.User;
+import org.piet.forumbackend.users.exceptions.UserNotLoggedInException;
+import org.springdoc.core.annotations.ParameterObject;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.*;
+
+import java.io.IOException;
+
+@RestController
+@RequestMapping("${forum.api.prefix}/posts")
+@RequiredArgsConstructor
+@Log4j2
+@Tag(name = "Posts", description = "Endpoints for posts management.")
+public class PostController {
+
+    private final UserService userService;
+    private final ContentService contentService;
+
+
+    @PostMapping(value = "/create", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<ContentDto> createPost(
+            Authentication auth,
+            @ModelAttribute CreateContentDto dto) throws UserNotLoggedInException, IOException, UnauthorizedAccessException, BadRequestException {
+
+        User user = userService.getUserFromAuth(auth);
+        Content post = contentService.createContent(user, dto.getContent(), ContentType.POST, null, dto.getPhotos());
+
+        log.info("User with id: {} added new post: {}", user.getId(), post.toLogString());
+        return ResponseEntity.ok(ContentDtoMapper.toContentDto(post));
+    }
+
+    @PatchMapping("/edit")
+    public ResponseEntity<ContentDto> updatePost(Authentication auth, @ModelAttribute EditContentDto dto) throws UserNotLoggedInException, NotFoundException, UnauthorizedAccessException, BadRequestException, IOException {
+        User u = userService.getUserFromAuth(auth);
+        Content updated = contentService.editContent(u, dto.getId(), dto.getContent(), dto.getAttachedPhotos(), dto.getNewPhotos());
+
+        log.info("User {} changed post's content with id {} to {}", u, updated.getId(), updated.getContent());
+        return ResponseEntity.ok(ContentDtoMapper.toContentDto(updated));
+    }
+
+    @DeleteMapping("/{postId}")
+    public ResponseEntity<?> deletePost(Authentication auth, @PathVariable() Long postId) throws UserNotLoggedInException, NotFoundException, UnauthorizedAccessException {
+        User u = userService.getUserFromAuth(auth);
+        contentService.deleteContent(postId, u);
+        log.info("User {} deleted post with id: {}", u, postId);
+        return ResponseEntity.ok().build();
+    }
+
+    @PatchMapping("/{postId}/upvote")
+    public ResponseEntity<?> upvotePost(@PathVariable Long postId, Authentication auth) throws NotFoundException, UserNotLoggedInException {
+        User u = userService.getUserFromAuth(auth);
+        Content post = contentService.getContentById(postId);
+        contentService.vote(post, u, VoteType.UPVOTE);
+
+        log.info("User: {} upvoted post with id: {}", u, postId);
+        return ResponseEntity.ok().build();
+    }
+
+    @PatchMapping("/{postId}/downvote")
+    public ResponseEntity<?> downvotePost(@PathVariable Long postId, Authentication auth) throws NotFoundException, UserNotLoggedInException {
+        User u = userService.getUserFromAuth(auth);
+        Content post = contentService.getContentById(postId);
+        contentService.vote(post, u, VoteType.DOWNVOTE);
+
+        log.info("User: {} downvoted post with id: {}", u, postId);
+        return ResponseEntity.ok().build();
+    }
+
+    @GetMapping("/recent")
+    public ResponseEntity<PageDto<ContentDto>> getRecentPosts(@ParameterObject PaginationDto paginationDto){
+        var page = contentService.getRecentPosts(paginationDto.getPage(), paginationDto.getSize());
+
+        return ResponseEntity.ok(page);
+    }
+}

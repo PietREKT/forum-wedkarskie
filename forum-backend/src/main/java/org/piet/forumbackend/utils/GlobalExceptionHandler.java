@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.multipart.support.MissingServletRequestPartException;
 
 import java.io.IOException;
+import java.nio.file.FileSystemException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -54,8 +55,8 @@ public class GlobalExceptionHandler {
     }
 
     //Generic 500
-    @ExceptionHandler(NoSuchMessageException.class)
-    public ResponseEntity<Map<String, String>> handleNoSuchMessage(NoSuchMessageException e) {
+    @ExceptionHandler({NoSuchMessageException.class, FileSystemException.class})
+    public ResponseEntity<Map<String, String>> handleNoSuchMessage(Exception e) {
         Map<String, String> m = Map.of(
         "message",
                 Objects.requireNonNull(messageSource.getMessage("error.internal_server_error",

@@ -53,4 +53,11 @@ public class UserService {
                 )
         ));
     }
+
+    public User getUserFromAuthOrNull(Authentication auth){
+        if (auth == null || !(auth.getPrincipal() instanceof SecurityUserDto su)){
+            return null;
+        }
+        return userRepository.findById(su.getId()).orElse(null);
+    }
 }

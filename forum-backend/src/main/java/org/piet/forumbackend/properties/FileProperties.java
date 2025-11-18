@@ -22,19 +22,29 @@ public class FileProperties {
     File defaultUserFolder;
     File fishFolder;
     File spotsFolder;
+    File contentFolder;
+
+    final String contentFolderUploadsUrl;
 
     private final MessageSource messageSource;
 
-    public FileProperties(String main, String userFiles, String defaultUser, String fish, String spots, MessageSource messageSrc) {
+    public FileProperties(String main, String userFiles, String defaultUser, String fish, String spots, String content, MessageSource messageSrc) {
         Path mainPath = Paths.get(main).toAbsolutePath().normalize();
         Path userFilesPath = mainPath.resolve(userFiles).normalize();
         Path fishPath = mainPath.resolve(fish).normalize();
         Path defaultPath = userFilesPath.resolve(defaultUser).normalize();
         Path spotsPath = mainPath.resolve(spots).normalize();
+        Path contentPath = userFilesPath.resolve(content).normalize();
         this.messageSource = messageSrc;
 
         if (!defaultPath.startsWith(userFilesPath)) {
             log.error("Default user's path must be relative to user_files folder path!");
+            throw new IllegalStateException(
+                    messageSource.getMessage("error.folders.path.not_relative", null, LocaleContextHolder.getLocale())
+            );
+        }
+        if (!contentPath.startsWith(userFilesPath)) {
+            log.error("\"content\" folder's path must be relative to user_files folder path!");
             throw new IllegalStateException(
                     messageSource.getMessage("error.folders.path.not_relative", null, LocaleContextHolder.getLocale())
             );
@@ -57,13 +67,15 @@ public class FileProperties {
         this.defaultUserFolder = defaultPath.toFile();
         this.fishFolder = fishPath.toFile();
         this.spotsFolder = spotsPath.toFile();
+        this.contentFolder = contentPath.toFile();
 
         Map<File, String> files = Map.of(
                 mainDataFolder, "main",
                 userFilesFolder, "user_files",
                 defaultUserFolder, "user",
                 fishFolder, "fish",
-                spotsFolder, "spots"
+                spotsFolder, "spots",
+                contentFolder, "content"
         );
 
         files.forEach((k, v) -> {
@@ -75,6 +87,8 @@ public class FileProperties {
                         ));
             }
         });
+
+        this.contentFolderUploadsUrl = "/uploads/" + contentFolder.getName() + '/';
     }
 
     public static String getFileExtension(String filename){

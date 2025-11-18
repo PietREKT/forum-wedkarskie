@@ -2,8 +2,13 @@ package org.piet.forumbackend.users.controllers;
 
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
-import org.piet.forumbackend.content.reports.dtos.CommentReportSummaryDto;
-import org.piet.forumbackend.content.reports.services.CommentReportService;
+import org.piet.forumbackend.content.entities.Content;
+import org.piet.forumbackend.content.reports.dtos.ContentReportDto;
+import org.piet.forumbackend.content.reports.dtos.HotReportedContentDto;
+import org.piet.forumbackend.content.reports.entities.enums.TimeUnitInput;
+import org.piet.forumbackend.content.reports.services.ContentReportService;
+import org.piet.forumbackend.content.services.ContentService;
+import org.piet.forumbackend.exceptions.NotFoundException;
 import org.piet.forumbackend.exceptions.UnauthorizedAccessException;
 import org.piet.forumbackend.fish.FishService;
 import org.piet.forumbackend.fish.dtos.CreateFishDto;
@@ -13,9 +18,6 @@ import org.piet.forumbackend.fish.entities.Fish;
 import org.piet.forumbackend.users.UserService;
 import org.piet.forumbackend.users.entities.User;
 import org.piet.forumbackend.users.exceptions.UserNotLoggedInException;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
@@ -28,19 +30,28 @@ import java.util.List;
 @Tag(name = "Admin", description = "Endpoints for site management.")
 @RequiredArgsConstructor
 public class AdminController {
-    private final CommentReportService commentReportService;
     private final UserService userService;
     private final FishService fishService;
+    private final ContentReportService contentReportService;
+    private final ContentService contentService;
 
     @GetMapping("/reports/summary")
-    ResponseEntity<List<CommentReportSummaryDto>> getCommentSummary(
+    ResponseEntity<List<HotReportedContentDto>> getReportsSummary(
             @RequestParam(name = "page", defaultValue = "0") int page,
-            @RequestParam(name = "count", required = false, defaultValue = "30") int itemsPerPage
-    ) {
-        Pageable pageable = PageRequest.of(page, itemsPerPage, Sort.by("createdAt").descending());
-        List<CommentReportSummaryDto> dtos = commentReportService.getAggregatedReports(pageable);
+            @RequestParam(name = "count", required = false, defaultValue = "30") int pageSize,
+            @RequestParam(name = "amount", required = false, defaultValue = "1") Long amount,
+            @RequestParam(name = "unit", required = false, defaultValue = "WEEKS") TimeUnitInput unit
+            ) {
+        var dtos = contentReportService.getRecentlyReportedContent(amount, unit.map(), page, pageSize);
 
         return ResponseEntity.ok(dtos);
+    }
+
+    @GetMapping("/reports/{contentId}")
+    ResponseEntity<ContentReportDto> getContentReports(@PathVariable Long contentId) throws NotFoundException {
+        Content content = contentService.getContentById(contentId);
+        var dto = contentReportService.getReportSummary(content);
+        return ResponseEntity.ok(dto);
     }
 
     @PostMapping("/fish/create")
