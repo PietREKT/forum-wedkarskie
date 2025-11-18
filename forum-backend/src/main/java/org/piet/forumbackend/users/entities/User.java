@@ -80,4 +80,12 @@ public class User implements UserDetails {
     public boolean hasPermLevelAtLeast(Role other) {
         return role.hasAtLeast(other);
     }
+
+    @Override
+    public String toString() {
+        return "{ " +
+                "username: " + username +
+                ", role: " + role.name() +
+                "}";
+    }
 }

@@ -4,15 +4,14 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import org.piet.forumbackend.content.reports.ReportReason;
+import org.piet.forumbackend.content.entities.Content;
+import org.piet.forumbackend.content.reports.entities.enums.ReportReason;
 import org.piet.forumbackend.users.entities.User;
 
 import java.time.Instant;
 
-@Getter
-@Setter
-@NoArgsConstructor
-@MappedSuperclass
+@Entity
+@Getter @Setter @NoArgsConstructor
 public class ContentReport {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -23,10 +22,14 @@ public class ContentReport {
     @Enumerated(value = EnumType.STRING)
     private ReportReason reason;
 
-    protected void setCreatedAt() {
+    @PrePersist
+    private void setCreatedAt() {
         createdAt = Instant.now();
     }
 
-    @ManyToOne
+    @ManyToOne(optional = false)
+    Content reported;
+
+    @ManyToOne(optional = false)
     User reportedBy; //Do not show this to anyone, it's a hook for notifications
 }

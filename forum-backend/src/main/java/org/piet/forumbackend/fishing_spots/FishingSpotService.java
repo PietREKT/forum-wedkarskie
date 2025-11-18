@@ -10,7 +10,7 @@ import org.locationtech.jts.geom.Geometry;
 import org.locationtech.jts.geom.GeometryFactory;
 import org.locationtech.jts.geom.Point;
 import org.locationtech.jts.util.GeometricShapeFactory;
-import org.piet.forumbackend.content.VerificationStatus;
+import org.piet.forumbackend.content.entities.enums.VerificationStatus;
 import org.piet.forumbackend.exceptions.BadRequestException;
 import org.piet.forumbackend.exceptions.UnauthorizedAccessException;
 import org.piet.forumbackend.fish.entities.Fish;

@@ -5,7 +5,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.locationtech.jts.geom.Point;
-import org.piet.forumbackend.content.VerificationStatus;
+import org.piet.forumbackend.content.entities.enums.VerificationStatus;
 import org.piet.forumbackend.fish.entities.Fish;
 import org.piet.forumbackend.users.entities.User;
 

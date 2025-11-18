@@ -16,8 +16,8 @@ public class UsersDtoMapper {
         );
     }
 
-    public static PostUserDto toPostUserDto(User user){
-        return new PostUserDto(
+    public static ContentUserDto toPostUserDto(User user){
+        return new ContentUserDto(
                 user.getUsername()
         );
     }
