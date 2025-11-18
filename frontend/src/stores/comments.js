@@ -8,68 +8,81 @@ export const useCommentsStore = defineStore('comments', () => {
 
     function _ensure(postId) {
         if (!byPost.value[postId]) {
-            byPost.value[postId] = { list: [], page: 0, loading: false, hasMore: true }
+            byPost.value[postId] = {
+                list: [],
+                page: 0,
+                loading: false,
+                hasMore: true,
+            }
         }
         return byPost.value[postId]
     }
 
     function normalize(c = {}) {
-        const att =
-            c.attachment ??
-            c.photo ??
-            c.photoUrl ??
-            c.image ??
-            c.imageUrl ??
-            c.file ??
-            c.fileUrl ??
-            null
-        return { ...c, attachment: att }
+        return c
     }
 
     async function fetchNext(postId) {
         const state = _ensure(postId)
         if (state.loading || !state.hasMore) return
+
         state.loading = true
         try {
             const resp = await apiClient.get(`/comments/${postId}`, {
-                params: { page: state.page, size: PAGE_SIZE },
+                params: { page: state.page },
             })
+
             const data = resp.data || {}
-            const listRaw = Array.isArray(data) ? data : (data.content || data.items || [])
+            const listRaw = Array.isArray(data)
+                ? data
+                : data.content || data.items || []
+
             const list = listRaw.map(normalize)
-            if (!list.length || data.last === true) state.hasMore = false
-            state.list = state.list.concat(list)
-            state.page += 1
+
+            if (!list.length) {
+                state.hasMore = false
+            } else {
+                state.list = state.list.concat(list)
+                state.page += 1
+            }
         } finally {
             state.loading = false
         }
     }
 
-    async function add(postId, { content, file }) {
+    async function add(postId, { content, file, parentCommentId = null }) {
         const fd = new FormData()
         fd.append('content', content || '')
         fd.append('postId', postId)
 
+        if (parentCommentId != null) {
+            fd.append('commentId', parentCommentId)
+        }
+
         if (file) {
             fd.append('attachment', file)
-            fd.append('photo', file)
-            fd.append('image', file)
-            fd.append('file', file)
         }
 
         const resp = await apiClient.post('/comments', fd, {
             headers: { 'Content-Type': 'multipart/form-data' },
         })
+
         const created = normalize(resp.data)
         _ensure(postId).list.unshift(created)
         return created
     }
 
     async function edit({ id, content, postId }) {
-        const resp = await apiClient.patch('/comments', { id, content })
+        const resp = await apiClient.patch('/comments', {
+            id,
+            content,
+        })
+
         const list = _ensure(postId).list
         const i = list.findIndex(c => c.id === id)
-        if (i !== -1) list[i] = normalize(resp.data)
+        if (i !== -1) {
+            list[i] = normalize(resp.data)
+        }
         return resp.data
     }
 
@@ -79,9 +92,19 @@ export const useCommentsStore = defineStore('comments', () => {
         state.list = state.list.filter(c => c.id !== id)
     }
 
-    async function report({ commentId, reason = 'OTHER' }) {
-        await apiClient.post('/reports/comments/report', { commentId, reason })
+    async function report({ commentId, reason = 'SPAM' }) {
+        await apiClient.post('/reports/comments/report', {
+            reason,
+            commentId,
+        })
     }
 
-    return { byPost, fetchNext, add, edit, remove, report }
+    return {
+        byPost,
+        fetchNext,
+        add,
+        edit,
+        remove,
+        report,
+    }
 })

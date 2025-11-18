@@ -69,7 +69,7 @@
                bg-zinc-900 text-white hover:bg-zinc-800
                dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-100
                disabled:opacity-50 disabled:cursor-not-allowed"
-          :disabled="submitting || !content"
+          :disabled="submitting || !content.trim()"
           type="button"
           @click="onSubmit"
       >
@@ -81,7 +81,6 @@
 
 <script setup>
 import { ref, computed } from 'vue'
-//jeśli plik jest w src/components → '../stores/posts' jeśli w src/views → '../../stores/posts'
 import { usePostsStore } from '../../stores/posts'
 
 const emit = defineEmits(['done', 'cancel'])
@@ -121,7 +120,7 @@ function setFiles(list) {
 }
 
 async function onSubmit() {
-  if (!content.value) return
+  if (!content.value.trim()) return
   submitting.value = true
   try {
     await store.createPost({ content: content.value, files: files.value })
