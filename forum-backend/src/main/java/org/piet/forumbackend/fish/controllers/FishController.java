@@ -35,7 +35,7 @@ public class FishController {
         Pageable pageable = PageRequest.of(paginationDto.getPage(), paginationDto.getSize());
         if (fishDto.getId() != null) {
             return ResponseEntity.ok(List.of(
-                    FishDtoMapper.toFishDto(fishService.getFishById(fishDto.getId()))
+                    FishDto.create(fishService.getFishById(fishDto.getId()))
             ));
         } else if (fishDto.getName() != null) {
             return ResponseEntity.ok(List.of(
@@ -45,20 +45,20 @@ public class FishController {
             return ResponseEntity.ok(
                     fishService.getFishByWaterType(fishDto.getWaterType(), pageable)
                             .stream()
-                            .map(FishDtoMapper::toFishDto)
+                            .map(FishDto::create)
                             .toList()
             );
         } else if (fishDto.getMethods() != null && !fishDto.getMethods().isEmpty()) {
             return ResponseEntity.ok(
                     fishService.getFishByFishingMethods(fishDto.getMethods(), pageable)
                             .stream()
-                            .map(FishDtoMapper::toFishDto)
+                            .map(FishDto::create)
                             .toList()
             );
         } else {
             return ResponseEntity.ok(fishService.getFish(pageable)
                     .stream()
-                    .map(FishDtoMapper::toFishDto)
+                    .map(FishDto::create)
                     .toList()
             );
         }

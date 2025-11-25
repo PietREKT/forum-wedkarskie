@@ -21,4 +21,17 @@ public class FishDto implements Serializable {
     boolean isPredatory;
     List<FishingMethod> methods;
     WaterType waterType;
+
+    public static FishDto create(Fish fish){
+        return new FishDto(
+                fish.getName(),
+                fish.getAvgLength(),
+                fish.getAvgMass(),
+                fish.getPhotoUrl(),
+                fish.getDescription(),
+                fish.isPredatory(),
+                fish.getMethods(),
+                fish.getWaterType()
+        );
+    }
 }

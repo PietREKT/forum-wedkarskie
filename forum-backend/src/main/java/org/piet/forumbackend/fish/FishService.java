@@ -23,6 +23,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 @Log4j2
@@ -36,12 +37,20 @@ public class FishService {
     @Value("${forum.files.fish.defaultPhoto}")
     String defaultFishPhotoPath;
 
+    public boolean fishExistsByName(String name){
+        return fishRepository.existsByName(name);
+    }
+
     public Fish getFishByName(String name) throws FishNotFoundException {
         return fishRepository.findByName(name.trim().toLowerCase()).orElseThrow(() -> new FishNotFoundException(
                 messageSource.getMessage("error.fish.name_not_found",
                         new Object[]{name},
                         LocaleContextHolder.getLocale())
         ));
+    }
+
+    public Optional<Fish> getFishByIdOptional(Long id){
+        return fishRepository.findById(id);
     }
 
     public Fish getFishById(Long id) throws FishNotFoundException {
@@ -131,4 +140,5 @@ public class FishService {
     public List<WaterType> getWaterTypes(){
         return Arrays.stream(WaterType.values()).toList();
     }
+
 }

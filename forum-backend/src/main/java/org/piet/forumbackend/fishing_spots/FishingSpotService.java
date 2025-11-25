@@ -5,10 +5,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
-import org.locationtech.jts.geom.Coordinate;
-import org.locationtech.jts.geom.Geometry;
-import org.locationtech.jts.geom.GeometryFactory;
-import org.locationtech.jts.geom.Point;
+import org.locationtech.jts.geom.*;
 import org.locationtech.jts.util.GeometricShapeFactory;
 import org.piet.forumbackend.content.entities.enums.VerificationStatus;
 import org.piet.forumbackend.exceptions.BadRequestException;
@@ -34,6 +31,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
@@ -86,6 +84,12 @@ public class FishingSpotService {
 
     private Point getPointByAddress(AddressDto address) throws JsonProcessingException, LocationNotFoundException {
         var geoFactory = new GeometryFactory();
+
+        String tag = LocaleContextHolder.getLocale().toLanguageTag();
+
+        if (tag.equalsIgnoreCase("en")) tag = "en-US";
+        if (tag.equalsIgnoreCase("pl")) tag = "pl-PL";
+
         URI uri = UriComponentsBuilder
                 .fromUriString("https://api.tomtom.com/search/2/structuredGeocode.json")
                 .queryParam("key", TOM_TOM_API_KEY)
@@ -93,7 +97,7 @@ public class FishingSpotService {
                 .queryParam("streetNumber", address.getPropertyNo())
                 .queryParam("streetName", address.getStreet())
                 .queryParam("municipality", address.getMunicipality())
-                .queryParam("language", LocaleContextHolder.getLocale().toLanguageTag())
+                .queryParam("language", tag)
                 .build()
                 .toUri();
         RestTemplate restTemplate = new RestTemplate();
@@ -136,8 +140,12 @@ public class FishingSpotService {
     }
 
     //name desc type managers fish
-    public FishingSpot createFishingSpot(String name, String desc, FishingSpot.FISHING_SPOT_TYPE type, List<User> managers, List<Fish> fish, LocationDto location, User sentBy, MultipartFile statue) throws LocationDtoIncompleteException, IOException, LocationNotFoundException, UnauthorizedAccessException, BadRequestException {
+    public FishingSpot createFishingSpot(String name, String desc, FishingSpot.FISHING_SPOT_TYPE type, List<User> managers, List<Fish> fish, LocationDto location, User sentBy) throws LocationDtoIncompleteException, IOException, LocationNotFoundException, UnauthorizedAccessException, BadRequestException {
         FishingSpot spot = new FishingSpot();
+        if (managers == null){
+            managers = new ArrayList<>();
+        }
+        managers.add(sentBy);
 
         if (type == FishingSpot.FISHING_SPOT_TYPE.PUBLIC && !sentBy.hasPermLevelAtLeast(Role.PZW)) {
             log.warn("User with ID: {} tried to access forbidden resource: \"createFishingSpot\" - PUBLIC type", sentBy.getId());
@@ -179,9 +187,9 @@ public class FishingSpotService {
         spot.setDescription(desc);
         spot.setManagers(managers);
 
-        if (statue != null && !statue.isEmpty()) {
-            return updateStatue(spot, statue, sentBy);
-        }
+//        if (statue != null && !statue.isEmpty()) {
+//            return updateStatue(spot, statue, sentBy);
+//        }
         return fishingSpotRepository.save(spot);
     }
 
@@ -245,7 +253,7 @@ public class FishingSpotService {
     }
 
     private Geometry createRadius(Point point, Integer radius){
-        GeometricShapeFactory shapeFactory = new GeometricShapeFactory();
+        GeometricShapeFactory shapeFactory = new GeometricShapeFactory(new GeometryFactory(new PrecisionModel(), 4326));
         shapeFactory.setNumPoints(32);
         shapeFactory.setCentre(point.getCoordinate());
         shapeFactory.setSize(radius*2);
@@ -253,8 +261,11 @@ public class FishingSpotService {
     }
 
     public List<FishingSpot> getFishingSpotsInRadius(Double x, Double y, Integer radiusKm, Pageable pageable){
-        Point centre = new GeometryFactory().createPoint(new Coordinate(x, y));
+        Point centre = new GeometryFactory(new PrecisionModel(), 4326).createPoint(new Coordinate(x, y));
         Geometry radius = createRadius(centre, radiusKm);
-        return fishingSpotRepository.findByLocation(radius, pageable).getContent();
+        return fishingSpotRepository.findByLocation(radius, pageable).getContent()
+                .stream()
+                .sorted(Comparator.comparing(spot -> spot.getLocation().distance(centre)))
+                .toList();
     }
 }

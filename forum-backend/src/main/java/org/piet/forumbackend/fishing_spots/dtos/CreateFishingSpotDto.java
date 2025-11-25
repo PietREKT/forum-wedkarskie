@@ -18,4 +18,6 @@ public class CreateFishingSpotDto implements Serializable {
     FishingSpot.FISHING_SPOT_TYPE type;
     List<GetUserDto> managers;
     List<GetFishDto> fish;
+    LocationDto locationDto;
+//    MultipartFile statue;
 }

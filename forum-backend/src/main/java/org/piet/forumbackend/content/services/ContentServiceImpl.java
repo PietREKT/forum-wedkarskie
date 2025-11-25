@@ -233,10 +233,12 @@ public class ContentServiceImpl implements ContentService {
         File file = new File(contentFolder,
                 fileIndex + FileProperties.getFileExtension(photo.getOriginalFilename()));
         photo.transferTo(file);
+        log.info(file.getName());
+        String url = fileProperties.getContentFolderUploadsUrl() + contentFolder.getName() +
+                '/' +
+                file.getName();
         content.addAttachmentUrl(
-                fileProperties.getContentFolderUploadsUrl() +
-                        '/' + contentFolder.getName() +
-                        '/' + file.getName());
+                url);
         contentRepository.save(content);
     }
 

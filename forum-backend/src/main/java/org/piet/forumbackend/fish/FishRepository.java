@@ -23,4 +23,15 @@ public interface FishRepository extends JpaRepository<Fish, Long> {
             select distinct f from Fish f join f.methods m where m in :methods
             """)
     Page<Fish> findByMethods(@Param("methods") List<FishingMethod> methods, Pageable pageable);
+
+    boolean existsByName(String name);
+
+    @Query("""
+            select f from Fish f
+                        where lower(f.name) like lower(concat('%', :q, '%'))
+                                    order by case when
+                                                lower(f.name) like lower(concat(:q, '%')) then 0 else 1 end,
+                                    length(f.name)
+            """)
+    List<Fish> findNamesForAutocomplete(@Param("q") String query, Pageable pageable);
 }

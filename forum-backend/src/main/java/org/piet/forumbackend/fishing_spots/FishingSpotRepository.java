@@ -15,7 +15,7 @@ public interface FishingSpotRepository extends JpaRepository<FishingSpot, Long> 
     Optional<FishingSpot> findByNameIgnoreCase(String name);
 
     @Query("""
-            select fs from FishingSpot fs where within(fs.location, :radius) = true
+                select fs from FishingSpot fs where contains(:radius, fs.location) = true
             """)
     Page<FishingSpot> findByLocation(@Param("radius") Geometry radius, Pageable pageable);
 }

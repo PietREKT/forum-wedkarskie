@@ -15,9 +15,11 @@ import org.piet.forumbackend.fish.dtos.CreateFishDto;
 import org.piet.forumbackend.fish.dtos.FishDto;
 import org.piet.forumbackend.fish.dtos.FishDtoMapper;
 import org.piet.forumbackend.fish.entities.Fish;
+import org.piet.forumbackend.pagination.PaginationDto;
 import org.piet.forumbackend.users.UserService;
 import org.piet.forumbackend.users.entities.User;
 import org.piet.forumbackend.users.exceptions.UserNotLoggedInException;
+import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
@@ -37,12 +39,11 @@ public class AdminController {
 
     @GetMapping("/reports/summary")
     ResponseEntity<List<HotReportedContentDto>> getReportsSummary(
-            @RequestParam(name = "page", defaultValue = "0") int page,
-            @RequestParam(name = "count", required = false, defaultValue = "30") int pageSize,
+            @ParameterObject PaginationDto paginationDto,
             @RequestParam(name = "amount", required = false, defaultValue = "1") Long amount,
             @RequestParam(name = "unit", required = false, defaultValue = "WEEKS") TimeUnitInput unit
             ) {
-        var dtos = contentReportService.getRecentlyReportedContent(amount, unit.map(), page, pageSize);
+        var dtos = contentReportService.getRecentlyReportedContent(amount, unit.map(), paginationDto.getPage(), paginationDto.getSize());
 
         return ResponseEntity.ok(dtos);
     }
