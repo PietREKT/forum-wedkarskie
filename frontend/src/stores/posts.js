@@ -157,7 +157,7 @@ export const usePostsStore = defineStore('posts', () => {
 
     async function reportPost({ postId, reason = 'SPAM' }) {
         await apiClient.post('/reports/posts/report', {
-            contentId: postId,
+            postId,
             reason,
         })
     }
