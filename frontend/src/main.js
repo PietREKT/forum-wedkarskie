@@ -6,7 +6,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import { routes } from './resources/routes'
 import { createI18n } from "vue-i18n";
 import { defaultLocale, languages } from './resources/locales'
-
+import 'leaflet/dist/leaflet.css'
 
 const pinia = createPinia();
 const messages = Object.assign(languages)
