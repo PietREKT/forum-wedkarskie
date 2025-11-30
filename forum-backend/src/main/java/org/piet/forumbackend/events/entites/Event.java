@@ -1,7 +1,7 @@
 package org.piet.forumbackend.events.entites;
 
 import jakarta.persistence.*;
-import org.piet.forumbackend.fishing_spots.FishingSpot;
+import org.piet.forumbackend.fishing_spots.entities.FishingSpot;
 
 import java.time.Instant;
 

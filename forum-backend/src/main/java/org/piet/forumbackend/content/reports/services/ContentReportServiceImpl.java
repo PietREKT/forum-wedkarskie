@@ -8,7 +8,7 @@ import org.piet.forumbackend.content.reports.entities.ContentReport;
 import org.piet.forumbackend.content.reports.entities.enums.ReportReason;
 import org.piet.forumbackend.content.reports.repositories.ContentReportRepository;
 import org.piet.forumbackend.content.repositories.ContentRepository;
-import org.piet.forumbackend.users.entities.User;
+import org.piet.forumbackend.users.core.entities.User;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;

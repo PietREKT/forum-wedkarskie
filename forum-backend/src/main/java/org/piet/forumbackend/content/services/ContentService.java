@@ -5,17 +5,20 @@ import org.piet.forumbackend.content.dtos.ParentContentDto;
 import org.piet.forumbackend.content.entities.Content;
 import org.piet.forumbackend.content.entities.enums.ContentType;
 import org.piet.forumbackend.content.entities.enums.VoteType;
-import org.piet.forumbackend.exceptions.BadRequestException;
-import org.piet.forumbackend.exceptions.NotFoundException;
-import org.piet.forumbackend.exceptions.UnauthorizedAccessException;
-import org.piet.forumbackend.pagination.PageDto;
-import org.piet.forumbackend.users.entities.User;
+import org.piet.forumbackend.globals.exceptions.BadRequestException;
+import org.piet.forumbackend.globals.exceptions.NotFoundException;
+import org.piet.forumbackend.globals.exceptions.UnauthorizedAccessException;
+import org.piet.forumbackend.globals.pagination.PageDto;
+import org.piet.forumbackend.globals.pagination.PaginationDto;
+import org.piet.forumbackend.users.core.entities.User;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.nio.file.FileSystemException;
 import java.util.List;
+
 
 public interface ContentService {
     public Content getContentById(Long id) throws NotFoundException;
@@ -34,7 +37,10 @@ public interface ContentService {
 
     public PageDto<ContentDto> getRecentPosts(Integer pageNo, Integer pageSize);
 
-    public void deleteContent(Long id, User currentUser) throws UnauthorizedAccessException;
+    default void deleteContent(Long id, User currentUser) throws UnauthorizedAccessException, NotFoundException {
+        Content c = getContentById(id);
+        deleteContent(c, currentUser);
+    }
 
     public void deleteContent(Content content, User currentUser) throws UnauthorizedAccessException;
 
@@ -44,5 +50,7 @@ public interface ContentService {
 
     public void deletePhotoFromContent(Content content, String filename, User user) throws FileSystemException, UnauthorizedAccessException;
 
-    public void deleteContentFolder(Content content) throws FileSystemException, UnauthorizedAccessException;
+    public void deleteContentFolder(Content content) throws UnauthorizedAccessException;
+
+    public Page<Content> getUserPosts(User user, PaginationDto pagination);
 }

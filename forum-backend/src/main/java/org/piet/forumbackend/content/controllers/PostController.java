@@ -11,14 +11,14 @@ import org.piet.forumbackend.content.entities.Content;
 import org.piet.forumbackend.content.entities.enums.ContentType;
 import org.piet.forumbackend.content.entities.enums.VoteType;
 import org.piet.forumbackend.content.services.ContentService;
-import org.piet.forumbackend.exceptions.BadRequestException;
-import org.piet.forumbackend.exceptions.NotFoundException;
-import org.piet.forumbackend.exceptions.UnauthorizedAccessException;
-import org.piet.forumbackend.pagination.PageDto;
-import org.piet.forumbackend.pagination.PaginationDto;
-import org.piet.forumbackend.users.UserService;
-import org.piet.forumbackend.users.entities.User;
-import org.piet.forumbackend.users.exceptions.UserNotLoggedInException;
+import org.piet.forumbackend.globals.exceptions.BadRequestException;
+import org.piet.forumbackend.globals.exceptions.NotFoundException;
+import org.piet.forumbackend.globals.exceptions.UnauthorizedAccessException;
+import org.piet.forumbackend.globals.pagination.PageDto;
+import org.piet.forumbackend.globals.pagination.PaginationDto;
+import org.piet.forumbackend.users.core.entities.User;
+import org.piet.forumbackend.users.core.exceptions.UserNotLoggedInException;
+import org.piet.forumbackend.users.core.services.UserService;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -26,6 +26,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.io.IOException;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("${forum.api.prefix}/posts")
@@ -92,5 +93,13 @@ public class PostController {
         var page = contentService.getRecentPosts(paginationDto.getPage(), paginationDto.getSize());
 
         return ResponseEntity.ok(page);
+    }
+
+    @GetMapping("/user/{userId}")
+    public ResponseEntity<PageDto<ContentDto>> getByAuthor(@PathVariable UUID userId , PaginationDto pagination) throws NotFoundException {
+        User user = userService.getUserById(userId);
+        var posts = contentService.getUserPosts(user, pagination).map(ContentDtoMapper::toContentDto);
+
+        return ResponseEntity.ok(PageDto.createDto(posts));
     }
 }
