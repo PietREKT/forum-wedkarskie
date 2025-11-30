@@ -5,7 +5,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.piet.forumbackend.content.entities.enums.ContentType;
-import org.piet.forumbackend.users.entities.User;
+import org.piet.forumbackend.users.core.entities.User;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -33,7 +33,15 @@ public class Content {
     ContentType contentType;
 
     @ManyToOne(targetEntity = Content.class)
+            @JoinColumn(name = "parent_id")
     Content parent;
+
+    @OneToMany(
+            mappedBy = "parent",
+            cascade = CascadeType.ALL,
+            orphanRemoval = true
+    )
+    private List<Content> children;
 
     @ElementCollection
     @CollectionTable(name = "content_photos", joinColumns = @JoinColumn(name = "content_id"))
@@ -49,7 +57,11 @@ public class Content {
     @Column(name = "edited_content", columnDefinition = "TEXT")
     Map<Instant, String> editHistory;
 
-    @OneToMany(mappedBy = "content")
+    @OneToMany(
+            mappedBy = "content",
+            cascade = CascadeType.ALL,
+            orphanRemoval = true
+    )
     List<ContentVote> votes = new ArrayList<>();
 
     @PrePersist
@@ -90,5 +102,15 @@ public class Content {
     public void removeAttachmentUrl(String attachmentUrl){
         if (this.attachedPhotos == null || !this.attachedPhotos.contains(attachmentUrl)) return;
         this.attachedPhotos.remove(attachmentUrl);
+    }
+
+    public void addChild(Content child){
+        children.add(child);
+        child.setParent(this);
+    }
+
+    public void removeChild(Content child){
+        children.remove(child);
+        child.setParent(null);
     }
 }

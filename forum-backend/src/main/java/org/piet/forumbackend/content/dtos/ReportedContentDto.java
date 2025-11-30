@@ -3,7 +3,7 @@ package org.piet.forumbackend.content.dtos;
 import lombok.Value;
 import org.piet.forumbackend.content.entities.Content;
 import org.piet.forumbackend.content.entities.enums.ContentType;
-import org.piet.forumbackend.users.dtos.ContentUserDto;
+import org.piet.forumbackend.users.core.dtos.ContentUserDto;
 
 import java.io.Serializable;
 import java.time.Instant;

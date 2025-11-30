@@ -6,7 +6,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.piet.forumbackend.content.entities.Content;
 import org.piet.forumbackend.content.reports.entities.enums.ReportReason;
-import org.piet.forumbackend.users.entities.User;
+import org.piet.forumbackend.users.core.entities.User;
 
 import java.time.Instant;
 

@@ -10,13 +10,13 @@ import org.piet.forumbackend.content.entities.Content;
 import org.piet.forumbackend.content.entities.enums.ContentType;
 import org.piet.forumbackend.content.entities.enums.VoteType;
 import org.piet.forumbackend.content.services.ContentService;
-import org.piet.forumbackend.exceptions.BadRequestException;
-import org.piet.forumbackend.exceptions.NotFoundException;
-import org.piet.forumbackend.exceptions.UnauthorizedAccessException;
-import org.piet.forumbackend.pagination.PageDto;
-import org.piet.forumbackend.users.UserService;
-import org.piet.forumbackend.users.entities.User;
-import org.piet.forumbackend.users.exceptions.UserNotLoggedInException;
+import org.piet.forumbackend.globals.exceptions.BadRequestException;
+import org.piet.forumbackend.globals.exceptions.NotFoundException;
+import org.piet.forumbackend.globals.exceptions.UnauthorizedAccessException;
+import org.piet.forumbackend.globals.pagination.PageDto;
+import org.piet.forumbackend.users.core.entities.User;
+import org.piet.forumbackend.users.core.exceptions.UserNotLoggedInException;
+import org.piet.forumbackend.users.core.services.UserServiceImpl;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -33,7 +33,7 @@ import java.io.IOException;
 @RequiredArgsConstructor
 @Tag(name = "Comments", description = "Endpoint for comments management")
 public class CommentController {
-    private final UserService userService;
+    private final UserServiceImpl userService;
     private final ContentService contentService;
 
 
@@ -70,7 +70,7 @@ public class CommentController {
     }
 
     @DeleteMapping("/{commentId}")
-    public ResponseEntity<?> deleteComment(@PathVariable Long commentId, Authentication auth) throws UserNotLoggedInException, UnauthorizedAccessException {
+    public ResponseEntity<?> deleteComment(@PathVariable Long commentId, Authentication auth) throws UserNotLoggedInException, UnauthorizedAccessException, NotFoundException {
         User u = userService.getUserFromAuth(auth);
         contentService.deleteContent(commentId, u);
         return ResponseEntity.ok().build();

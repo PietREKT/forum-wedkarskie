@@ -5,7 +5,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.piet.forumbackend.content.entities.enums.VoteType;
-import org.piet.forumbackend.users.entities.User;
+import org.piet.forumbackend.users.core.entities.User;
 
 import java.time.Instant;
 import java.time.ZoneId;

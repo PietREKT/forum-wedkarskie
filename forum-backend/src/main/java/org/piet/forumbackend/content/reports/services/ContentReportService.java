@@ -5,7 +5,7 @@ import org.piet.forumbackend.content.reports.dtos.ContentReportDto;
 import org.piet.forumbackend.content.reports.dtos.HotReportedContentDto;
 import org.piet.forumbackend.content.reports.entities.ContentReport;
 import org.piet.forumbackend.content.reports.entities.enums.ReportReason;
-import org.piet.forumbackend.users.entities.User;
+import org.piet.forumbackend.users.core.entities.User;
 import org.springframework.data.domain.Page;
 
 import java.time.temporal.TemporalUnit;

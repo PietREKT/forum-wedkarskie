@@ -11,14 +11,15 @@ import org.piet.forumbackend.content.entities.enums.ContentType;
 import org.piet.forumbackend.content.entities.enums.VoteType;
 import org.piet.forumbackend.content.repositories.ContentRepository;
 import org.piet.forumbackend.content.repositories.ContentVoteRepository;
-import org.piet.forumbackend.exceptions.BadRequestException;
-import org.piet.forumbackend.exceptions.NotFoundException;
-import org.piet.forumbackend.exceptions.UnauthorizedAccessException;
-import org.piet.forumbackend.pagination.PageDto;
-import org.piet.forumbackend.properties.FileProperties;
-import org.piet.forumbackend.users.entities.Role;
-import org.piet.forumbackend.users.entities.User;
-import org.piet.forumbackend.users.repos.UserRepository;
+import org.piet.forumbackend.globals.exceptions.BadRequestException;
+import org.piet.forumbackend.globals.exceptions.NotFoundException;
+import org.piet.forumbackend.globals.exceptions.UnauthorizedAccessException;
+import org.piet.forumbackend.globals.pagination.PageDto;
+import org.piet.forumbackend.globals.pagination.PaginationDto;
+import org.piet.forumbackend.globals.properties.FileProperties;
+import org.piet.forumbackend.users.core.entities.Role;
+import org.piet.forumbackend.users.core.entities.User;
+import org.piet.forumbackend.users.core.repos.UserRepository;
 import org.springframework.context.MessageSource;
 import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.data.domain.Page;
@@ -26,6 +27,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
+import org.springframework.util.FileSystemUtils;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
@@ -105,7 +107,7 @@ public class ContentServiceImpl implements ContentService {
                                 LocaleContextHolder.getLocale())
                 );
             }
-            c.setParent(parent);
+            parent.addChild(c);
         }
         c.setContentType(type);
         contentRepository.save(c);
@@ -124,7 +126,7 @@ public class ContentServiceImpl implements ContentService {
     @Override
     public Content editContent(User currentUser, Long contentId, String newContent, List<String> attachmentsToKeep, List<MultipartFile> photos) throws NotFoundException, BadRequestException, UnauthorizedAccessException, IOException {
         Content c = getContentById(contentId);
-        if (!c.getAuthor().equals(currentUser)) {
+        if (!c.getAuthor().equalsUser(currentUser)) {
             throw new UnauthorizedAccessException(
                     messageSource.getMessage("errors.content.no_perms_for_edit",
                             null,
@@ -135,6 +137,7 @@ public class ContentServiceImpl implements ContentService {
         c.getAttachedPhotos()
                 .stream()
                 .filter(url -> !attachmentsToKeep.contains(url))
+                .toList()
                 .forEach(c::removeAttachmentUrl);
         if (!newContent.equals(c.getContent())) {
             updateContentEditHistory(c, newContent);
@@ -142,7 +145,7 @@ public class ContentServiceImpl implements ContentService {
         }
         contentRepository.save(c);
 
-        for (var photo : photos) {
+        for (var photo : (photos != null ? photos : new ArrayList<MultipartFile>())) {
             savePhotoToContent(c, photo, currentUser);
         }
         return c;
@@ -159,12 +162,12 @@ public class ContentServiceImpl implements ContentService {
         Page<Content> contentPage = contentRepository.findByParent(parent, pageable);
         if (currentUser != null) {
             return PageDto.createDto(contentPage.map(c -> ContentDtoMapper.toContentDto(c,
-                    c.getVotes().stream()
-                            .filter(v -> v.getUser().equals(currentUser))
-                            .findFirst()
-                            .map(ContentVote::getVote)
-                            .orElse(VoteType.NO_VOTE)
-            )
+                            c.getVotes().stream()
+                                    .filter(v -> v.getUser().equalsUser(currentUser))
+                                    .findFirst()
+                                    .map(ContentVote::getVote)
+                                    .orElse(VoteType.NO_VOTE)
+                    )
             ));
         }
         return PageDto.createDto(contentPage.map(ContentDtoMapper::toContentDto));
@@ -178,19 +181,8 @@ public class ContentServiceImpl implements ContentService {
     }
 
     @Override
-    public void deleteContent(Long id, User currentUser) throws UnauthorizedAccessException {
-        try {
-            Content c = getContentById(id);
-            deleteContent(c, currentUser);
-        } catch (NotFoundException e) {
-            log.info("User with id: {} tried to delete content with id: {} but it wasn't found in database.",
-                    currentUser.getId(), id);
-        }
-    }
-
-    @Override
     public void deleteContent(Content content, User currentUser) throws UnauthorizedAccessException {
-        if (!(content.getAuthor().equals(currentUser) || currentUser.hasPermLevelAtLeast(Role.MOD))) {
+        if (!(content.getAuthor().equalsUser(currentUser) || currentUser.hasPermLevelAtLeast(Role.MOD))) {
             throw new UnauthorizedAccessException(
                     messageSource.getMessage("error.content.no_perms_for_deletion",
                             null,
@@ -203,26 +195,44 @@ public class ContentServiceImpl implements ContentService {
 
     @Override
     public void vote(Content content, User user, VoteType vote) {
-        if (content.getVotes().stream().anyMatch(c -> c.getUser().equals(user))) {
-            content.getVotes()
-                    .stream()
-                    .takeWhile(c -> c.getUser().equals(user))
-                    .forEach(c -> {
-                        log.info("Removed content vote: {}", c.toLogString());
-                    });
-            return;
+
+        var existingOpt = content.getVotes()
+                .stream()
+                .filter(v -> v.getUser().equalsUser(user))
+                .findFirst();
+
+        if (existingOpt.isPresent()) {
+            ContentVote existing = existingOpt.get();
+            if (existing.getVote() == vote) {
+                log.info("Removing content vote: {} under content with id: {}. Voting user's id: {}",
+                        existing.toLogString(),
+                        content.getId(),
+                        user.getId()
+                );
+                content.getVotes().remove(existing);
+            } else {
+                log.info("Changed content vote under content with id: {} from type: {} to :{}. Voting user's id: {}",
+                        content.getId(),
+                        existing.getVote(),
+                        vote,
+                        user.getId()
+                );
+                existing.setVote(vote);
+            }
+        } else {
+            ContentVote contentVote = new ContentVote();
+            contentVote.setVote(vote);
+            contentVote.setUser(user);
+            contentVote.setContent(content);
+            content.getVotes().add(contentVote);
         }
-        ContentVote contentVote = new ContentVote();
-        contentVote.setVote(vote);
-        contentVote.setUser(user);
-        contentVote.setContent(content);
-        contentVoteRepository.save(contentVote);
+        contentRepository.save(content);
     }
 
     @Override
     public void savePhotoToContent(Content content, MultipartFile photo, User user) throws IOException, UnauthorizedAccessException {
         File contentFolder = getContentFolder(content);
-        if (!content.getAuthor().equals(user)) {
+        if (!content.getAuthor().equalsUser(user)) {
             throw new UnauthorizedAccessException(
                     messageSource.getMessage("error.users.unauthorized_access",
                             null,
@@ -246,7 +256,7 @@ public class ContentServiceImpl implements ContentService {
     public void deletePhotoFromContent(Content content, String filename, User user) throws FileSystemException, UnauthorizedAccessException {
         File contentFolder = getContentFolder(content);
 
-        if (!content.getAuthor().equals(user)) {
+        if (!content.getAuthor().equalsUser(user)) {
             throw new UnauthorizedAccessException(
                     messageSource.getMessage("error.users.unauthorized_access",
                             null,
@@ -266,7 +276,23 @@ public class ContentServiceImpl implements ContentService {
     }
 
     @Override
-    public void deleteContentFolder(Content content) throws FileSystemException {
-        getContentFolder(content).delete();
+    public void deleteContentFolder(Content content) {
+        try {
+            File folder = getContentFolder(content);
+            if (folder.exists()) {
+                FileSystemUtils.deleteRecursively(folder);
+            }
+        } catch (FileSystemException e) {
+            log.warn("Failed to delete content folder for: {}", content.toLogString(), e);
+        }
+    }
+
+    @Override
+    public Page<Content> getUserPosts(User user, PaginationDto pagination) {
+        return contentRepository.findByContentTypeAndAuthor(ContentType.POST,
+                user,
+                pagination.toPageable(Sort.by(Sort.Direction.DESC, "createdAt"))
+        );
+
     }
 }
