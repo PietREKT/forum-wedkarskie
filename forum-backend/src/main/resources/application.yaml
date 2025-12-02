@@ -53,6 +53,7 @@ forum:
         default-user: default-user
         fish: fish
         spots: spots
+        content: content
     fish:
       defaultPhoto: fish.jpg
   constants:
@@ -64,4 +65,4 @@ forum:
   api:
     prefix: /api
     tomtom_key: ${TOMTOM_API_KEY}
-    tomtom_minimum_precision: 80
+    tomtom_minimum_precision: 0.8

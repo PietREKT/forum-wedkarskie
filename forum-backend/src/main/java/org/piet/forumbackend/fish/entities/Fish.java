@@ -4,6 +4,8 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.piet.forumbackend.fish.entities.enums.FishingMethod;
+import org.piet.forumbackend.fish.entities.enums.WaterType;
 
 import java.util.List;
 

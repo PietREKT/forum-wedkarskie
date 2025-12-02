@@ -15,4 +15,8 @@ public class FishDtoMapper {
                 fish.getWaterType()
         );
     }
+
+    public static FishListDto toFishListDto(Fish fish){
+        return FishListDto.create(fish);
+    }
 }

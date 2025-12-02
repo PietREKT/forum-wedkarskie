@@ -2,8 +2,8 @@ package org.piet.forumbackend.fish.dtos;
 
 import lombok.Value;
 import org.piet.forumbackend.fish.entities.Fish;
-import org.piet.forumbackend.fish.entities.FishingMethod;
-import org.piet.forumbackend.fish.entities.WaterType;
+import org.piet.forumbackend.fish.entities.enums.FishingMethod;
+import org.piet.forumbackend.fish.entities.enums.WaterType;
 
 import java.io.Serializable;
 import java.util.List;
