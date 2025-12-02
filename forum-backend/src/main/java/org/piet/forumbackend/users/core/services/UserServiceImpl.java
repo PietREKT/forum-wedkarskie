@@ -171,4 +171,13 @@ public class UserServiceImpl implements UserService {
         return userRepository.findByMutedUntilAfter(Instant.now(), pageable)
                 .map(UsersDtoMapper::toListUserDto);
     }
+
+    @Override
+    public User getCurrentUserOrNull() {
+        try {
+            return getCurrentUser();
+        } catch (UserNotLoggedInException e){
+            return null;
+        }
+    }
 }

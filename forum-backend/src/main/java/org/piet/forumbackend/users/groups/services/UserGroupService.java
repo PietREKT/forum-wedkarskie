@@ -6,10 +6,13 @@ import org.piet.forumbackend.users.groups.entities.UserGroup;
 import org.springframework.security.access.AccessDeniedException;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 public interface UserGroupService {
     UserGroup getById(UUID id) throws NotFoundException;
+
+    Optional<UserGroup> getByIdOpt(UUID id);
 
     void addMemberCandidate(UserGroup group, User memberCandidate, User currentUser) throws AccessDeniedException;
     default void addMemberCandidate(UUID groupId, User memberCandidate, User currentUser) throws NotFoundException, AccessDeniedException {

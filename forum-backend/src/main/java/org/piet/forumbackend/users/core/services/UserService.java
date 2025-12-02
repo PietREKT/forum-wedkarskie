@@ -49,4 +49,6 @@ public interface UserService {
     default Page<ListUserDto> getMutedUsers(PaginationDto pagination){
         return getMutedUsers(pagination.toPageable());
     }
+
+    User getCurrentUserOrNull();
 }

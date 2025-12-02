@@ -19,6 +19,7 @@ import org.piet.forumbackend.globals.properties.FileProperties;
 import org.piet.forumbackend.users.core.entities.Role;
 import org.piet.forumbackend.users.core.entities.User;
 import org.piet.forumbackend.users.core.services.UserService;
+import org.piet.forumbackend.users.groups.entities.UserGroup;
 import org.springframework.context.MessageSource;
 import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.data.domain.Page;
@@ -83,12 +84,15 @@ public class ContentServiceImpl implements ContentService {
     }
 
     @Override
-    public Content createContent(User author, String content, ContentType type, Content parent, List<MultipartFile> photos) throws BadRequestException, UnauthorizedAccessException, IOException {
+    public Content createContent(User author, String content, ContentType type, Content parent, UserGroup group, List<MultipartFile> photos) throws BadRequestException, UnauthorizedAccessException, IOException {
         userService.checkIsMuted(author);
 
         Content c = new Content();
         c.setAuthor(author);
         c.setContent(content);
+        if (group != null){
+            c.setGroup(group);
+        }
         if (photos == null)
             photos = new ArrayList<>();
         if (type == ContentType.COMMENT) {

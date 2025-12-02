@@ -19,6 +19,8 @@ import org.piet.forumbackend.globals.pagination.PaginationDto;
 import org.piet.forumbackend.users.core.entities.User;
 import org.piet.forumbackend.users.core.exceptions.UserNotLoggedInException;
 import org.piet.forumbackend.users.core.services.UserService;
+import org.piet.forumbackend.users.groups.entities.UserGroup;
+import org.piet.forumbackend.users.groups.services.UserGroupService;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -37,15 +39,19 @@ public class PostController {
 
     private final UserService userService;
     private final ContentService contentService;
+    private final UserGroupService userGroupService;
 
 
     @PostMapping(value = "/create", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ContentDto> createPost(
             Authentication auth,
-            @ModelAttribute CreateContentDto dto) throws UserNotLoggedInException, IOException, UnauthorizedAccessException, BadRequestException {
+            @ModelAttribute CreateContentDto dto) throws UserNotLoggedInException, IOException, UnauthorizedAccessException, BadRequestException, NotFoundException {
 
         User user = userService.getUserFromAuth(auth);
-        Content post = contentService.createContent(user, dto.getContent(), ContentType.POST, null, dto.getPhotos());
+        UserGroup userGroup = dto.getGroupId() != null ?
+                userGroupService.getById(dto.getGroupId())
+                : null;
+        Content post = contentService.createContent(user, dto.getContent(), ContentType.POST, null, userGroup, dto.getPhotos());
 
         log.info("User with id: {} added new post: {}", user.getId(), post.toLogString());
         return ResponseEntity.ok(ContentDtoMapper.toContentDto(post));
@@ -89,8 +95,8 @@ public class PostController {
     }
 
     @GetMapping("/recent")
-    public ResponseEntity<PageDto<ContentDto>> getRecentPosts(@ParameterObject PaginationDto paginationDto){
-        var page = contentService.getRecentPosts(, paginationDto.getPage(), , paginationDto.getSize());
+    public ResponseEntity<PageDto<ContentDto>> getRecentPosts(@ParameterObject PaginationDto paginationDto) throws UserNotLoggedInException {
+        var page = contentService.getRecentPosts(paginationDto, userService.getCurrentUserOrNull());
 
         return ResponseEntity.ok(page);
     }

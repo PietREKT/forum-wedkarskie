@@ -11,6 +11,7 @@ import org.piet.forumbackend.globals.exceptions.UnauthorizedAccessException;
 import org.piet.forumbackend.globals.pagination.PageDto;
 import org.piet.forumbackend.globals.pagination.PaginationDto;
 import org.piet.forumbackend.users.core.entities.User;
+import org.piet.forumbackend.users.groups.entities.UserGroup;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.web.multipart.MultipartFile;
@@ -28,7 +29,7 @@ public interface ContentService {
 
     public Content getContentByIdOrNull(ParentContentDto parent);
 
-    public Content createContent(User author, String content, ContentType type, Content parent, List<MultipartFile> photos) throws BadRequestException, UnauthorizedAccessException, IOException;
+    public Content createContent(User author, String content, ContentType type, Content parent, UserGroup group, List<MultipartFile> photos) throws BadRequestException, UnauthorizedAccessException, IOException;
 
     public Content editContent(User currentUser, Long contentId, String newContent, List<String> alreadyAttached, List<MultipartFile> photos) throws NotFoundException, BadRequestException, UnauthorizedAccessException, IOException;
 

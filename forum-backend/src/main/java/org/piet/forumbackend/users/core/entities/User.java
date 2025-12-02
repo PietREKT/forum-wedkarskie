@@ -99,6 +99,7 @@ public class User implements UserDetails {
     }
 
     public boolean equalsUser(User anotherUser) {
+        if (anotherUser == null) return false;
         return anotherUser.id.equals(this.id);
     }
 
