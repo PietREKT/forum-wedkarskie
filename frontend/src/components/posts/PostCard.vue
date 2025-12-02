@@ -1,7 +1,6 @@
 <template>
-  <article
-      class="rounded-xl shadow-sm p-4 relative border theme-border theme-card theme-text"
-  >
+  <article class="rounded-xl shadow-sm p-4 relative border theme-border theme-card theme-text">
+    <!-- Autor + akcje -->
     <div class="flex items-start justify-between gap-4">
       <header class="flex items-center gap-3">
         <RouterLink
@@ -19,119 +18,133 @@
               class="w-9 h-9 rounded-full grid place-items-center text-xs font-semibold
                    bg-[var(--color-border)] text-[var(--color-text)]/70"
           >
-            {{ initials }}
+            {{ authorInitials }}
           </div>
 
-          <div>
-            <h3
-                class="text-base md:text-lg font-semibold leading-tight group-hover:underline"
-            >
-              {{ authorUsername }}
-            </h3>
-            <p class="text-[11px] md:text-xs theme-muted">
-              {{ formatDate(post.postedAt) }}
-            </p>
+          <div class="flex flex-col">
+            <span class="text-sm font-medium group-hover:underline">
+              {{ authorUsername || 'Użytkownik' }}
+            </span>
+            <span class="text-xs theme-muted">
+              {{ createdAtFormatted }}
+            </span>
           </div>
         </RouterLink>
+
+        <!-- Obserwuj -->
+        <UserFollowButton
+            v-if="authorUsername"
+            class="ml-2"
+            :username="authorUsername"
+        />
       </header>
 
+      <!-- Menu Akcje -->
       <div class="relative">
         <button
-            class="px-2 py-1 border rounded-md text-xs theme-border hover:bg-[var(--color-border)]/20"
-            @click.stop="open = !open"
+            type="button"
+            class="px-2 py-1 text-xs border rounded-md theme-border hover:bg-zinc-50 dark:hover:bg-zinc-800"
+            @click.stop="toggleMenu"
         >
           Akcje
         </button>
+
         <div
-            v-if="open"
-            class="absolute right-0 mt-1 w-44 bg-[var(--color-bg)] shadow text-sm z-10 rounded-md border theme-border theme-card"
+            v-if="menuOpen"
+            class="absolute right-0 mt-1 w-40 rounded-md border theme-border bg-[var(--color-card)] shadow-lg z-10"
         >
           <button
-              class="w-full text-left px-3 py-2 hover:bg-[var(--color-border)]/20"
-              @click="startReport"
+              v-if="canEdit"
+              type="button"
+              class="block w-full text-left px-3 py-1.5 text-xs hover:bg-zinc-100 dark:hover:bg-zinc-800"
+              @click="onEdit"
+          >
+            Edytuj
+          </button>
+          <button
+              v-if="canDelete"
+              type="button"
+              class="block w-full text-left px-3 py-1.5 text-xs text-red-600 hover:bg-red-50 dark:hover:bg-red-900/40"
+              @click="onDelete"
+          >
+            Usuń
+          </button>
+          <button
+              v-if="canReport"
+              type="button"
+              class="block w-full text-left px-3 py-1.5 text-xs hover:bg-zinc-100 dark:hover:bg-zinc-800"
+              @click="onReport"
           >
             Zgłoś
           </button>
-          <template v-if="canEditOrDelete">
-            <button
-                class="w-full text-left px-3 py-2 hover:bg-[var(--color-border)]/20"
-                @click="onEdit"
-            >
-              Edytuj
-            </button>
-            <button
-                class="w-full text-left px-3 py-2 text-[var(--color-danger)] hover:bg-[var(--color-border)]/20"
-                @click="askDelete"
-            >
-              Usuń
-            </button>
-          </template>
         </div>
       </div>
     </div>
 
-    <!-- Formularz edycji treści posta widoczny po kliknięciu "Edytuj" -->
-    <div
-        v-if="editing"
-        class="mt-4 border rounded-md p-3 theme-border theme-card"
-    >
-      <h3 class="text-sm font-medium mb-2">Edycja posta</h3>
-      <textarea
-          v-model.trim="editContent"
-          class="w-full border rounded-md p-2 text-sm theme-border theme-card"
-          rows="3"
-          placeholder="Treść posta"
-      ></textarea>
-      <div class="mt-3 flex gap-2 justify-end">
-        <button
-            class="px-3 py-1.5 border rounded-md text-sm theme-border"
-            @click="cancelEdit"
-        >
-          Anuluj
-        </button>
-        <button
-            class="px-3 py-1.5 rounded-md text-sm bg-black text-white dark:bg-white dark:text-black"
-            @click="applyEdit"
-        >
-          Zapisz
-        </button>
+    <!-- Treść posta -->
+    <section class="mt-3">
+      <!-- tryb edycji -->
+      <div v-if="editing" class="space-y-2">
+        <textarea
+            v-model.trim="editContent"
+            class="w-full rounded-md border theme-border theme-card px-3 py-2 text-sm"
+            rows="3"
+        />
+        <div class="flex justify-end gap-2">
+          <button
+              type="button"
+              class="px-3 py-1.5 text-xs border rounded-md"
+              @click="cancelEdit"
+              :disabled="savingEdit"
+          >
+            Anuluj
+          </button>
+          <button
+              type="button"
+              class="px-3 py-1.5 text-xs rounded-md bg-cyan-600 text-white disabled:opacity-60"
+              @click="applyEdit"
+              :disabled="savingEdit || !canSaveEdit"
+          >
+            {{ savingEdit ? 'Zapisywanie...' : 'Zapisz' }}
+          </button>
+        </div>
+        <p v-if="localError" class="mt-1 text-xs text-red-600">
+          {{ localError }}
+        </p>
       </div>
-    </div>
 
-    <!-- TREŚĆ POSTA -->
-    <p class="mt-3 whitespace-pre-wrap leading-relaxed">
-      {{ post.content }}
-    </p>
+      <!-- normalny widok -->
+      <div v-else class="space-y-3">
+        <p class="text-sm whitespace-pre-wrap">
+          {{ post.content }}
+        </p>
 
-    <!-- Zdjęcia -->
-    <div
-        v-if="post.attachedPhotos && post.attachedPhotos.length"
-        class="mt-3 grid grid-cols-2 md:grid-cols-3 gap-2"
-    >
-      <img
-          v-for="(photo, idx) in post.attachedPhotos"
-          :key="idx"
-          :src="mediaUrl(photo)"
-          class="w-full h-32 md:h-40 object-cover rounded-lg border theme-border"
-          alt="Zdjęcie z posta"
-      />
-    </div>
+        <img
+            v-if="firstPhoto"
+            :src="firstPhoto"
+            alt="Załączone zdjęcie"
+            class="w-full max-h-80 h-auto object-cover rounded-lg border theme-border"
+        />
+      </div>
+    </section>
 
     <!-- Głosowanie -->
-    <footer class="mt-4 flex flex-wrap items-center gap-2 border-t theme-border pt-3">
+    <footer class="mt-4 flex items-center gap-2">
       <button
-          class="px-2 py-1 rounded-md text-xs border theme-border hover:bg-[var(--color-primary)]/10"
-          :class="userVote === 1 ? 'bg-[var(--color-primary)] text-white border-transparent' : ''"
-          :disabled="isVoting"
-          @click="vote(1)"
+          type="button"
+          class="px-3 py-1.5 text-xs md:text-sm rounded-md border theme-border flex items-center gap-1"
+          :class="post.viewerVote === 1 ? 'bg-emerald-600 text-white' : ''"
+          :disabled="voting"
+          @click="voteUp"
       >
         Podoba mi się
       </button>
       <button
-          class="px-2 py-1 rounded-md text-xs border theme-border hover:bg-[var(--color-danger)]/10"
-          :class="userVote === -1 ? 'bg-[var(--color-danger)] text-white border-transparent' : ''"
-          :disabled="isVoting"
-          @click="vote(-1)"
+          type="button"
+          class="px-3 py-1.5 text-xs md:text-sm rounded-md border theme-border flex items-center gap-1"
+          :class="post.viewerVote === -1 ? 'bg-red-600 text-white' : ''"
+          :disabled="voting"
+          @click="voteDown"
       >
         Nie podoba mi się
       </button>
@@ -142,256 +155,167 @@
 
     <!-- Komentarze -->
     <section class="mt-4">
-      <CommentsSection :post-id="getId(post)" />
+      <CommentsSection :post-id="postId" />
     </section>
-
-    <!-- Toast -->
-    <div
-        v-if="statusMessage"
-        class="mt-3 text-xs border rounded-md px-3 py-2"
-        :class="statusClass"
-    >
-      {{ statusMessage }}
-    </div>
-
-    <!-- zgłoszenia posta -->
-    <div
-        v-if="reportOpen"
-        class="fixed inset-0 z-40 flex items-center justify-center bg-black/60"
-    >
-      <div class="w-full max-w-sm rounded-xl border theme-border theme-card p-4">
-        <h3 class="text-sm font-semibold mb-2">Zgłoś post</h3>
-        <p class="text-xs theme-muted mb-3">
-          Wybierz powód zgłoszenia. Zgłoszenie zostanie przekazane moderatorowi.
-        </p>
-        <div class="flex flex-col gap-2">
-          <button
-              v-for="r in REPORT_REASONS"
-              :key="r.code"
-              class="px-3 py-1.5 rounded-md border text-xs text-left theme-border hover:bg-[var(--color-border)]/20 disabled:opacity-50"
-              :disabled="reportSubmitting"
-              @click="sendReport(r.code)"
-          >
-            {{ r.label }}
-          </button>
-        </div>
-        <div class="mt-3 flex justify-end gap-2">
-          <button
-              class="px-3 py-1.5 rounded-md border text-xs theme-border"
-              :disabled="reportSubmitting"
-              @click="reportOpen = false"
-          >
-            Anuluj
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- usuwania posta -->
-    <div
-        v-if="deleteConfirmOpen"
-        class="fixed inset-0 z-40 flex items-center justify-center bg-black/60"
-    >
-      <div class="w-full max-w-sm rounded-xl border theme-border theme-card p-4">
-        <h3 class="text-sm font-semibold mb-2">Usunąć post?</h3>
-        <p class="text-xs theme-muted mb-4">
-          Tej operacji nie można cofnąć.
-        </p>
-        <div class="flex justify-end gap-2">
-          <button
-              class="px-3 py-1.5 rounded-md border text-xs theme-border"
-              @click="cancelDelete"
-          >
-            Anuluj
-          </button>
-          <button
-              class="px-3 py-1.5 rounded-md text-xs bg-[var(--color-danger)] text-white"
-              @click="confirmDelete"
-          >
-            Usuń
-          </button>
-        </div>
-      </div>
-    </div>
   </article>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
+import { computed, ref, onMounted, onBeforeUnmount } from 'vue'
 import { RouterLink } from 'vue-router'
 import { usePostsStore } from '../../stores/posts'
-import { mediaUrl } from '../../utils/media'
+import { useAuthStore } from '../../stores/auth'
+import UserFollowButton from '../users/UserFollowButton.vue'
 import CommentsSection from './CommentsSection.vue'
+import { mediaUrl } from '../../utils/media'
 
 const props = defineProps({
-  post: Object,
-  currentUser: Object,
+  post: { type: Object, required: true },
 })
 
-const store = usePostsStore()
-const open = ref(false)
+const posts = usePostsStore()
+const auth = useAuthStore()
 
-const authorUsername = computed(
-    () => props.post?.author?.username || 'użytkownik',
-)
-const avatarSrc = computed(() => {
-  const avatar = props.post?.author?.avatar || props.post?.author?.photo || ''
-  return avatar ? mediaUrl(avatar) : ''
-})
-const initials = computed(() => authorUsername.value.slice(0, 2).toUpperCase())
-
-const canEditOrDelete = computed(() => {
-  if (!props.currentUser) return false
-  const isAdmin = props.currentUser.role === 'ADMIN'
-  const sameAuthor =
-      props.currentUser.username === (props.post?.author?.username || '')
-  return isAdmin || sameAuthor
-})
-
-const userVote = computed(() => props.post?.viewerVote ?? 0)
-const isVoting = computed(() => store.voting.has(getId(props.post)))
-
-function formatDate(d) {
-  return d ? new Date(d).toLocaleString('pl-PL') : ''
-}
-
-function getId(p) {
-  return store.getId(p)
-}
-
-async function vote(delta) {
-  const id = getId(props.post)
-  if (!id) return
-  if (delta > 0) await store.voteUp(id)
-  else await store.voteDown(id)
-  open.value = false
-}
-
-/* Logika edycji posta: otwieranie formularza, anulowanie, zapisywanie */
-
+const menuOpen = ref(false)
 const editing = ref(false)
 const editContent = ref('')
+const savingEdit = ref(false)
+const localError = ref('')
+
+const postId = computed(() => posts.getId(props.post))
+
+const authorUsername = computed(() => props.post?.author?.username || '')
+const avatarSrc = computed(() => {
+  const url = props.post?.author?.avatarUrl || props.post?.author?.avatar
+  return url ? mediaUrl(url) : ''
+})
+const authorInitials = computed(() => {
+  const u = authorUsername.value
+  if (!u) return '??'
+  return u.slice(0, 2).toUpperCase()
+})
+
+const createdAtFormatted = computed(() => {
+  const d = props.post?.createdAt
+  if (!d) return ''
+  try {
+    return new Date(d).toLocaleString('pl-PL')
+  } catch {
+    return String(d)
+  }
+})
+
+const firstPhoto = computed(() => {
+  const arr = props.post?.attachedPhotos || props.post?.photos || []
+  if (!arr || !arr.length) return ''
+  return mediaUrl(arr[0])
+})
+
+const canSaveEdit = computed(() => editContent.value.trim().length > 0)
+
+const currentUsername = computed(() => auth.user?.username || '')
+
+const canEdit = computed(() => {
+  return (
+      currentUsername.value &&
+      authorUsername.value &&
+      currentUsername.value === authorUsername.value
+  )
+})
+const canDelete = canEdit
+const canReport = computed(() => {
+  return (
+      currentUsername.value &&
+      authorUsername.value &&
+      currentUsername.value !== authorUsername.value
+  )
+})
+
+const voting = computed(() => posts.voting.has(postId.value))
+
+function toggleMenu() {
+  menuOpen.value = !menuOpen.value
+}
+
+function onDocClick(e) {
+  if (!menuOpen.value) return
+  const article = e.target.closest('article')
+  if (!article) menuOpen.value = false
+}
+
+onMounted(() => document.addEventListener('click', onDocClick))
+onBeforeUnmount(() => document.removeEventListener('click', onDocClick))
 
 function onEdit() {
   editing.value = true
   editContent.value = props.post.content || ''
-  open.value = false
+  localError.value = ''
+  menuOpen.value = false
+}
+
+async function applyEdit() {
+  if (!postId.value) return
+  if (!canSaveEdit.value) {
+    localError.value = 'Treść posta nie może być pusta.'
+    return
+  }
+  savingEdit.value = true
+  localError.value = ''
+  try {
+    await posts.editPost({ id: postId.value, content: editContent.value })
+    editing.value = false
+  } catch {
+    localError.value = posts.error || 'Nie udało się zapisać zmian.'
+  } finally {
+    savingEdit.value = false
+  }
 }
 
 function cancelEdit() {
   editing.value = false
-  editContent.value = ''
+  localError.value = ''
 }
 
-async function applyEdit() {
-  const id = getId(props.post)
-  if (!id) return
-  const content = (editContent.value || '').trim()
-  if (!content) return
-  await store.editPost({ id, content })
-  editing.value = false
-}
-
-/* TOAST */
-
-const statusMessage = ref('')
-const statusType = ref('info')
-let statusTimer = null
-
-const statusClass = computed(() => {
-  if (statusType.value === 'error') {
-    return 'bg-red-500/15 border-red-500/40 text-red-100'
-  }
-  if (statusType.value === 'success') {
-    return 'bg-emerald-500/15 border-emerald-500/40 text-emerald-100'
-  }
-  return 'bg-zinc-500/10 border-zinc-500/30 text-zinc-100'
-})
-
-function showStatus(msg, type = 'info') {
-  statusMessage.value = msg
-  statusType.value = type
-  if (statusTimer) clearTimeout(statusTimer)
-  statusTimer = setTimeout(() => {
-    statusMessage.value = ''
-  }, 5000)
-}
-
-/* USUWANIE POSTA */
-
-const deleteConfirmOpen = ref(false)
-
-function askDelete() {
-  deleteConfirmOpen.value = true
-  open.value = false
-}
-
-function cancelDelete() {
-  deleteConfirmOpen.value = false
-}
-
-async function confirmDelete() {
-  const id = getId(props.post)
-  if (!id) return
-  deleteConfirmOpen.value = false
+async function onDelete() {
+  if (!postId.value) return
+  if (!confirm('Czy na pewno chcesz usunąć ten post?')) return
   try {
-    await store.deletePost(id)
-    showStatus('Post został usunięty.', 'success')
-  } catch (e) {
-    const status = e?.response?.status
-    if (status === 403) {
-      showStatus('Nie masz uprawnień do usunięcia tego posta.', 'error')
-    } else if (status === 500) {
-      showStatus('Nie udało się usunąć posta (błąd serwera).', 'error')
-    } else {
-      showStatus('Nie udało się usunąć posta.', 'error')
-    }
-  }
-}
-
-/* ZGŁOSZENIA POSTA */
-
-const REPORT_REASONS = [
-  { code: 'SPAM', label: 'Spam lub treści bezwartościowe' },
-  { code: 'UNPAID_AD', label: 'Ukryta / nieoznaczona reklama' },
-  { code: 'HARASSMENT', label: 'Nękanie, obraźliwe treści' },
-  { code: 'SEXUAL_CONTENT', label: 'Treści o charakterze seksualnym' },
-]
-
-const reportOpen = ref(false)
-const reportSubmitting = ref(false)
-
-function startReport() {
-  reportOpen.value = true
-  open.value = false
-}
-
-async function sendReport(reasonCode) {
-  const id = getId(props.post)
-  if (!id) return
-  reportSubmitting.value = true
-  try {
-    await store.reportPost({ postId: id, reason: reasonCode })
-    showStatus('Zgłoszenie zostało wysłane do moderacji.', 'success')
+    await posts.deletePost(postId.value)
   } catch {
-    showStatus('Nie udało się wysłać zgłoszenia (błąd serwera).', 'error')
+    // komunikat jest w posts.error
   } finally {
-    reportSubmitting.value = false
-    reportOpen.value = false
+    menuOpen.value = false
   }
 }
 
-/* Automatyczne zamykanie menu "Akcje" po kliknięciu poza komponent */
-
-function onDocClick(e) {
-  if (!open.value) return
-  const el = e.target.closest('article')
-  if (!el) open.value = false
+async function onReport() {
+  if (!postId.value) return
+  try {
+    // używamy poprawnego kodu z enumu backendu; na razie na sztywno SPAM
+    await posts.reportPost({ postId: postId.value, reason: 'SPAM' })
+    alert('Zgłoszenie zostało wysłane.')
+  } catch {
+    // posts.error już ma komunikat
+  } finally {
+    menuOpen.value = false
+  }
 }
 
-onMounted(() => document.addEventListener('click', onDocClick))
-onBeforeUnmount(() => {
-  document.removeEventListener('click', onDocClick)
-  if (statusTimer) clearTimeout(statusTimer)
-})
+async function voteUp() {
+  if (!postId.value) return
+  try {
+    await posts.voteUp(postId.value)
+  } catch {
+    // posts.error
+  }
+}
+
+async function voteDown() {
+  if (!postId.value) return
+  try {
+    await posts.voteDown(postId.value)
+  } catch {
+    // posts.error
+  }
+}
 </script>

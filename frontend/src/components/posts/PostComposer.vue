@@ -4,6 +4,14 @@
   >
     <h3 class="font-medium mb-2 text-sm md:text-base">Nowy post</h3>
 
+    <!-- lokalny komunikat błędu -->
+    <p
+        v-if="localError"
+        class="mb-2 text-xs text-red-600 dark:text-red-400"
+    >
+      {{ localError }}
+    </p>
+
     <!-- Treść posta -->
     <textarea
         v-model.trim="content"
@@ -14,66 +22,54 @@
              dark:border-zinc-600 dark:focus:ring-cyan-400"
         rows="3"
         placeholder="Napisz coś..."
-    ></textarea>
+    />
 
-    <!-- Strefa zdjęć -->
-    <div
-        class="mt-2 rounded-md border-2 border-dashed cursor-pointer select-none
-             border-zinc-300 hover:border-zinc-400 bg-zinc-50
-             dark:border-zinc-600 dark:hover:border-zinc-500 dark:bg-zinc-800
-             px-3 py-2"
-        @click="openFile"
-        @dragover.prevent
-        @drop.prevent="onDrop"
-    >
-      <p class="text-sm">
-        <span class="font-medium">Zdjęcia</span> – kliknij, aby wybrać lub upuść tutaj pliki
-      </p>
-      <p class="text-xs mt-1 text-zinc-600 dark:text-zinc-400">
-        {{ files.length ? summary : 'Nie wybrano plików' }}
-      </p>
+    <!-- Załączone pliki -->
+    <div class="mt-3">
+      <label class="inline-flex items-center gap-2 text-xs md:text-sm cursor-pointer">
+        <span class="px-2 py-1 border rounded-md">Dodaj zdjęcia</span>
+        <span class="text-zinc-500">
+          {{ summary }}
+        </span>
+        <input
+            ref="fileInput"
+            type="file"
+            class="hidden"
+            accept="image/*"
+            multiple
+            @change="onFilesSelected"
+        >
+      </label>
 
-      <input
-          ref="fileInput"
-          type="file"
-          accept="image/*"
-          multiple
-          class="hidden"
-          @change="onFiles"
-      />
+      <!-- podglądy -->
+      <div v-if="previews.length" class="mt-2 flex flex-wrap gap-2">
+        <div
+            v-for="(src, idx) in previews"
+            :key="idx"
+            class="relative w-20 h-20 rounded-md overflow-hidden border"
+        >
+          <img :src="src" alt="Podgląd" class="w-full h-full object-cover">
+        </div>
+      </div>
     </div>
 
-    <!-- Podglądy -->
-    <div v-if="previews.length" class="mt-2 grid grid-cols-3 sm:grid-cols-4 gap-2">
-      <img
-          v-for="(src, i) in previews"
-          :key="i"
-          :src="src"
-          class="w-full h-20 object-cover rounded-md border border-zinc-200 dark:border-zinc-700"
-          alt="Podgląd zdjęcia"
-      />
-    </div>
-
-    <div class="mt-3 flex items-center justify-end gap-2">
+    <!-- Przyciski -->
+    <div class="mt-3 flex justify-end gap-2">
       <button
-          class="px-3 py-1.5 rounded-md text-sm border
-               border-zinc-300 hover:bg-zinc-100
-               dark:border-zinc-600 dark:hover:bg-zinc-800"
           type="button"
+          class="px-3 py-1.5 text-xs md:text-sm border rounded-md"
           @click="onCancel"
+          :disabled="submitting"
       >
         Anuluj
       </button>
       <button
-          class="px-3 py-1.5 rounded-md text-sm
-               bg-zinc-900 text-white hover:bg-zinc-800
-               dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-100
-               disabled:opacity-50 disabled:cursor-not-allowed"
-          :disabled="submitting || !content.trim()"
           type="button"
+          class="px-3 py-1.5 text-xs md:text-sm rounded-md bg-cyan-600 text-white disabled:opacity-60"
+          :disabled="submitting || !canSubmit"
           @click="onSubmit"
       >
-        {{ submitting ? 'Wysyłanie...' : 'Dodaj post' }}
+        {{ submitting ? 'Zapisywanie...' : 'Dodaj post' }}
       </button>
     </div>
   </div>
@@ -91,41 +87,48 @@ const files = ref([])
 const previews = ref([])
 const submitting = ref(false)
 const fileInput = ref(null)
+const localError = ref('')
 
 const summary = computed(() => {
   if (!files.value.length) return ''
-  if (files.value.length === 1) return `Wybrano: ${files.value[0].name}`
-  return `Wybrano ${files.value.length} pliki(ów)`
+  if (files.value.length === 1) return '1 plik'
+  return `${files.value.length} pliki(ów)`
 })
 
-function openFile() {
-  fileInput.value?.click()
-}
+const canSubmit = computed(() => {
+  return content.value.trim().length > 0 || files.value.length > 0
+})
 
-function onFiles(e) {
-  const all = Array.from(e.target.files || [])
-  const list = all.filter(f => f.type.startsWith('image/'))
-  setFiles(list)
-}
-
-function onDrop(e) {
-  const list = Array.from(e.dataTransfer?.files || []).filter(f => f.type.startsWith('image/'))
-  setFiles(files.value.concat(list))
-}
-
-function setFiles(list) {
+function onFilesSelected(event) {
+  const selected = Array.from(event.target.files || [])
+  files.value = selected
   previews.value.forEach(u => URL.revokeObjectURL(u))
-  files.value = list
-  previews.value = files.value.map(f => URL.createObjectURL(f))
+  previews.value = selected.map(f => URL.createObjectURL(f))
 }
 
 async function onSubmit() {
-  if (!content.value.trim()) return
+  localError.value = ''
+  if (!canSubmit.value) {
+    localError.value = 'Post musi mieć treść lub załącznik.'
+    return
+  }
+
   submitting.value = true
   try {
-    await store.createPost({ content: content.value, files: files.value })
+    await store.createPost({
+      content: content.value,
+      files: files.value,
+    })
     reset()
     emit('done')
+  } catch (e) {
+    const status = e?.response?.status
+    if (status === 401) {
+      localError.value = 'Musisz być zalogowany, aby dodać post.'
+    } else {
+      // jeśli store.error ma treść – pokaż ją; w przeciwnym razie domyślny tekst
+      localError.value = store.error || 'Nie udało się dodać posta.'
+    }
   } finally {
     submitting.value = false
   }
@@ -141,6 +144,7 @@ function reset() {
   files.value = []
   previews.value.forEach(u => URL.revokeObjectURL(u))
   previews.value = []
+  localError.value = ''
   if (fileInput.value) fileInput.value.value = ''
 }
 </script>

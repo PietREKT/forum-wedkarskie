@@ -2,7 +2,6 @@
   <div class="max-w-5xl mx-auto">
     <header class="mb-4 flex items-center justify-between">
       <h1 class="text-2xl font-semibold">Posty</h1>
-
       <button
           v-if="isAuth"
           class="px-3 py-1.5 border rounded-md text-sm"
@@ -12,74 +11,81 @@
       </button>
     </header>
 
-    <!-- Formularz dodawania posta -->
+    <!-- komunikat błędu ze store -->
+    <p
+        v-if="posts.error"
+        class="mb-3 text-sm text-red-600 dark:text-red-400"
+    >
+      {{ posts.error }}
+    </p>
+
     <section v-if="composerOpen && isAuth" class="mb-6">
       <PostComposer @done="onCreated" @cancel="composerOpen = false" />
     </section>
 
-    <!-- Lista postów -->
-    <section class="space-y-4">
-      <PostCard
-          v-for="p in posts.items"
-          :key="posts.getId(p) ?? p.postedAt"
-          :post="p"
-          :current-user="currentUser"
-      />
+    <section>
+      <div v-if="!posts.items.length && posts.loading" class="py-8 text-center text-sm text-zinc-500">
+        Ładowanie postów...
+      </div>
+
+      <div v-else-if="!posts.items.length">
+        <p class="py-8 text-center text-sm text-zinc-500">
+          Brak postów do wyświetlenia.
+        </p>
+      </div>
+
+      <div v-else class="space-y-4">
+        <PostCard
+            v-for="post in posts.items"
+            :key="posts.getId(post)"
+            :post="post"
+        />
+      </div>
+
+      <div class="mt-6 flex justify-center">
+        <button
+            v-if="hasMore"
+            class="px-4 py-2 text-sm border rounded-md disabled:opacity-50"
+            :disabled="posts.loading"
+            @click="loadMore"
+        >
+          {{ posts.loading ? 'Ładowanie...' : 'Wczytaj więcej' }}
+        </button>
+      </div>
     </section>
-
-    <!-- Paginacja -->
-    <div class="mt-6 text-center">
-      <button
-          v-if="!posts.loading && posts.items.length < posts.total"
-          class="px-4 py-2 border rounded-md text-sm"
-          :disabled="posts.loading"
-          @click="loadMore"
-      >
-        Wczytaj więcej
-      </button>
-
-      <p v-else-if="posts.loading" class="text-sm text-zinc-500">
-        Ładowanie...
-      </p>
-
-      <p v-else class="text-xs text-zinc-500">
-        Brak kolejnych postów
-      </p>
-    </div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue'
-import { usePostsStore } from '../stores/posts'
+import { ref, computed, onMounted } from 'vue'
 import { useAuthStore } from '../stores/auth'
-import PostCard from '../components/posts/PostCard.vue'
+import { usePostsStore } from '../stores/posts'
 import PostComposer from '../components/posts/PostComposer.vue'
+import PostCard from '../components/posts/PostCard.vue'
 
-const posts = usePostsStore()
 const auth = useAuthStore()
+const posts = usePostsStore()
 
 const composerOpen = ref(false)
 
-const currentUser = computed(() => auth.user)
-const isAuth = computed(() => !!auth.user)
+const isAuth = computed(() => auth.isAuthenticated)
 
-onMounted(() => {
-  posts.reset()
-  posts.fetchNext()
+const hasMore = computed(() => {
+  // jeśli nie mamy total z backu, to przyjmijmy że dopóki ostatnie pobranie coś zwróciło,
+  // to przycisk "Wczytaj więcej" będzie widoczny. Tu na razie prosto:
+  return posts.items.length < posts.total || posts.total === 0
 })
 
-watch(
-    () => auth.user && auth.user.username,
-    () => {
-      posts.reset()
-      posts.fetchNext()
-    }
-)
+onMounted(async () => {
+  if (!posts.items.length) {
+    posts.reset()
+    await posts.fetchNext()
+  }
+})
 
-function loadMore() {
+async function loadMore() {
   if (!posts.loading) {
-    posts.fetchNext()
+    await posts.fetchNext()
   }
 }
 

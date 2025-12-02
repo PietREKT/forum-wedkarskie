@@ -2,7 +2,8 @@
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useCommentsStore } from '../../stores/comments'
 import { useAuthStore } from '../../stores/auth'
-import { mediaUrl } from '../../utils/media'
+import CommentReportModal from './CommentReportModal.vue'
+import CommentDeleteModal from './CommentDeleteModal.vue'
 
 const props = defineProps({
   postId: { type: [Number, String], required: true },
@@ -22,8 +23,6 @@ const state = computed(
 )
 
 const content = ref('')
-const file = ref(null)
-const fileInput = ref(null)
 const menuFor = ref(null)
 const editingId = ref(null)
 const editContent = ref('')
@@ -69,10 +68,10 @@ function showStatus(msg, type = 'info') {
 /* powody zgłoszeń */
 
 const REPORT_REASONS = [
-  { code: 'SPAM',            label: 'Spam lub treści bezwartościowe' },
-  { code: 'UNPAID_AD',       label: 'Ukryta / nieoznaczona reklama' },
-  { code: 'HARASSMENT',      label: 'Nękanie, obraźliwe treści' },
-  { code: 'SEXUAL_CONTENT',  label: 'Treści o charakterze seksualnym' },
+  { code: 'SPAM',           label: 'Spam lub treści bezwartościowe' },
+  { code: 'UNPAID_AD',      label: 'Ukryta / nieoznaczona reklama' },
+  { code: 'HARASSMENT',     label: 'Nękanie, obraźliwe treści' },
+  { code: 'SEXUAL_CONTENT', label: 'Treści o charakterze seksualnym' },
 ]
 
 onMounted(() => {
@@ -89,36 +88,17 @@ function date(d) {
   return d ? new Date(d).toLocaleString('pl-PL') : ''
 }
 
-function att(c) {
-  return (
-      c?.attachmentUrl ||
-      c?.attachment ||
-      c?.photo ||
-      c?.photoUrl ||
-      c?.image ||
-      c?.imageUrl ||
-      c?.file ||
-      c?.fileUrl ||
-      ''
-  )
-}
-
-function onFile(e) {
-  const f = e.target.files?.[0]
-  file.value = f && f.type.startsWith('image/') ? f : null
-}
+/* dodawanie komentarza – bez zdjęć */
 
 async function submit() {
   const text = (content.value || '').trim()
-  if (!text && !file.value) return
+  if (!text) return
   if (submitting.value) return
 
   submitting.value = true
   try {
-    await comments.add(props.postId, { content: text, file: file.value })
+    await comments.add(props.postId, { content: text })
     content.value = ''
-    if (fileInput.value) fileInput.value.value = ''
-    file.value = null
     showStatus('Komentarz został dodany.', 'success')
   } catch {
     showStatus('Nie udało się dodać komentarza.', 'error')
@@ -138,6 +118,8 @@ function canEditOrDelete(c) {
       currentUser.value.username === (c?.author?.username || '')
   return isAdmin || sameAuthor
 }
+
+/* edycja */
 
 function startEdit(c) {
   editingId.value = c.id
@@ -160,25 +142,6 @@ async function applyEdit(c) {
     showStatus('Nie udało się zaktualizować komentarza.', 'error')
   } finally {
     cancelEdit()
-  }
-}
-
-/* usuwanie komentarza */
-
-function askRemove(c) {
-  deleteConfirmComment.value = c
-  menuFor.value = null
-}
-
-async function doRemove() {
-  const c = deleteConfirmComment.value
-  if (!c) return
-  deleteConfirmComment.value = null
-  try {
-    await comments.remove({ id: c.id, postId: props.postId })
-    showStatus('Komentarz został usunięty.', 'success')
-  } catch {
-    showStatus('Nie udało się usunąć komentarza.', 'error')
   }
 }
 
@@ -212,6 +175,10 @@ async function sendReply(parent) {
 }
 
 const showAllReplies = ref({})
+
+function childrenOf(id) {
+  return (state.value.list || []).filter(c => c.parentId === id)
+}
 
 function visibleChildrenOf(id) {
   const all = childrenOf(id)
@@ -248,6 +215,37 @@ async function sendReport(reasonCode) {
   }
 }
 
+/* usuwanie komentarza */
+
+function askRemove(c) {
+  deleteConfirmComment.value = c
+  menuFor.value = null
+}
+
+async function doRemove() {
+  const c = deleteConfirmComment.value
+  if (!c) return
+  deleteConfirmComment.value = null
+
+  // id komentarza i jego odpowiedzi które znikną w UI
+  const removedIds = [c.id, ...childrenOf(c.id).map(x => x.id)]
+
+  try {
+    await comments.remove({ id: c.id, postId: props.postId })
+    showStatus('Komentarz został usunięty.', 'success')
+
+    // jeśli edytowaliśmy/odpowiadaliśmy na usunięty komentarz/odpowiedź – wyczyść UI
+    if (removedIds.includes(editingId.value)) {
+      cancelEdit()
+    }
+    if (removedIds.includes(replyToId.value)) {
+      cancelReply()
+    }
+  } catch {
+    showStatus('Nie udało się usunąć komentarza.', 'error')
+  }
+}
+
 function loadMore() {
   if (!state.value.loading) comments.fetchNext(props.postId)
 }
@@ -257,10 +255,6 @@ function loadMore() {
 const topLevelComments = computed(() =>
     (state.value.list || []).filter(c => !c.parentId),
 )
-
-function childrenOf(id) {
-  return (state.value.list || []).filter(c => c.parentId === id)
-}
 
 const totalCount = computed(() => state.value.list.length)
 
@@ -286,7 +280,7 @@ onBeforeUnmount(() => {
     </div>
 
     <div v-if="sectionOpen" class="mt-3 space-y-3">
-      <!-- dodawanie komentarza -->
+      <!-- dodawanie komentarza (bez zdjęć) -->
       <form
           v-if="isAuth"
           @submit.prevent="submit"
@@ -298,16 +292,9 @@ onBeforeUnmount(() => {
             class="flex-1 border rounded-md p-2 text-sm theme-border theme-card"
             placeholder="Dodaj komentarz"
         ></textarea>
-        <input
-            ref="fileInput"
-            type="file"
-            accept="image/*"
-            class="text-xs"
-            @change="onFile"
-        />
         <button
             class="px-3 py-1.5 border rounded-md text-sm theme-border theme-primary"
-            :disabled="submitting || (!content.trim() && !file)"
+            :disabled="submitting || !content.trim()"
         >
           {{ submitting ? 'Wysyłanie...' : 'Wyślij' }}
         </button>
@@ -338,13 +325,6 @@ onBeforeUnmount(() => {
               <p class="text-xs theme-muted mt-1">
                 {{ author(c) }} • {{ date(c.createdAt) }}
               </p>
-
-              <img
-                  v-if="att(c)"
-                  :src="mediaUrl(att(c))"
-                  class="mt-2 w-full max-h-80 h-auto object-cover rounded-md border theme-border"
-                  alt="Załącznik"
-              />
             </div>
 
             <div class="relative">
@@ -389,7 +369,7 @@ onBeforeUnmount(() => {
             </div>
           </div>
 
-          <!-- edycja komentarza -->
+          <!-- edycja komentarza głównego -->
           <div v-if="editingId === c.id" class="mt-2">
             <textarea
                 v-model.trim="editContent"
@@ -470,9 +450,32 @@ onBeforeUnmount(() => {
                   </div>
                 </div>
               </div>
+
+              <!-- edycja odpowiedzi -->
+              <div v-if="editingId === r.id" class="mt-2">
+                <textarea
+                    v-model.trim="editContent"
+                    class="w-full border rounded-md p-2 text-sm theme-border theme-card"
+                    rows="2"
+                ></textarea>
+                <div class="mt-2 flex gap-2">
+                  <button
+                      class="px-3 py-1.5 border rounded-md text-sm theme-border"
+                      @click="cancelEdit"
+                  >
+                    Anuluj
+                  </button>
+                  <button
+                      class="px-3 py-1.5 border rounded-md text-sm theme-primary"
+                      @click="applyEdit(r)"
+                  >
+                    Zapisz
+                  </button>
+                </div>
+              </div>
             </li>
 
-            <!-- formularz odpowiedzi -->
+            <!-- formularz odpowiedzi (dla aktualnie wybranego komentarza) -->
             <li v-if="replyToId === c.id" class="pt-1">
               <div class="mt-2">
                 <textarea
@@ -505,7 +508,9 @@ onBeforeUnmount(() => {
                   type="button"
                   @click="toggleReplies(c.id)"
               >
-                {{ showAllReplies[c.id] ? 'Pokaż mniej odpowiedzi' : 'Pokaż wszystkie odpowiedzi' }}
+                {{ showAllReplies[c.id]
+                  ? 'Pokaż mniej odpowiedzi'
+                  : 'Pokaż wszystkie odpowiedzi' }}
               </button>
             </li>
           </ul>
@@ -531,63 +536,22 @@ onBeforeUnmount(() => {
     </div>
 
     <!-- zgłoszenia komentarza -->
-    <div
+    <CommentReportModal
         v-if="reportForComment"
-        class="fixed inset-0 z-40 flex items-center justify-center bg-black/60"
-    >
-      <div class="w-full max-w-sm rounded-xl border theme-border theme-card p-4">
-        <h3 class="text-sm font-semibold mb-2">Zgłoś komentarz</h3>
-        <p class="text-xs theme-muted mb-3">
-          Wybierz powód zgłoszenia. Zgłoszenie zostanie przekazane moderatorowi.
-        </p>
-        <div class="flex flex-col gap-2">
-          <button
-              v-for="r in REPORT_REASONS"
-              :key="r.code"
-              class="px-3 py-1.5 rounded-md border text-xs text-left theme-border hover:bg-[var(--color-border)]/20 disabled:opacity-50"
-              :disabled="reportSubmitting"
-              @click="sendReport(r.code)"
-          >
-            {{ r.label }}
-          </button>
-        </div>
-        <div class="mt-3 flex justify-end gap-2">
-          <button
-              class="px-3 py-1.5 rounded-md border text-xs theme-border"
-              :disabled="reportSubmitting"
-              @click="reportForComment = null"
-          >
-            Anuluj
-          </button>
-        </div>
-      </div>
-    </div>
+        :comment="reportForComment"
+        :reasons="REPORT_REASONS"
+        :loading="reportSubmitting"
+        @close="reportForComment = null"
+        @submit="sendReport"
+    />
 
     <!-- Overlay usuwania komentarza -->
-    <div
+    <CommentDeleteModal
         v-if="deleteConfirmComment"
-        class="fixed inset-0 z-40 flex items-center justify-center bg-black/60"
-    >
-      <div class="w-full max-w-sm rounded-xl border theme-border theme-card p-4">
-        <h3 class="text-sm font-semibold mb-2">Usunąć komentarz?</h3>
-        <p class="text-xs theme-muted mb-4">
-          Tej operacji nie można cofnąć.
-        </p>
-        <div class="flex justify-end gap-2">
-          <button
-              class="px-3 py-1.5 rounded-md border text-xs theme-border"
-              @click="deleteConfirmComment = null"
-          >
-            Anuluj
-          </button>
-          <button
-              class="px-3 py-1.5 rounded-md text-xs bg-[var(--color-danger)] text-white"
-              @click="doRemove"
-          >
-            Usuń
-          </button>
-        </div>
-      </div>
-    </div>
+        :comment="deleteConfirmComment"
+        :loading="false"
+        @close="deleteConfirmComment = null"
+        @confirm="doRemove"
+    />
   </div>
 </template>
