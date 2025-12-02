@@ -111,7 +111,6 @@ public class ContentServiceImpl implements ContentService {
                 );
             }
             parent.addChild(c);
-            c.setGroup(parent.getGroup());
         }
         c.setContentType(type);
         contentRepository.save(c);
