@@ -29,7 +29,7 @@ public class FishingSpotAdminController {
         return ResponseEntity.ok().build();
     }
 
-    @PatchMapping("/{id}/accept")
+    @PatchMapping("/{id}/reject")
     public ResponseEntity<?> rejectFishingSpot(@PathVariable Long id) throws FishingSpotNotFoundException {
         fishingSpotService.markFishingSpotAsRejected(id);
 
