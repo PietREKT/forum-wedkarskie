@@ -1,7 +1,7 @@
 
 --
-insert into app_users(username, name, surname, password, role)
-    values ('test',  'tName', 'tSurname', '$2a$10$pVf8bDRJzqBQ75LrR7dhEO00av69.V6ZIVy4Zj.nxW.vUcdVE/z0.', 'ROOT');
+insert into app_users(id, username, name, surname, password, role)
+    values ('00000000-0000-0000-0000-000000000001', 'test',  'tName', 'tSurname', '$2a$10$pVf8bDRJzqBQ75LrR7dhEO00av69.V6ZIVy4Zj.nxW.vUcdVE/z0.', 'ROOT');
 --  password evaluates to 'test'
 --
 -- insert into post(author_id, content, created_at, rating, dtype)
