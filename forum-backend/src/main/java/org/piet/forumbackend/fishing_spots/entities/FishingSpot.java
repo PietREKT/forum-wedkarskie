@@ -34,6 +34,9 @@ public class FishingSpot {
 
     private String statuteUrl;
 
+    @ManyToOne
+    User owner;
+
     @ManyToMany
     @JoinTable(
             name = "fishing_spots_managers",

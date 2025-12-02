@@ -4,7 +4,7 @@ import jakarta.validation.constraints.NotNull;
 import lombok.Value;
 import org.piet.forumbackend.fish.dtos.GetFishDto;
 import org.piet.forumbackend.fishing_spots.entities.FishingSpot;
-import org.piet.forumbackend.users.core.dtos.GetUserDto;
+import org.piet.forumbackend.users.core.dtos.requests.GetUserDto;
 
 import java.io.Serializable;
 import java.util.List;

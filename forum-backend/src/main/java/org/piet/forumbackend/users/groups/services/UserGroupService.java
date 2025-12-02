@@ -3,8 +3,8 @@ package org.piet.forumbackend.users.groups.services;
 import org.piet.forumbackend.globals.exceptions.NotFoundException;
 import org.piet.forumbackend.users.core.entities.User;
 import org.piet.forumbackend.users.groups.entities.UserGroup;
+import org.springframework.security.access.AccessDeniedException;
 
-import java.nio.file.AccessDeniedException;
 import java.util.List;
 import java.util.UUID;
 

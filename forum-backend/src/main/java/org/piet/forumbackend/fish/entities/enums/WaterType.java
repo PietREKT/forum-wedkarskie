@@ -1,4 +1,4 @@
-package org.piet.forumbackend.fish.entities;
+package org.piet.forumbackend.fish.entities.enums;
 
 public enum WaterType {
         SWEETWATER,

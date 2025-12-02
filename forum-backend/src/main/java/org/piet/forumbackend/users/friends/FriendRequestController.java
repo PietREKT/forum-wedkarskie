@@ -2,7 +2,7 @@ package org.piet.forumbackend.users.friends;
 
 import org.piet.forumbackend.globals.exceptions.BadRequestException;
 import org.piet.forumbackend.globals.exceptions.NotFoundException;
-import org.piet.forumbackend.users.core.dtos.GetUserDto;
+import org.piet.forumbackend.users.core.dtos.requests.GetUserDto;
 import org.piet.forumbackend.users.core.entities.User;
 import org.piet.forumbackend.users.core.exceptions.UserNotLoggedInException;
 import org.piet.forumbackend.users.core.services.UserService;

@@ -6,8 +6,7 @@ import lombok.Getter;
 public enum VerificationStatus {
     IN_REVIEW(0),
     ACCEPTED(1),
-    REJECTED(-1),
-    MARKED_FOR_DELETION(2);
+    REJECTED(-1);
 
     final int verificationStage;
 
@@ -20,6 +19,6 @@ public enum VerificationStatus {
     }
 
     public boolean isRejected(){
-        return this.verificationStage == 0;
+        return this.verificationStage == -1;
     }
 }

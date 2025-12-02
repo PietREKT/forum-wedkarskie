@@ -49,6 +49,9 @@ public class User implements UserDetails {
     String phone;
 
     Instant createdAt;
+    Instant bannedUntil;
+    Instant mutedUntil;
+    String banReason;
 
     @Enumerated(EnumType.STRING)
     @Convert(converter = RoleConverter.class)
@@ -62,11 +65,7 @@ public class User implements UserDetails {
     private Set<UserGroup> groups = new HashSet<>();
 
     @ManyToMany
-    @JoinTable(
-            name = "user_friends",
-            joinColumns = @JoinColumn(name = "user_id"),
-            inverseJoinColumns = @JoinColumn(name = "friend_id")
-    )
+    @JoinColumn(name = "group_id")
     Set<User> friends = new HashSet<>();
 
     @OneToMany(mappedBy = "sender", cascade = CascadeType.ALL, orphanRemoval = true)
@@ -86,7 +85,7 @@ public class User implements UserDetails {
 
     @Override
     public boolean isAccountNonLocked() {
-        return UserDetails.super.isAccountNonLocked();
+        return !isBanned(Instant.now());
     }
 
     @Override
@@ -126,5 +125,21 @@ public class User implements UserDetails {
     @PrePersist
     void init() {
         createdAt = Instant.now();
+    }
+
+    public boolean isAdmin(){
+        return hasPermLevelAtLeast(Role.ADMIN);
+    }
+
+    public boolean isMod(){
+        return hasPermLevelAtLeast(Role.MOD);
+    }
+
+    public boolean isBanned(Instant now){
+        return bannedUntil != null && bannedUntil.isAfter(now);
+    }
+
+    public boolean isMuted(Instant now){
+        return mutedUntil != null && mutedUntil.isAfter(now);
     }
 }

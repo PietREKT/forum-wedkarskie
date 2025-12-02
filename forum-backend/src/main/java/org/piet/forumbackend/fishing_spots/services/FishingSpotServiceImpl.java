@@ -10,6 +10,7 @@ import org.locationtech.jts.util.GeometricShapeFactory;
 import org.piet.forumbackend.content.entities.enums.VerificationStatus;
 import org.piet.forumbackend.fish.entities.Fish;
 import org.piet.forumbackend.fishing_spots.dtos.AddressDto;
+import org.piet.forumbackend.fishing_spots.dtos.FishingSpotDto;
 import org.piet.forumbackend.fishing_spots.dtos.LocationDto;
 import org.piet.forumbackend.fishing_spots.entities.FishingSpot;
 import org.piet.forumbackend.fishing_spots.exceptions.FishingSpotNotFoundException;
@@ -26,6 +27,7 @@ import org.springframework.context.MessageSource;
 import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
@@ -56,19 +58,27 @@ public class FishingSpotServiceImpl implements FishingSpotService {
     private Double MINIMUM_CONFIDENCE;
 
     @Override
-    public FishingSpot markFishingSpotAsVerified(FishingSpot fishingSpot) {
+    public void markFishingSpotAsVerified(FishingSpot fishingSpot) {
         fishingSpot.setVerificationStatus(VerificationStatus.ACCEPTED);
-        return fishingSpotRepository.save(fishingSpot);
-    }
-
-    @Override
-    public void markFishingSpotForDeletion(FishingSpot fishingSpot) {
-        fishingSpot.setVerificationStatus(VerificationStatus.MARKED_FOR_DELETION);
         fishingSpotRepository.save(fishingSpot);
     }
 
     @Override
-    public void deleteFishingSpot(FishingSpot fishingSpot) {
+    public void markFishingSpotAsRejected(FishingSpot fishingSpot) {
+        fishingSpot.setVerificationStatus(VerificationStatus.ACCEPTED);
+        fishingSpotRepository.save(fishingSpot);
+    }
+
+    @Override
+    public void deleteFishingSpot(FishingSpot fishingSpot, User currentUser) {
+        if (!currentUser.isAdmin() && !fishingSpot.getOwner().equalsUser(currentUser)) {
+            throw new AccessDeniedException(
+                    messageSource.getMessage("error.spots.no_perms_for_delete",
+                            null,
+                            LocaleContextHolder.getLocale()
+                    )
+            );
+        }
         fishingSpotRepository.delete(fishingSpot);
     }
 
@@ -92,7 +102,7 @@ public class FishingSpotServiceImpl implements FishingSpotService {
 
     @Override
     public Page<FishingSpot> getFishingSpots(Pageable pageable) {
-        return fishingSpotRepository.findAll(pageable);
+        return fishingSpotRepository.findByVerificationStatus(VerificationStatus.ACCEPTED, pageable);
     }
 
     //name desc type managers fish
@@ -143,6 +153,7 @@ public class FishingSpotServiceImpl implements FishingSpotService {
         spot.setName(name);
         spot.setDescription(desc);
         spot.setManagers(managers);
+        spot.setOwner(sentBy);
 
         return fishingSpotRepository.save(spot);
     }
@@ -250,5 +261,33 @@ public class FishingSpotServiceImpl implements FishingSpotService {
         shapeFactory.setCentre(point.getCoordinate());
         shapeFactory.setSize(radius * 2);
         return shapeFactory.createCircle();
+    }
+
+    @Override
+    public void transferOwnership(Long spotId, User newOwner, User currentUser) throws FishingSpotNotFoundException {
+        FishingSpot spot = getFishingSpotById(spotId);
+
+        if (!spot.getOwner().equalsUser(currentUser)
+                && currentUser.isAdmin()) {
+            throw new AccessDeniedException(
+                    messageSource.getMessage("error.spots.no_perms_for_transfer",
+                            null,
+                            LocaleContextHolder.getLocale()
+                    )
+            );
+        }
+
+        spot.setOwner(newOwner);
+        if (!spot.getManagers().contains(newOwner)){
+            spot.getManagers().add(newOwner);
+        }
+
+        fishingSpotRepository.save(spot);
+    }
+
+    @Override
+    public Page<FishingSpotDto> getUnverified(Pageable pageable) {
+        return fishingSpotRepository.findByVerificationStatus(VerificationStatus.IN_REVIEW, pageable)
+                .map(FishingSpotDto::create);
     }
 }

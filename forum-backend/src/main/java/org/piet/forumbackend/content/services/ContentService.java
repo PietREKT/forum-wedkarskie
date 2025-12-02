@@ -1,7 +1,7 @@
 package org.piet.forumbackend.content.services;
 
-import org.piet.forumbackend.content.dtos.ContentDto;
-import org.piet.forumbackend.content.dtos.ParentContentDto;
+import org.piet.forumbackend.content.dtos.responses.content.ContentDto;
+import org.piet.forumbackend.content.dtos.responses.content.ParentContentDto;
 import org.piet.forumbackend.content.entities.Content;
 import org.piet.forumbackend.content.entities.enums.ContentType;
 import org.piet.forumbackend.content.entities.enums.VoteType;
@@ -21,6 +21,7 @@ import java.util.List;
 
 
 public interface ContentService {
+
     public Content getContentById(Long id) throws NotFoundException;
 
     public Content getContentByIdOrNull(Long id);
@@ -35,7 +36,7 @@ public interface ContentService {
 
     public PageDto<ContentDto> getContentByParent(Content parent, User currentUser, Pageable pageable);
 
-    public PageDto<ContentDto> getRecentPosts(Integer pageNo, Integer pageSize);
+    public PageDto<ContentDto> getRecentPosts(PaginationDto pagination, User currentUser);
 
     default void deleteContent(Long id, User currentUser) throws UnauthorizedAccessException, NotFoundException {
         Content c = getContentById(id);
@@ -53,4 +54,5 @@ public interface ContentService {
     public void deleteContentFolder(Content content) throws UnauthorizedAccessException;
 
     public Page<Content> getUserPosts(User user, PaginationDto pagination);
+
 }

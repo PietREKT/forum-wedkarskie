@@ -15,8 +15,8 @@ import org.piet.forumbackend.users.groups.entities.UserGroup;
 import org.piet.forumbackend.users.groups.repositories.UserGroupRepository;
 import org.piet.forumbackend.users.groups.services.UserGroupServiceImpl;
 import org.springframework.context.MessageSource;
+import org.springframework.security.access.AccessDeniedException;
 
-import java.nio.file.AccessDeniedException;
 import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -78,7 +78,7 @@ class UserGroupServiceImplTest {
     // ---------- addMemberCandidate ----------
 
     @Test
-    void addMemberCandidate_ShouldAddCandidateAndSave() {
+    void addMemberCandidate_ShouldAddCandidateAndSave() throws AccessDeniedException {
         UserGroup group = mock(UserGroup.class);
         User candidate = mockUser("candidate");
         User currentUser = mockUser("current");

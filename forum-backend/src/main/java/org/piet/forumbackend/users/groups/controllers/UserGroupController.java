@@ -3,7 +3,7 @@ package org.piet.forumbackend.users.groups.controllers;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.piet.forumbackend.globals.exceptions.NotFoundException;
-import org.piet.forumbackend.users.core.dtos.GetUserDto;
+import org.piet.forumbackend.users.core.dtos.requests.GetUserDto;
 import org.piet.forumbackend.users.core.entities.User;
 import org.piet.forumbackend.users.core.exceptions.UserNotLoggedInException;
 import org.piet.forumbackend.users.core.services.UserService;
@@ -13,10 +13,10 @@ import org.piet.forumbackend.users.groups.dtos.responses.UserGroupDto;
 import org.piet.forumbackend.users.groups.entities.UserGroup;
 import org.piet.forumbackend.users.groups.services.UserGroupService;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
-import java.nio.file.AccessDeniedException;
 import java.util.Optional;
 import java.util.UUID;
 

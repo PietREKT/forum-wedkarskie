@@ -1,4 +1,4 @@
-package org.piet.forumbackend.users.core.dtos;
+package org.piet.forumbackend.users.core.dtos.responses;
 
 import lombok.Value;
 import org.piet.forumbackend.users.core.entities.User;

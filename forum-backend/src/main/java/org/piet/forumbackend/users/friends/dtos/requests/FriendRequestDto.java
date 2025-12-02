@@ -1,7 +1,7 @@
 package org.piet.forumbackend.users.friends.dtos.requests;
 
 import lombok.Value;
-import org.piet.forumbackend.users.core.dtos.GetUserDto;
+import org.piet.forumbackend.users.core.dtos.requests.GetUserDto;
 
 import java.io.Serializable;
 

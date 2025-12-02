@@ -6,6 +6,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.piet.forumbackend.content.entities.enums.ContentType;
 import org.piet.forumbackend.users.core.entities.User;
+import org.piet.forumbackend.users.groups.entities.UserGroup;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -17,6 +18,7 @@ import java.util.Map;
 @Getter
 @Setter
 @NoArgsConstructor
+@Inheritance(strategy = InheritanceType.JOINED)
 public class Content {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -33,8 +35,16 @@ public class Content {
     ContentType contentType;
 
     @ManyToOne(targetEntity = Content.class)
-            @JoinColumn(name = "parent_id")
+    @JoinColumn(name = "parent_id")
     Content parent;
+
+    @ManyToOne
+    @JoinTable(
+            name = "groups_posts",
+            joinColumns = @JoinColumn(name = "content_id"),
+            inverseJoinColumns = @JoinColumn(name = "group_id")
+    )
+    UserGroup group;
 
     @OneToMany(
             mappedBy = "parent",
@@ -65,21 +75,25 @@ public class Content {
     List<ContentVote> votes = new ArrayList<>();
 
     @PrePersist
-    private void onCreate(){
+    private void onCreate() {
         Instant now = Instant.now();
         editHistory = new HashMap<>();
         editHistory.put(now, getContent());
         setCreatedAt(now);
+
+        if (parent != null){
+            this.group = parent.getGroup();
+        }
     }
 
-    public Integer getRating(){
+    public Integer getRating() {
         return votes
                 .stream()
                 .mapToInt(v -> v.getVote().getValue())
                 .sum();
     }
 
-    public String toLogString(){
+    public String toLogString() {
         return "{ " +
                 "ID: " +
                 id +
@@ -92,24 +106,24 @@ public class Content {
                 " }";
     }
 
-    public void addAttachmentUrl(String attachmentUrl){
-        if (this.attachedPhotos == null){
+    public void addAttachmentUrl(String attachmentUrl) {
+        if (this.attachedPhotos == null) {
             this.attachedPhotos = new ArrayList<>();
         }
         this.attachedPhotos.add(attachmentUrl);
     }
 
-    public void removeAttachmentUrl(String attachmentUrl){
+    public void removeAttachmentUrl(String attachmentUrl) {
         if (this.attachedPhotos == null || !this.attachedPhotos.contains(attachmentUrl)) return;
         this.attachedPhotos.remove(attachmentUrl);
     }
 
-    public void addChild(Content child){
+    public void addChild(Content child) {
         children.add(child);
         child.setParent(this);
     }
 
-    public void removeChild(Content child){
+    public void removeChild(Content child) {
         children.remove(child);
         child.setParent(null);
     }

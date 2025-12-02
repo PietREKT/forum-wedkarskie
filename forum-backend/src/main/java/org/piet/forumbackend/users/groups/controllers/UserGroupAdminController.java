@@ -12,10 +12,10 @@ import org.piet.forumbackend.users.groups.dtos.responses.UserGroupDto;
 import org.piet.forumbackend.users.groups.entities.UserGroup;
 import org.piet.forumbackend.users.groups.services.UserGroupService;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
-import java.nio.file.AccessDeniedException;
 import java.util.UUID;
 
 @RestController

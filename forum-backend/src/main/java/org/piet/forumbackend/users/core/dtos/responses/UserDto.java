@@ -1,9 +1,10 @@
-package org.piet.forumbackend.users.core.dtos;
+package org.piet.forumbackend.users.core.dtos.responses;
 
 import lombok.Value;
 import org.piet.forumbackend.users.core.entities.User;
 
 import java.io.Serializable;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -18,4 +19,7 @@ public class UserDto implements Serializable {
     String email;
     String phone;
     RoleDto role;
+
+
+    Set<ListUserDto> friends;
 }

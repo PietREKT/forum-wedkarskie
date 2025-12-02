@@ -7,11 +7,11 @@ import java.util.Arrays;
 import java.util.List;
 
 public enum Role {
-    USER(0, true),
+    USER(0),
     PZW(1, false),
-    MOD(2, true),
-    ADMIN(3, true),
-    ROOT(4, true);
+    MOD(2 ),
+    ADMIN(3),
+    ROOT(4);
 
     private final int permLevel;
     private final boolean includeInPermissionTree;
@@ -19,6 +19,9 @@ public enum Role {
     Role(int permLevel, boolean includeInPermissionTree) {
         this.permLevel = permLevel;
         this.includeInPermissionTree = includeInPermissionTree;
+    }Role(int permLevel) {
+        this.permLevel = permLevel;
+        this.includeInPermissionTree = true;
     }
 
     public boolean hasAtLeast(Role other){

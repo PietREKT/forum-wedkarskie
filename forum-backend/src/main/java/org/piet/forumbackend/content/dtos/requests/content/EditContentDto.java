@@ -1,6 +1,7 @@
-package org.piet.forumbackend.content.dtos;
+package org.piet.forumbackend.content.dtos.requests.content;
 
 import lombok.Value;
+import org.piet.forumbackend.content.dtos.responses.content.ContentDto;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.Serializable;

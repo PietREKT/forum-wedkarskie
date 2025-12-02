@@ -10,6 +10,7 @@ import org.piet.forumbackend.fish.services.FishService;
 import org.piet.forumbackend.fishing_spots.dtos.CreateFishingSpotDto;
 import org.piet.forumbackend.fishing_spots.dtos.FishingSpotDto;
 import org.piet.forumbackend.fishing_spots.dtos.FishingSpotListDto;
+import org.piet.forumbackend.fishing_spots.exceptions.FishingSpotNotFoundException;
 import org.piet.forumbackend.fishing_spots.exceptions.LocationDtoIncompleteException;
 import org.piet.forumbackend.fishing_spots.exceptions.LocationNotFoundException;
 import org.piet.forumbackend.fishing_spots.services.FishingSpotService;
@@ -43,7 +44,7 @@ public class FishingSpotController {
     private final UserServiceImpl userService;
     private final FishService fishService;
 
-    @GetMapping("radius")
+    @GetMapping("/radius")
     public ResponseEntity<List<FishingSpotListDto>> getSpotsInRadius(
             @RequestParam("x") Double x,
             @RequestParam("y") Double y,
@@ -115,5 +116,12 @@ public class FishingSpotController {
         var spots = fishingSpotService.getFishingSpots(dto)
                 .map(FishingSpotListDto::create);
         return ResponseEntity.ok(PageDto.createDto(spots));
+    }
+
+    @DeleteMapping("/{id}/delete")
+    public ResponseEntity<?> deleteSpot(@PathVariable Long id) throws UserNotLoggedInException, FishingSpotNotFoundException {
+        fishingSpotService.deleteFishingSpot(id, userService.getCurrentUser());
+
+        return ResponseEntity.ok().build();
     }
 }

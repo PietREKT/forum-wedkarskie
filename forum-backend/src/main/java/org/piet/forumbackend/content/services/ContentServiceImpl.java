@@ -2,15 +2,14 @@ package org.piet.forumbackend.content.services;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
-import org.piet.forumbackend.content.dtos.ContentDto;
 import org.piet.forumbackend.content.dtos.ContentDtoMapper;
-import org.piet.forumbackend.content.dtos.ParentContentDto;
+import org.piet.forumbackend.content.dtos.responses.content.ContentDto;
+import org.piet.forumbackend.content.dtos.responses.content.ParentContentDto;
 import org.piet.forumbackend.content.entities.Content;
 import org.piet.forumbackend.content.entities.ContentVote;
 import org.piet.forumbackend.content.entities.enums.ContentType;
 import org.piet.forumbackend.content.entities.enums.VoteType;
 import org.piet.forumbackend.content.repositories.ContentRepository;
-import org.piet.forumbackend.content.repositories.ContentVoteRepository;
 import org.piet.forumbackend.globals.exceptions.BadRequestException;
 import org.piet.forumbackend.globals.exceptions.NotFoundException;
 import org.piet.forumbackend.globals.exceptions.UnauthorizedAccessException;
@@ -19,11 +18,10 @@ import org.piet.forumbackend.globals.pagination.PaginationDto;
 import org.piet.forumbackend.globals.properties.FileProperties;
 import org.piet.forumbackend.users.core.entities.Role;
 import org.piet.forumbackend.users.core.entities.User;
-import org.piet.forumbackend.users.core.repos.UserRepository;
+import org.piet.forumbackend.users.core.services.UserService;
 import org.springframework.context.MessageSource;
 import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
@@ -43,11 +41,10 @@ import java.util.Map;
 @Log4j2
 @RequiredArgsConstructor
 public class ContentServiceImpl implements ContentService {
-    private final ContentVoteRepository contentVoteRepository;
-    private final UserRepository userRepository;
     private final ContentRepository contentRepository;
     private final MessageSource messageSource;
     private final FileProperties fileProperties;
+    private final UserService userService;
 
     private File getContentFolder(Content content) throws FileSystemException {
         String folderName = content.getContentType().name() + '-' + content.getId();
@@ -87,6 +84,8 @@ public class ContentServiceImpl implements ContentService {
 
     @Override
     public Content createContent(User author, String content, ContentType type, Content parent, List<MultipartFile> photos) throws BadRequestException, UnauthorizedAccessException, IOException {
+        userService.checkIsMuted(author);
+
         Content c = new Content();
         c.setAuthor(author);
         c.setContent(content);
@@ -108,6 +107,7 @@ public class ContentServiceImpl implements ContentService {
                 );
             }
             parent.addChild(c);
+            c.setGroup(parent.getGroup());
         }
         c.setContentType(type);
         contentRepository.save(c);
@@ -125,6 +125,7 @@ public class ContentServiceImpl implements ContentService {
 
     @Override
     public Content editContent(User currentUser, Long contentId, String newContent, List<String> attachmentsToKeep, List<MultipartFile> photos) throws NotFoundException, BadRequestException, UnauthorizedAccessException, IOException {
+        userService.checkIsMuted(currentUser);
         Content c = getContentById(contentId);
         if (!c.getAuthor().equalsUser(currentUser)) {
             throw new UnauthorizedAccessException(
@@ -174,10 +175,20 @@ public class ContentServiceImpl implements ContentService {
     }
 
     @Override
-    public PageDto<ContentDto> getRecentPosts(Integer pageNo, Integer pageSize) {
-        Pageable pageable = PageRequest.of(pageNo, pageSize, Sort.by(Sort.Direction.DESC, "createdAt"));
+    public PageDto<ContentDto> getRecentPosts(PaginationDto pagination, User currentUser) {
+        Pageable pageable = pagination.toPageable(Sort.by(Sort.Direction.DESC, "createdAt"));
         Page<Content> contentPage = contentRepository.findByContentType(ContentType.POST, pageable);
-        return PageDto.createDto(contentPage.map(ContentDtoMapper::toContentDto));
+        return PageDto.createDto(contentPage.map(c ->
+                        ContentDtoMapper.toContentDto(
+                                c,
+                                c.getVotes().stream()
+                                        .filter(v -> v.getUser().equalsUser(currentUser))
+                                        .findFirst()
+                                        .map(ContentVote::getVote)
+                                        .orElse(VoteType.NO_VOTE)
+                        )
+                )
+        );
     }
 
     @Override

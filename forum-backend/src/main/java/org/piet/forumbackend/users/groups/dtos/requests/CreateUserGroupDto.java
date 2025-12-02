@@ -4,7 +4,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Value;
 import org.hibernate.validator.constraints.Length;
-import org.piet.forumbackend.users.core.dtos.GetUserDto;
+import org.piet.forumbackend.users.core.dtos.requests.GetUserDto;
 
 import java.io.Serializable;
 import java.util.Set;

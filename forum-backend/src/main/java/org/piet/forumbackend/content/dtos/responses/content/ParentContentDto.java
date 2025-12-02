@@ -1,4 +1,4 @@
-package org.piet.forumbackend.content.dtos;
+package org.piet.forumbackend.content.dtos.responses.content;
 
 import lombok.Value;
 

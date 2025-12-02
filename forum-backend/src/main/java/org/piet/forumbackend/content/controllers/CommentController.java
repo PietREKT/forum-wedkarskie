@@ -2,10 +2,10 @@ package org.piet.forumbackend.content.controllers;
 
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
-import org.piet.forumbackend.content.dtos.ContentDto;
 import org.piet.forumbackend.content.dtos.ContentDtoMapper;
-import org.piet.forumbackend.content.dtos.CreateContentDto;
-import org.piet.forumbackend.content.dtos.EditContentDto;
+import org.piet.forumbackend.content.dtos.requests.content.CreateContentDto;
+import org.piet.forumbackend.content.dtos.requests.content.EditContentDto;
+import org.piet.forumbackend.content.dtos.responses.content.ContentDto;
 import org.piet.forumbackend.content.entities.Content;
 import org.piet.forumbackend.content.entities.enums.ContentType;
 import org.piet.forumbackend.content.entities.enums.VoteType;
@@ -42,10 +42,9 @@ public class CommentController {
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ContentDto> createComment(
-            @ModelAttribute CreateContentDto dto, Authentication auth) throws UserNotLoggedInException, NotFoundException, IOException, BadRequestException, UnauthorizedAccessException {
-        User author = userService.getUserFromAuth(auth);
+            @ModelAttribute CreateContentDto dto) throws UserNotLoggedInException, NotFoundException, IOException, BadRequestException, UnauthorizedAccessException {
         Content parent = contentService.getContentByIdOrNull(dto.getParentId());
-        Content comment = contentService.createContent(author, dto.getContent(), ContentType.COMMENT, parent, dto.getPhotos());
+        Content comment = contentService.createContent(userService.getCurrentUser(), dto.getContent(), ContentType.COMMENT, parent, dto.getPhotos());
 
         return ResponseEntity.ok(ContentDtoMapper.toContentDto(comment));
     }
@@ -63,32 +62,28 @@ public class CommentController {
     }
 
     @PatchMapping
-    public ResponseEntity<ContentDto> editComment(@RequestBody EditContentDto dto, Authentication auth) throws UserNotLoggedInException, NotFoundException, UnauthorizedAccessException, BadRequestException, IOException {
-        User u = userService.getUserFromAuth(auth);
-        Content comment = contentService.editContent(u, dto.getId(), dto.getContent(), dto.getAttachedPhotos(), dto.getNewPhotos());
+    public ResponseEntity<ContentDto> editComment(@RequestBody EditContentDto dto) throws UserNotLoggedInException, NotFoundException, UnauthorizedAccessException, BadRequestException, IOException {
+        Content comment = contentService.editContent(userService.getCurrentUser(), dto.getId(), dto.getContent(), dto.getAttachedPhotos(), dto.getNewPhotos());
         return ResponseEntity.ok(ContentDtoMapper.toContentDto(comment));
     }
 
     @DeleteMapping("/{commentId}")
-    public ResponseEntity<?> deleteComment(@PathVariable Long commentId, Authentication auth) throws UserNotLoggedInException, UnauthorizedAccessException, NotFoundException {
-        User u = userService.getUserFromAuth(auth);
-        contentService.deleteContent(commentId, u);
+    public ResponseEntity<?> deleteComment(@PathVariable Long commentId) throws UserNotLoggedInException, UnauthorizedAccessException, NotFoundException {
+        contentService.deleteContent(commentId, userService.getCurrentUser());
         return ResponseEntity.ok().build();
     }
 
     @PatchMapping("/{commentId}/upvote")
-    public ResponseEntity<?> upvote(@PathVariable Long commentId, Authentication auth) throws UserNotLoggedInException, NotFoundException {
-        User u = userService.getUserFromAuth(auth);
+    public ResponseEntity<?> upvote(@PathVariable Long commentId) throws UserNotLoggedInException, NotFoundException {
         Content c = contentService.getContentById(commentId);
-        contentService.vote(c, u, VoteType.UPVOTE);
+        contentService.vote(c, userService.getCurrentUser(), VoteType.UPVOTE);
         return ResponseEntity.ok().build();
     }
 
     @PatchMapping("/{commentId}/downvote")
-    public ResponseEntity<?> downvote(@PathVariable Long commentId, Authentication auth) throws UserNotLoggedInException, NotFoundException {
-        User u = userService.getUserFromAuth(auth);
+    public ResponseEntity<?> downvote(@PathVariable Long commentId) throws UserNotLoggedInException, NotFoundException {
         Content c = contentService.getContentById(commentId);
-        contentService.vote(c, u, VoteType.DOWNVOTE);
+        contentService.vote(c, userService.getCurrentUser(), VoteType.DOWNVOTE);
         return ResponseEntity.ok().build();
     }
 }

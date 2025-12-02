@@ -1,9 +1,9 @@
-package org.piet.forumbackend.content.dtos;
+package org.piet.forumbackend.content.dtos.responses.content;
 
 import lombok.Value;
 import org.piet.forumbackend.content.entities.Content;
 import org.piet.forumbackend.content.entities.enums.ContentType;
-import org.piet.forumbackend.users.core.dtos.ContentUserDto;
+import org.piet.forumbackend.users.core.dtos.responses.ContentUserDto;
 
 import java.io.Serializable;
 import java.time.Instant;

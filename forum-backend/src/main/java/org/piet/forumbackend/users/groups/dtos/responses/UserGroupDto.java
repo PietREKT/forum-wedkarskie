@@ -3,8 +3,8 @@ package org.piet.forumbackend.users.groups.dtos.responses;
 import jakarta.validation.constraints.NotBlank;
 import lombok.Value;
 import org.hibernate.validator.constraints.Length;
-import org.piet.forumbackend.users.core.dtos.UserDto;
 import org.piet.forumbackend.users.core.dtos.UsersDtoMapper;
+import org.piet.forumbackend.users.core.dtos.responses.UserDto;
 import org.piet.forumbackend.users.groups.entities.UserGroup;
 
 import java.io.Serializable;

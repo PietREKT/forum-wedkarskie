@@ -1,8 +1,10 @@
 package org.piet.forumbackend.content.dtos;
 
+import org.piet.forumbackend.content.dtos.responses.content.ContentDto;
+import org.piet.forumbackend.content.dtos.responses.content.ParentContentDto;
 import org.piet.forumbackend.content.entities.Content;
 import org.piet.forumbackend.content.entities.enums.VoteType;
-import org.piet.forumbackend.users.core.dtos.ContentUserDto;
+import org.piet.forumbackend.users.core.dtos.responses.ContentUserDto;
 
 public class ContentDtoMapper {
     public static ContentDto toContentDto(Content content, VoteType userVote){

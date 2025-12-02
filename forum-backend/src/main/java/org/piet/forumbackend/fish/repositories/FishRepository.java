@@ -1,8 +1,8 @@
 package org.piet.forumbackend.fish.repositories;
 
 import org.piet.forumbackend.fish.entities.Fish;
-import org.piet.forumbackend.fish.entities.FishingMethod;
-import org.piet.forumbackend.fish.entities.WaterType;
+import org.piet.forumbackend.fish.entities.enums.FishingMethod;
+import org.piet.forumbackend.fish.entities.enums.WaterType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;

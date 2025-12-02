@@ -1,4 +1,4 @@
-package org.piet.forumbackend.users.core.dtos;
+package org.piet.forumbackend.users.core.dtos.requests;
 
 import jakarta.validation.constraints.NotNull;
 import lombok.Value;

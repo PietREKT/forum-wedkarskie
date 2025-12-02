@@ -3,10 +3,10 @@ package org.piet.forumbackend.content.controllers;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
-import org.piet.forumbackend.content.dtos.ContentDto;
 import org.piet.forumbackend.content.dtos.ContentDtoMapper;
-import org.piet.forumbackend.content.dtos.CreateContentDto;
-import org.piet.forumbackend.content.dtos.EditContentDto;
+import org.piet.forumbackend.content.dtos.requests.content.CreateContentDto;
+import org.piet.forumbackend.content.dtos.requests.content.EditContentDto;
+import org.piet.forumbackend.content.dtos.responses.content.ContentDto;
 import org.piet.forumbackend.content.entities.Content;
 import org.piet.forumbackend.content.entities.enums.ContentType;
 import org.piet.forumbackend.content.entities.enums.VoteType;
@@ -90,7 +90,7 @@ public class PostController {
 
     @GetMapping("/recent")
     public ResponseEntity<PageDto<ContentDto>> getRecentPosts(@ParameterObject PaginationDto paginationDto){
-        var page = contentService.getRecentPosts(paginationDto.getPage(), paginationDto.getSize());
+        var page = contentService.getRecentPosts(, paginationDto.getPage(), , paginationDto.getSize());
 
         return ResponseEntity.ok(page);
     }

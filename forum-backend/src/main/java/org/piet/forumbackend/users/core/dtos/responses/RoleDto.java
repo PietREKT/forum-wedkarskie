@@ -1,4 +1,4 @@
-package org.piet.forumbackend.users.core.dtos;
+package org.piet.forumbackend.users.core.dtos.responses;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
