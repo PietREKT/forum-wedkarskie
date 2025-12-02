@@ -44,7 +44,7 @@ public class CommentController {
     public ResponseEntity<ContentDto> createComment(
             @ModelAttribute CreateContentDto dto) throws UserNotLoggedInException, NotFoundException, IOException, BadRequestException, UnauthorizedAccessException {
         Content parent = contentService.getContentByIdOrNull(dto.getParentId());
-        Content comment = contentService.createContent(userService.getCurrentUser(), dto.getContent(), ContentType.COMMENT, parent, dto.getPhotos());
+        Content comment = contentService.createContent(userService.getCurrentUser(), dto.getContent(), ContentType.COMMENT, parent, parent.getGroup() , dto.getPhotos());
 
         return ResponseEntity.ok(ContentDtoMapper.toContentDto(comment));
     }
