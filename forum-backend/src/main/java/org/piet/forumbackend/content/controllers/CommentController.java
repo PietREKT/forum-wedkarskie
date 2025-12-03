@@ -17,6 +17,7 @@ import org.piet.forumbackend.globals.pagination.PageDto;
 import org.piet.forumbackend.users.core.entities.User;
 import org.piet.forumbackend.users.core.exceptions.UserNotLoggedInException;
 import org.piet.forumbackend.users.core.services.UserServiceImpl;
+import org.piet.forumbackend.users.groups.entities.UserGroup;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -44,7 +45,8 @@ public class CommentController {
     public ResponseEntity<ContentDto> createComment(
             @ModelAttribute CreateContentDto dto) throws UserNotLoggedInException, NotFoundException, IOException, BadRequestException, UnauthorizedAccessException {
         Content parent = contentService.getContentByIdOrNull(dto.getParentId());
-        Content comment = contentService.createContent(userService.getCurrentUser(), dto.getContent(), ContentType.COMMENT, parent, parent.getGroup() , dto.getPhotos());
+        UserGroup group = parent != null ? parent.getGroup() : null;
+        Content comment = contentService.createContent(userService.getCurrentUser(), dto.getContent(), ContentType.COMMENT, parent, group , dto.getPhotos());
 
         return ResponseEntity.ok(ContentDtoMapper.toContentDto(comment));
     }

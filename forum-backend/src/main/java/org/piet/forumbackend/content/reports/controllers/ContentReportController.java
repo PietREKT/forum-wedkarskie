@@ -7,6 +7,7 @@ import org.piet.forumbackend.content.entities.Content;
 import org.piet.forumbackend.content.reports.dtos.CreateContentReportDto;
 import org.piet.forumbackend.content.reports.services.ContentReportService;
 import org.piet.forumbackend.content.services.ContentService;
+import org.piet.forumbackend.globals.exceptions.BadRequestException;
 import org.piet.forumbackend.globals.exceptions.NotFoundException;
 import org.piet.forumbackend.users.core.entities.User;
 import org.piet.forumbackend.users.core.services.UserServiceImpl;
@@ -30,7 +31,7 @@ public class ContentReportController {
     private final ContentService contentService;
 
     @PostMapping("/report")
-    ResponseEntity<?> createReport(@RequestBody CreateContentReportDto dto, Authentication auth) throws NotFoundException {
+    ResponseEntity<?> createReport(@RequestBody CreateContentReportDto dto, Authentication auth) throws NotFoundException, BadRequestException {
         Content content = contentService.getContentById(dto.getContentId());
         User user = userService.getUserFromAuthOrNull(auth);
         if (user != null){

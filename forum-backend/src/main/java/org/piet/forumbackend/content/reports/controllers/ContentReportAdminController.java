@@ -19,10 +19,10 @@ import java.util.List;
 @RequestMapping("${forum.api.prefix}/admin/reports")
 @RequiredArgsConstructor
 public class ContentReportAdminController {
-    ContentReportService contentReportService;
-    ContentService contentService;
+    private final ContentReportService contentReportService;
+    private final ContentService contentService;
 
-    @GetMapping("/reports/summary")
+    @GetMapping("/summary")
     ResponseEntity<List<HotReportedContentDto>> getReportsSummary(
             @ParameterObject PaginationDto paginationDto,
             @RequestParam(name = "amount", required = false, defaultValue = "1") Long amount,
