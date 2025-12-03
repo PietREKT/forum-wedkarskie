@@ -53,10 +53,14 @@ async function onLogout() {
             {{ tr('nav.posts', 'Posty') }}
           </RouterLink>
 
-          <!-- Pozycje w budowie: widoczne, ale nieklikalne -->
-          <span class="opacity-70 cursor-not-allowed" title="Brak trasy — moduł w budowie">
+          <RouterLink
+              v-if="auth.isAuthenticated"
+              class="hover:opacity-90 router-link"
+              :to="{ path: '/events' }"
+          >
             {{ tr('nav.events', 'Wydarzenia') }}
-          </span>
+          </RouterLink>
+
           <span class="opacity-70 cursor-not-allowed" title="Brak trasy — moduł w budowie">
             {{ tr('nav.map', 'Mapa') }}
           </span>
