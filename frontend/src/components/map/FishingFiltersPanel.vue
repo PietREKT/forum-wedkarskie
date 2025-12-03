@@ -1,5 +1,29 @@
 <script setup>
-const emit = defineEmits(['hide'])
+import { ref, watch } from 'vue'
+
+const props = defineProps({
+  filters: {
+    type: Object,
+    required: true,
+  },
+})
+
+const emit = defineEmits(['hide', 'update:filters'])
+
+const localFilters = ref({ ...props.filters })
+
+watch(
+    () => props.filters,
+    (val) => {
+      localFilters.value = { ...val }
+    },
+    { immediate: true, deep: true },
+)
+
+function updateField(field, value) {
+  localFilters.value = { ...localFilters.value, [field]: value }
+  emit('update:filters', localFilters.value)
+}
 </script>
 
 <template>
@@ -22,6 +46,8 @@ const emit = defineEmits(['hide'])
       <label class="font-medium">Województwo</label>
       <select
           class="bg-white/15 text-white border border-white/60 rounded px-2 py-1 text-xs outline-none"
+          :value="localFilters.voivodeship"
+          @change="updateField('voivodeship', $event.target.value)"
       >
         <option>Dowolne</option>
         <option>Warmińsko-mazurskie</option>
@@ -34,6 +60,8 @@ const emit = defineEmits(['hide'])
       <label class="font-medium">Typ zbiornika</label>
       <select
           class="bg-white/15 text-white border border-white/60 rounded px-2 py-1 text-xs outline-none"
+          :value="localFilters.waterBodyType"
+          @change="updateField('waterBodyType', $event.target.value)"
       >
         <option>Dowolny</option>
         <option>Rzeka</option>
@@ -51,6 +79,8 @@ const emit = defineEmits(['hide'])
           type="text"
           placeholder="np. szczupak, sandacz"
           class="bg-white/15 text-white placeholder:text-white/80 border border-white/60 rounded px-2 py-1 text-xs outline-none"
+          :value="localFilters.fishQuery"
+          @input="updateField('fishQuery', $event.target.value)"
       />
     </div>
 
@@ -58,6 +88,8 @@ const emit = defineEmits(['hide'])
       <label class="font-medium">Rodzaj łowiska</label>
       <select
           class="bg-white/15 text-white border border-white/60 rounded px-2 py-1 text-xs outline-none"
+          :value="localFilters.spotType"
+          @change="updateField('spotType', $event.target.value)"
       >
         <option>Dowolne</option>
         <option>PZW / koło</option>

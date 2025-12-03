@@ -1,5 +1,5 @@
 <script setup>
-import { onMounted, onBeforeUnmount, ref } from 'vue'
+import { onMounted, onBeforeUnmount, ref, computed } from 'vue'
 import L from 'leaflet'
 
 import FishingFiltersPanel from '../components/map/FishingFiltersPanel.vue'
@@ -10,7 +10,7 @@ const map = ref(null)
 const markersLayer = ref(null)
 const panelsVisible = ref(true)
 
-// DEMO dane łowisk
+// DEMO dane łowisk (lekko zbliżone do struktury backendu)
 const spots = ref([
   {
     id: 1,
@@ -27,6 +27,8 @@ const spots = ref([
     ratingCount: 27,
     lat: 53.8,
     lng: 20.5,
+    locationX: 20.5,
+    locationY: 53.8,
   },
   {
     id: 2,
@@ -43,6 +45,8 @@ const spots = ref([
     ratingCount: 102,
     lat: 52.15,
     lng: 21.0,
+    locationX: 21.0,
+    locationY: 52.15,
   },
   {
     id: 3,
@@ -59,10 +63,50 @@ const spots = ref([
     ratingCount: 11,
     lat: 50.3,
     lng: 18.9,
+    locationX: 18.9,
+    locationY: 50.3,
   },
 ])
 
 const selectedSpot = ref(spots.value[0] || null)
+
+// filtry (lokalne, tylko frontend)
+const filters = ref({
+  voivodeship: 'Dowolne',
+  waterBodyType: 'Dowolny',
+  fishQuery: '',
+  spotType: 'Dowolne',
+})
+
+const visibleSpots = computed(() =>
+    spots.value.filter((spot) => {
+      const f = filters.value
+
+      if (f.voivodeship !== 'Dowolne' && spot.voivodeship !== f.voivodeship) {
+        return false
+      }
+
+      if (f.waterBodyType !== 'Dowolny' && spot.type !== f.waterBodyType) {
+        return false
+      }
+
+      if (f.spotType !== 'Dowolne') {
+        if (f.spotType === 'PZW / koło' && spot.ownerType !== 'PZW') return false
+        if (f.spotType === 'Prywatne / komercyjne' && spot.ownerType !== 'Komercyjne') return false
+        if (f.spotType === 'Własne' && spot.ownerType !== 'Własne') return false
+      }
+
+      if (f.fishQuery) {
+        const q = f.fishQuery.toLowerCase()
+        const hasFish = (spot.fish || []).some((name) =>
+            name.toLowerCase().includes(q),
+        )
+        if (!hasFish) return false
+      }
+
+      return true
+    }),
+)
 
 function togglePanels() {
   panelsVisible.value = !panelsVisible.value
@@ -112,7 +156,7 @@ function renderMarkers() {
   if (!map.value || !markersLayer.value) return
   clearMarkers()
 
-  for (const spot of spots.value) {
+  for (const spot of visibleSpots.value) {
     if (spot.lat == null || spot.lng == null) continue
     const marker = L.marker([spot.lat, spot.lng])
     marker.on('click', () => selectSpot(spot))
@@ -156,12 +200,16 @@ onBeforeUnmount(() => {
             class="relative z-10 h-full flex text-white min-h-0"
         >
           <!-- Lewe filtry -->
-          <FishingFiltersPanel class="w-1/4 max-w-sm" @hide="togglePanels" />
+          <FishingFiltersPanel
+              class="w-1/4 max-w-sm"
+              v-model:filters="filters"
+              @hide="togglePanels"
+          />
 
           <!-- Środkowa lista -->
           <FishingSearchPanel
               class="w-1/4 max-w-sm"
-              :spots="spots"
+              :spots="visibleSpots"
               :selected-id="selectedSpot?.id ?? null"
               @select="selectSpot"
           />

@@ -1,4 +1,6 @@
 <script setup>
+import { ref, computed } from 'vue'
+
 const props = defineProps({
   spots: {
     type: Array,
@@ -11,6 +13,14 @@ const props = defineProps({
 })
 
 const emit = defineEmits(['select'])
+
+const search = ref('')
+
+const filteredSpots = computed(() =>
+    props.spots.filter((spot) =>
+        spot.name.toLowerCase().includes(search.value.toLowerCase()),
+    ),
+)
 </script>
 
 <template>
@@ -22,15 +32,16 @@ const emit = defineEmits(['select'])
         Wyszukiwarka
       </h2>
       <input
+          v-model="search"
           type="text"
-          placeholder="Szukaj po nazwie (na razie bez logiki)"
+          placeholder="Szukaj po nazwie"
           class="bg-white/15 text-white placeholder:text-white/80 border border-white/60 rounded px-2 py-1.5 text-xs outline-none"
       />
     </header>
 
     <div class="flex-1 overflow-y-auto space-y-2 text-xs">
       <article
-          v-for="spot in props.spots"
+          v-for="spot in filteredSpots"
           :key="spot.id"
           class="border rounded-lg px-3 py-2 cursor-pointer bg-white/10 hover:bg-white/20"
           :class="spot.id === selectedId ? 'border-white/80' : 'border-white/40'"
@@ -51,4 +62,3 @@ const emit = defineEmits(['select'])
     </div>
   </section>
 </template>
->
