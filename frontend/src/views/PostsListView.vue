@@ -11,7 +11,6 @@
       </button>
     </header>
 
-    <!-- komunikat błędu ze store -->
     <p
         v-if="posts.error"
         class="mb-3 text-sm text-red-600 dark:text-red-400"
@@ -24,7 +23,10 @@
     </section>
 
     <section>
-      <div v-if="!posts.items.length && posts.loading" class="py-8 text-center text-sm text-zinc-500">
+      <div
+          v-if="!posts.items.length && posts.loading"
+          class="py-8 text-center text-sm text-zinc-500"
+      >
         Ładowanie postów...
       </div>
 
@@ -71,16 +73,12 @@ const composerOpen = ref(false)
 const isAuth = computed(() => auth.isAuthenticated)
 
 const hasMore = computed(() => {
-  // jeśli nie mamy total z backu, to przyjmijmy że dopóki ostatnie pobranie coś zwróciło,
-  // to przycisk "Wczytaj więcej" będzie widoczny. Tu na razie prosto:
   return posts.items.length < posts.total || posts.total === 0
 })
 
 onMounted(async () => {
-  if (!posts.items.length) {
-    posts.reset()
-    await posts.fetchNext()
-  }
+  posts.reset()
+  await posts.fetchNext()
 })
 
 async function loadMore() {
@@ -93,3 +91,4 @@ function onCreated() {
   composerOpen.value = false
 }
 </script>
+

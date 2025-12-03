@@ -1,110 +1,220 @@
 import { defineStore } from 'pinia'
-import { ref } from 'vue'
-import { apiClient } from '../utils/axios.js'
+import { apiClient } from '../utils/axios'
 
-export const useCommentsStore = defineStore('comments', () => {
-    const byPost = ref({})
-    const PAGE_SIZE = 10
+export const useCommentsStore = defineStore('comments', {
+    state: () => ({
+        byPost: {},
+        error: null,
+        childrenLoaded: {},
+    }),
 
-    function _ensure(postId) {
-        if (!byPost.value[postId]) {
-            byPost.value[postId] = {
-                list: [],
-                page: 0,
-                loading: false,
-                hasMore: true,
+    actions: {
+        ensurePostState(postId) {
+            if (!this.byPost[postId]) {
+                this.byPost[postId] = {
+                    list: [],
+                    page: 0,
+                    loading: false,
+                    hasMore: true,
+                }
             }
-        }
-        return byPost.value[postId]
-    }
+            return this.byPost[postId]
+        },
 
-    function normalize(c = {}) {
-        return c
-    }
+        async fetchNext(postId) {
+            const state = this.ensurePostState(postId)
+            if (state.loading || !state.hasMore) return
 
-    async function fetchNext(postId) {
-        const state = _ensure(postId)
-        if (state.loading || !state.hasMore) return
+            state.loading = true
+            this.error = null
 
-        state.loading = true
-        try {
-            const resp = await apiClient.get(`/comments/${postId}`, {
-                params: { page: state.page },
-            })
+            try {
+                const res = await apiClient.get(`/comments/${postId}`, {
+                    params: { page: state.page },
+                })
 
-            const data = resp.data || {}
-            const listRaw = Array.isArray(data)
-                ? data
-                : data.content || data.items || []
+                const page = res.data || {}
+                const items = page.items || page.content || []
 
-            const list = listRaw.map(normalize)
+                const mapped = items.map(c => ({
+                    ...c,
+                    parent: c.parent || null,
+                    parentId: c.parent ? c.parent.id : postId,
+                }))
 
-            if (!list.length) {
-                state.hasMore = false
-            } else {
-                state.list = state.list.concat(list)
+                if (state.page === 0) {
+                    state.list = mapped
+                } else {
+                    const existingIds = new Set(state.list.map(c => c.id))
+                    mapped.forEach(c => {
+                        if (!existingIds.has(c.id)) {
+                            state.list.push(c)
+                        }
+                    })
+                }
+
                 state.page += 1
+                state.hasMore =
+                    page.hasNext !== undefined
+                        ? page.hasNext
+                        : page.totalPages !== undefined && page.page !== undefined
+                            ? page.page + 1 < page.totalPages
+                            : items.length > 0
+            } catch (e) {
+                console.error(e)
+                this.error = 'Nie udało się wczytać komentarzy.'
+            } finally {
+                state.loading = false
             }
-        } finally {
-            state.loading = false
-        }
-    }
+        },
 
-    async function add(postId, { content, file, parentCommentId = null }) {
-        const fd = new FormData()
-        fd.append('content', content || '')
-        fd.append('postId', postId)
+        addToStore(postId, comment) {
+            const state = this.ensurePostState(postId)
+            state.list.unshift({
+                ...comment,
+                parent: comment.parent || null,
+                parentId: comment.parent ? comment.parent.id : comment.parentId ?? null,
+            })
+        },
 
-        if (parentCommentId != null) {
-            fd.append('commentId', parentCommentId)
-        }
+        async add(postId, payload) {
+            const form = new FormData()
+            form.append('content', payload.content)
 
-        if (file) {
-            fd.append('attachment', file)
-        }
+            const parentId = payload.parentId != null ? payload.parentId : postId
+            form.append('parentId', parentId)
 
-        const resp = await apiClient.post('/comments', fd, {
-            headers: { 'Content-Type': 'multipart/form-data' },
-        })
+            if (payload.file) {
+                form.append('photos', payload.file)
+            }
 
-        const created = normalize(resp.data)
-        _ensure(postId).list.unshift(created)
-        return created
-    }
+            this.error = null
 
-    async function edit({ id, content, postId }) {
-        const resp = await apiClient.patch('/comments', {
-            id,
-            content,
-        })
+            try {
+                const res = await apiClient.post('/comments', form, {
+                    headers: { 'Content-Type': 'multipart/form-data' },
+                })
 
-        const list = _ensure(postId).list
-        const i = list.findIndex(c => c.id === id)
-        if (i !== -1) {
-            list[i] = normalize(resp.data)
-        }
-        return resp.data
-    }
+                const created = res.data || {}
+                const withParent = {
+                    ...created,
+                    parent: created.parent || { id: parentId },
+                    parentId: created.parent ? created.parent.id : parentId,
+                }
 
-    async function remove({ id, postId }) {
-        await apiClient.delete(`/comments/${id}`)
-        const state = _ensure(postId)
-        state.list = state.list.filter(c => c.id !== id)
-    }
+                this.addToStore(postId, withParent)
 
-    async function report({ commentId, reason = 'SPAM' }) {
-        await apiClient.post('/reports/comments/report', {
-            reason,
-            commentId,
-        })
-    }
+                this.childrenLoaded[parentId] = true
 
-    return {
-        byPost,
-        fetchNext,
-        add,
-        edit,
-        remove,
-        report,
-    }
+                return withParent
+            } catch (e) {
+                console.error(e)
+                this.error = 'Nie udało się dodać komentarza.'
+                throw e
+            }
+        },
+
+        async edit({ id, content, postId }) {
+            this.error = null
+            const state = this.ensurePostState(postId)
+
+            try {
+                const res = await apiClient.patch('/comments', {
+                    id,
+                    content,
+                    attachedPhotos: [],
+                    newPhotos: [],
+                })
+
+                const updatedRaw = res.data || {}
+                const existing = state.list.find(c => c.id === id) || {}
+                const updated = {
+                    ...existing,
+                    ...updatedRaw,
+                    parent: updatedRaw.parent || existing.parent || null,
+                }
+                updated.parentId = updated.parent
+                    ? updated.parent.id
+                    : existing.parentId ?? null
+
+                state.list = state.list.map(c => (c.id === id ? updated : c))
+
+                return updated
+            } catch (e) {
+                console.error(e)
+                this.error = 'Nie udało się zaktualizować komentarza.'
+                throw e
+            }
+        },
+
+        async remove({ id, postId }) {
+            const state = this.ensurePostState(postId)
+            this.error = null
+
+            try {
+                await apiClient.delete(`/comments/${id}`)
+            } catch (e) {
+                if (!(e.response && e.response.status === 500)) {
+                    console.error(e)
+                    this.error = 'Nie udało się usunąć komentarza.'
+                    throw e
+                }
+            }
+
+            // usuń komentarz + jego odpowiedzi
+            state.list = state.list.filter(
+                c => c.id !== id && c.parentId !== id,
+            )
+        },
+
+        async report({ id, reason }) {
+            this.error = null
+            try {
+                await apiClient.post('/reports/posts/report', {
+                    contentId: id,
+                    reason,
+                })
+            } catch (e) {
+                console.error(e)
+                this.error = 'Nie udało się wysłać zgłoszenia.'
+                throw e
+            }
+        },
+
+        async fetchChildren(postId, parentId) {
+            if (this.childrenLoaded[parentId]) return
+            this.childrenLoaded[parentId] = true
+
+            try {
+                const res = await apiClient.get(`/comments/${parentId}`, {
+                    params: { page: 0 },
+                })
+
+                const page = res.data || {}
+                const items = page.items || page.content || []
+
+                if (!items.length) return
+
+                const mapped = items.map(c => ({
+                    ...c,
+                    parent: c.parent || { id: parentId },
+                    parentId,
+                }))
+
+                const state = this.ensurePostState(postId)
+                const existingIds = new Set(state.list.map(c => c.id))
+                mapped.forEach(c => {
+                    if (!existingIds.has(c.id)) {
+                        state.list.push(c)
+                    }
+                })
+            } catch (e) {
+                console.error(e)
+            }
+        },
+
+        clearError() {
+            this.error = null
+        },
+    },
 })

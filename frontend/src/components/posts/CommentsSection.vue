@@ -39,21 +39,19 @@ const deleteConfirmComment = ref(null)
 const currentUser = computed(() => auth.user)
 const isAuth = computed(() => !!auth.user)
 
-/* zwijanie komentarzy */
 const sectionOpen = ref(true)
 
+/* status nad listą */
+
 const statusMessage = ref('')
-const statusType = ref('info')
+const statusType = ref('info') // 'info' | 'success' | 'error'
 let statusTimer = null
 
 const statusClass = computed(() => {
-  if (statusType.value === 'error') {
-    return 'bg-red-500/15 border-red-500/40 text-red-100'
-  }
-  if (statusType.value === 'success') {
-    return 'bg-emerald-500/15 border-emerald-500/40 text-emerald-100'
-  }
-  return 'bg-zinc-500/10 border-zinc-500/30 text-zinc-100'
+  if (!statusMessage.value) return ''
+  if (statusType.value === 'success') return 'border-green-500 text-green-600'
+  if (statusType.value === 'error') return 'border-red-500 text-red-600'
+  return 'border-slate-400 text-slate-600'
 })
 
 function showStatus(msg, type = 'info') {
@@ -68,9 +66,9 @@ function showStatus(msg, type = 'info') {
 /* powody zgłoszeń */
 
 const REPORT_REASONS = [
-  { code: 'SPAM',           label: 'Spam lub treści bezwartościowe' },
-  { code: 'UNPAID_AD',      label: 'Ukryta / nieoznaczona reklama' },
-  { code: 'HARASSMENT',     label: 'Nękanie, obraźliwe treści' },
+  { code: 'SPAM', label: 'Spam lub treści bezwartościowe' },
+  { code: 'UNPAID_AD', label: 'Ukryta / nieoznaczona reklama' },
+  { code: 'HARASSMENT', label: 'Nękanie, obraźliwe treści' },
   { code: 'SEXUAL_CONTENT', label: 'Treści o charakterze seksualnym' },
 ]
 
@@ -78,6 +76,10 @@ onMounted(() => {
   if (!state.value.list.length) {
     comments.fetchNext(props.postId)
   }
+})
+
+onBeforeUnmount(() => {
+  if (statusTimer) clearTimeout(statusTimer)
 })
 
 function author(c) {
@@ -88,7 +90,7 @@ function date(d) {
   return d ? new Date(d).toLocaleString('pl-PL') : ''
 }
 
-/* dodawanie komentarza – bez zdjęć */
+/* dodawanie komentarza */
 
 async function submit() {
   const text = (content.value || '').trim()
@@ -106,6 +108,70 @@ async function submit() {
     submitting.value = false
   }
 }
+
+
+function startReply(c) {
+  replyToId.value = c.id
+  replyContent.value = ''
+  menuFor.value = null
+}
+
+function cancelReply() {
+  replyToId.value = null
+  replyContent.value = ''
+}
+
+async function sendReply() {
+  const text = (replyContent.value || '').trim()
+  if (!text) return
+  const parentId = replyToId.value
+  if (!parentId) return
+
+  try {
+    await comments.add(props.postId, {
+      content: text,
+      parentId, // zawsze ID komentarza głównego w wątku
+    })
+    showStatus('Odpowiedź została dodana.', 'success')
+  } catch {
+    showStatus('Nie udało się dodać odpowiedzi.', 'error')
+  } finally {
+    cancelReply()
+  }
+}
+
+/* dzieci / drzewo */
+
+function childrenOf(id) {
+  // dociągnij odpowiedzi
+  comments.fetchChildren(props.postId, id)
+  return (state.value.list || []).filter(c => c.parentId === id)
+}
+
+const showAllReplies = ref({})
+
+function visibleChildrenOf(id) {
+  const all = childrenOf(id)
+  if (showAllReplies.value[id]) return all
+  return all.slice(0, 2)
+}
+
+function toggleReplies(id) {
+  showAllReplies.value = {
+    ...showAllReplies.value,
+    [id]: !showAllReplies.value[id],
+  }
+}
+
+const topLevelComments = computed(() => {
+  const list = state.value.list || []
+  const postIdNum = Number(props.postId)
+  return list.filter(c => !c.parentId || c.parentId === postIdNum)
+})
+
+const totalCount = computed(() => state.value.list.length)
+
+/* menu / uprawnienia */
 
 function toggleMenu(id) {
   menuFor.value = menuFor.value === id ? null : id
@@ -145,122 +211,63 @@ async function applyEdit(c) {
   }
 }
 
-/* odpowiedzi */
+/* usuwanie */
 
-function startReply(c) {
-  replyToId.value = c.id
-  replyContent.value = ''
+function confirmRemove(c) {
+  deleteConfirmComment.value = c
   menuFor.value = null
 }
 
-function cancelReply() {
-  replyToId.value = null
-  replyContent.value = ''
-}
-
-async function sendReply(parent) {
-  const text = (replyContent.value || '').trim()
-  if (!text) return
+async function doRemove() {
+  if (!deleteConfirmComment.value) return
+  const id = deleteConfirmComment.value.id
   try {
-    await comments.add(props.postId, {
-      content: text,
-      parentCommentId: parent.id,
-    })
-    showStatus('Odpowiedź została dodana.', 'success')
+    await comments.remove({ id, postId: props.postId })
+    showStatus('Komentarz został usunięty.', 'success')
+
+    if (replyToId.value === id) {
+      cancelReply()
+    }
   } catch {
-    showStatus('Nie udało się dodać odpowiedzi.', 'error')
+    showStatus('Nie udało się usunąć komentarza.', 'error')
   } finally {
-    cancelReply()
+    deleteConfirmComment.value = null
   }
 }
 
-const showAllReplies = ref({})
+/* ładowanie kolejnych stron */
 
-function childrenOf(id) {
-  return (state.value.list || []).filter(c => c.parentId === id)
+function loadMore() {
+  if (!state.value.loading) comments.fetchNext(props.postId)
 }
 
-function visibleChildrenOf(id) {
-  const all = childrenOf(id)
-  if (showAllReplies.value[id]) return all
-  return all.slice(0, 2)
-}
-
-function toggleReplies(id) {
-  showAllReplies.value = {
-    ...showAllReplies.value,
-    [id]: !showAllReplies.value[id],
-  }
-}
-
-/* zgłoszenia – overlay */
+/* zgłoszenia */
 
 function openReportPanel(c) {
   reportForComment.value = c
   menuFor.value = null
 }
 
-async function sendReport(reasonCode) {
-  const c = reportForComment.value
-  if (!c) return
+function closeReportPanel() {
+  reportForComment.value = null
+  reportSubmitting.value = false
+}
+
+async function sendReport(reason) {
+  if (!reportForComment.value || !reason) return
   reportSubmitting.value = true
   try {
-    await comments.report({ commentId: c.id, reason: reasonCode })
-    showStatus('Zgłoszenie zostało wysłane do moderacji.', 'success')
+    await comments.report({
+      id: reportForComment.value.id,
+      reason,
+    })
+    showStatus('Zgłoszenie zostało wysłane.', 'success')
+    closeReportPanel()
   } catch {
-    showStatus('Nie udało się wysłać zgłoszenia (błąd serwera).', 'error')
-  } finally {
+    showStatus('Nie udało się wysłać zgłoszenia.', 'error')
     reportSubmitting.value = false
-    reportForComment.value = null
   }
 }
-
-/* usuwanie komentarza */
-
-function askRemove(c) {
-  deleteConfirmComment.value = c
-  menuFor.value = null
-}
-
-async function doRemove() {
-  const c = deleteConfirmComment.value
-  if (!c) return
-  deleteConfirmComment.value = null
-
-  // id komentarza i jego odpowiedzi które znikną w UI
-  const removedIds = [c.id, ...childrenOf(c.id).map(x => x.id)]
-
-  try {
-    await comments.remove({ id: c.id, postId: props.postId })
-    showStatus('Komentarz został usunięty.', 'success')
-
-    // jeśli edytowaliśmy/odpowiadaliśmy na usunięty komentarz/odpowiedź – wyczyść UI
-    if (removedIds.includes(editingId.value)) {
-      cancelEdit()
-    }
-    if (removedIds.includes(replyToId.value)) {
-      cancelReply()
-    }
-  } catch {
-    showStatus('Nie udało się usunąć komentarza.', 'error')
-  }
-}
-
-function loadMore() {
-  if (!state.value.loading) comments.fetchNext(props.postId)
-}
-
-/* struktura komentarzy */
-
-const topLevelComments = computed(() =>
-    (state.value.list || []).filter(c => !c.parentId),
-)
-
-const totalCount = computed(() => state.value.list.length)
-
-onBeforeUnmount(() => {
-  if (statusTimer) clearTimeout(statusTimer)
-})
 </script>
 
 <template>
@@ -280,27 +287,30 @@ onBeforeUnmount(() => {
     </div>
 
     <div v-if="sectionOpen" class="mt-3 space-y-3">
-      <!-- dodawanie komentarza (bez zdjęć) -->
-      <form
-          v-if="isAuth"
-          @submit.prevent="submit"
-          class="flex items-start gap-2"
-      >
+      <!-- formularz dodawania komentarza -->
+      <form v-if="isAuth" class="space-y-2" @submit.prevent="submit">
         <textarea
-            v-model.trim="content"
-            rows="2"
-            class="flex-1 border rounded-md p-2 text-sm theme-border theme-card"
-            placeholder="Dodaj komentarz"
-        ></textarea>
-        <button
-            class="px-3 py-1.5 border rounded-md text-sm theme-border theme-primary"
-            :disabled="submitting || !content.trim()"
-        >
-          {{ submitting ? 'Wysyłanie...' : 'Wyślij' }}
-        </button>
+            v-model="content"
+            class="w-full resize-none border rounded-md px-3 py-2 text-sm theme-border theme-bg theme-text"
+            rows="3"
+            placeholder="Dodaj komentarz..."
+        />
+        <div class="flex justify-end">
+          <button
+              type="submit"
+              class="px-4 py-1 rounded-md text-sm theme-button"
+              :disabled="submitting || !content.trim()"
+          >
+            {{ submitting ? 'Wysyłanie...' : 'Wyślij' }}
+          </button>
+        </div>
       </form>
 
-      <!-- toast -->
+      <p v-else class="text-xs theme-muted">
+        Zaloguj się, aby dodać komentarz.
+      </p>
+
+      <!-- status -->
       <div
           v-if="statusMessage"
           class="text-xs border rounded-md px-3 py-2"
@@ -318,230 +328,245 @@ onBeforeUnmount(() => {
         >
           <!-- komentarz główny -->
           <div class="flex items-start justify-between gap-3">
-            <div>
-              <p class="text-sm whitespace-pre-wrap">
-                {{ editingId === (c.id ?? -1) ? editContent : c.content }}
-              </p>
-              <p class="text-xs theme-muted mt-1">
-                {{ author(c) }} • {{ date(c.createdAt) }}
-              </p>
-            </div>
-
-            <div class="relative">
-              <button
-                  class="px-2 py-1 border rounded-md text-xs theme-border"
-                  @click="toggleMenu(c.id)"
-              >
-                Akcje
-              </button>
-              <div
-                  v-if="menuFor === c.id"
-                  class="absolute right-0 mt-1 w-44 border rounded-md theme-border theme-card shadow text-sm z-10"
-              >
-                <button
-                    class="w-full text-left px-3 py-2 hover:bg-[var(--color-border)]/20"
-                    @click="openReportPanel(c)"
-                >
-                  Zgłoś
-                </button>
-                <button
-                    v-if="isAuth"
-                    class="w-full text-left px-3 py-2 hover:bg-[var(--color-border)]/20"
-                    @click="startReply(c)"
-                >
-                  Odpowiedz
-                </button>
-                <template v-if="canEditOrDelete(c)">
-                  <button
-                      class="w-full text-left px-3 py-2 hover:bg-[var(--color-border)]/20"
-                      @click="startEdit(c)"
-                  >
-                    Edytuj
-                  </button>
-                  <button
-                      class="w-full text-left px-3 py-2 text-[var(--color-danger)] hover:bg-[var(--color-border)]/20"
-                      @click="askRemove(c)"
-                  >
-                    Usuń
-                  </button>
-                </template>
-              </div>
-            </div>
-          </div>
-
-          <!-- edycja komentarza głównego -->
-          <div v-if="editingId === c.id" class="mt-2">
-            <textarea
-                v-model.trim="editContent"
-                class="w-full border rounded-md p-2 text-sm theme-border theme-card"
-                rows="2"
-            ></textarea>
-            <div class="mt-2 flex gap-2">
-              <button
-                  class="px-3 py-1.5 border rounded-md text-sm theme-border"
-                  @click="cancelEdit"
-              >
-                Anuluj
-              </button>
-              <button
-                  class="px-3 py-1.5 border rounded-md text-sm theme-primary"
-                  @click="applyEdit(c)"
-              >
-                Zapisz
-              </button>
-            </div>
-          </div>
-
-          <!-- odpowiedzi -->
-          <ul class="mt-3 space-y-2 pl-4 border-l border-dashed theme-border">
-            <li
-                v-for="r in visibleChildrenOf(c.id)"
-                :key="r.id ?? r.createdAt"
-                class="pt-1"
-            >
-              <div class="flex items-start justify-between gap-3">
-                <div>
-                  <p class="text-sm whitespace-pre-wrap">
-                    {{ editingId === r.id ? editContent : r.content }}
-                  </p>
-                  <p class="text-xs theme-muted mt-1">
-                    {{ author(r) }} • {{ date(r.createdAt) }}
-                  </p>
-                </div>
-
-                <div class="relative">
-                  <button
-                      class="px-2 py-1 border rounded-md text-xs theme-border"
-                      @click="toggleMenu(r.id)"
-                  >
-                    Akcje
-                  </button>
-                  <div
-                      v-if="menuFor === r.id"
-                      class="absolute right-0 mt-1 w-44 border rounded-md theme-border theme-card shadow text-sm z-10"
-                  >
-                    <button
-                        class="w-full text-left px-3 py-2 hover:bg-[var(--color-border)]/20"
-                        @click="openReportPanel(r)"
-                    >
-                      Zgłoś
-                    </button>
-                    <button
-                        v-if="isAuth"
-                        class="w-full text-left px-3 py-2 hover:bg-[var(--color-border)]/20"
-                        @click="startReply(r)"
-                    >
-                      Odpowiedz
-                    </button>
-                    <template v-if="canEditOrDelete(r)">
-                      <button
-                          class="w-full text-left px-3 py-2 hover:bg-[var(--color-border)]/20"
-                          @click="startEdit(r)"
-                      >
-                        Edytuj
-                      </button>
-                      <button
-                          class="w-full text-left px-3 py-2 text-[var(--color-danger)] hover:bg-[var(--color-border)]/20"
-                          @click="askRemove(r)"
-                      >
-                        Usuń
-                      </button>
-                    </template>
-                  </div>
-                </div>
+            <div class="flex-1">
+              <div class="flex items-center gap-2 mb-1">
+                <span class="text-xs font-semibold theme-text">
+                  {{ author(c) }}
+                </span>
+                <span class="text-[10px] theme-muted">
+                  {{ date(c.createdAt) }}
+                </span>
               </div>
 
-              <!-- edycja odpowiedzi -->
-              <div v-if="editingId === r.id" class="mt-2">
+              <div v-if="editingId === c.id" class="space-y-2">
                 <textarea
-                    v-model.trim="editContent"
-                    class="w-full border rounded-md p-2 text-sm theme-border theme-card"
-                    rows="2"
-                ></textarea>
-                <div class="mt-2 flex gap-2">
+                    v-model="editContent"
+                    class="w-full resize-none border rounded-md px-2 py-1 text-xs theme-border theme-bg theme-text"
+                    rows="3"
+                />
+                <div class="flex gap-2 justify-end">
                   <button
-                      class="px-3 py-1.5 border rounded-md text-sm theme-border"
+                      type="button"
+                      class="px-2 py-1 text-[11px] rounded-md border theme-border"
                       @click="cancelEdit"
                   >
                     Anuluj
                   </button>
                   <button
-                      class="px-3 py-1.5 border rounded-md text-sm theme-primary"
-                      @click="applyEdit(r)"
+                      type="button"
+                      class="px-2 py-1 text-[11px] rounded-md theme-button"
+                      @click="applyEdit(c)"
                   >
                     Zapisz
                   </button>
                 </div>
               </div>
-            </li>
+              <p v-else class="text-xs whitespace-pre-wrap theme-text">
+                {{ c.content }}
+              </p>
+            </div>
 
-            <!-- formularz odpowiedzi (dla aktualnie wybranego komentarza) -->
-            <li v-if="replyToId === c.id" class="pt-1">
-              <div class="mt-2">
-                <textarea
-                    v-model.trim="replyContent"
-                    class="w-full border rounded-md p-2 text-sm theme-border theme-card"
-                    rows="2"
-                    placeholder="Odpowiedz na komentarz"
-                ></textarea>
-                <div class="mt-2 flex gap-2">
+            <!-- menu akcji -->
+            <div class="relative">
+              <button
+                  type="button"
+                  class="text-xs px-2 py-1 rounded-md border theme-border theme-bg"
+                  @click="toggleMenu(c.id)"
+              >
+                Akcje
+              </button>
+
+              <div
+                  v-if="menuFor === c.id"
+                  class="absolute right-0 mt-1 w-40 rounded-md border theme-border theme-card shadow-lg z-10"
+              >
+                <ul class="text-xs">
+                  <li>
+                    <button
+                        type="button"
+                        class="w-full text-left px-3 py-1 hover:theme-hover"
+                        @click="startReply(c)"
+                    >
+                      Odpowiedz
+                    </button>
+                  </li>
+                  <li v-if="canEditOrDelete(c)">
+                    <button
+                        type="button"
+                        class="w-full text-left px-3 py-1 hover:theme-hover"
+                        @click="startEdit(c)"
+                    >
+                      Edytuj
+                    </button>
+                  </li>
+                  <li v-if="canEditOrDelete(c)">
+                    <button
+                        type="button"
+                        class="w-full text-left px-3 py-1 hover:theme-hover text-red-500"
+                        @click="confirmRemove(c)"
+                    >
+                      Usuń
+                    </button>
+                  </li>
+                  <li>
+                    <button
+                        type="button"
+                        class="w-full text-left px-3 py-1 hover:theme-hover"
+                        @click="openReportPanel(c)"
+                    >
+                      Zgłoś
+                    </button>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          <!-- odpowiedzi -->
+          <div class="mt-2 border-l pl-3 space-y-2">
+            <div
+                v-for="r in visibleChildrenOf(c.id)"
+                :key="r.id ?? r.createdAt"
+                class="text-xs theme-text"
+            >
+              <div class="flex justify-between gap-2">
+                <div class="flex-1">
+                  <div class="flex items-center gap-2 mb-1">
+                    <span class="text-[11px] font-semibold theme-text">
+                      {{ author(r) }}
+                    </span>
+                    <span class="text-[9px] theme-muted">
+                      {{ date(r.createdAt) }}
+                    </span>
+                  </div>
+                  <p class="whitespace-pre-wrap">
+                    {{ r.content }}
+                  </p>
+                </div>
+
+                <!-- menu akcji dla odpowiedzi -->
+                <div class="relative">
                   <button
-                      class="px-3 py-1.5 border rounded-md text-sm theme-border"
-                      @click="cancelReply"
+                      type="button"
+                      class="text-[11px] px-2 py-1 rounded-md border theme-border theme-bg"
+                      @click="toggleMenu(r.id)"
                   >
-                    Anuluj
+                    Akcje
                   </button>
-                  <button
-                      class="px-3 py-1.5 border rounded-md text-sm theme-primary"
-                      @click="sendReply(c)"
+
+                  <div
+                      v-if="menuFor === r.id"
+                      class="absolute right-0 mt-1 w-40 rounded-md border theme-border theme-card shadow-lg z-10"
                   >
-                    Wyślij odpowiedź
-                  </button>
+                    <ul class="text-xs">
+                      <li>
+                        <button
+                            type="button"
+                            class="w-full text-left px-3 py-1 hover:theme-hover"
+                            @click="startReply(c)"
+                        >
+                          Odpowiedz
+                        </button>
+                      </li>
+                      <li v-if="canEditOrDelete(r)">
+                        <button
+                            type="button"
+                            class="w-full text-left px-3 py-1 hover:theme-hover"
+                            @click="startEdit(r)"
+                        >
+                          Edytuj
+                        </button>
+                      </li>
+                      <li v-if="canEditOrDelete(r)">
+                        <button
+                            type="button"
+                            class="w-full text-left px-3 py-1 hover:theme-hover text-red-500"
+                            @click="confirmRemove(r)"
+                        >
+                          Usuń
+                        </button>
+                      </li>
+                      <li>
+                        <button
+                            type="button"
+                            class="w-full text-left px-3 py-1 hover:theme-hover"
+                            @click="openReportPanel(r)"
+                        >
+                          Zgłoś
+                        </button>
+                      </li>
+                    </ul>
+                  </div>
                 </div>
               </div>
-            </li>
+            </div>
 
-            <!-- przycisk pokaż wszystkie / mniej odpowiedzi -->
-            <li v-if="childrenOf(c.id).length > 2" class="pt-1">
-              <button
-                  class="text-[11px] underline theme-muted"
-                  type="button"
-                  @click="toggleReplies(c.id)"
-              >
-                {{ showAllReplies[c.id]
-                  ? 'Pokaż mniej odpowiedzi'
-                  : 'Pokaż wszystkie odpowiedzi' }}
-              </button>
-            </li>
-          </ul>
+            <!-- przycisk „pokaż więcej odpowiedzi” -->
+            <button
+                v-if="childrenOf(c.id).length > 2"
+                type="button"
+                class="text-[11px] theme-link"
+                @click="toggleReplies(c.id)"
+            >
+              <span v-if="showAllReplies[c.id]">Ukryj odpowiedzi</span>
+              <span v-else>
+                Pokaż wszystkie odpowiedzi ({{ childrenOf(c.id).length }})
+              </span>
+            </button>
+
+            <!-- formularz odpowiedzi  -->
+            <form
+                v-if="replyToId === c.id"
+                class="mt-2 space-y-2"
+                @submit.prevent="sendReply"
+            >
+              <textarea
+                  v-model="replyContent"
+                  class="w-full resize-none border rounded-md px-2 py-1 text-xs theme-border theme-bg theme-text"
+                  rows="2"
+                  placeholder="Napisz odpowiedź..."
+              />
+              <div class="flex gap-2 justify-end">
+                <button
+                    type="button"
+                    class="px-2 py-1 text-[11px] rounded-md border theme-border"
+                    @click="cancelReply"
+                >
+                  Anuluj
+                </button>
+                <button
+                    type="submit"
+                    class="px-2 py-1 text-[11px] rounded-md theme-button"
+                    :disabled="!replyContent.trim()"
+                >
+                  Wyślij odpowiedź
+                </button>
+              </div>
+            </form>
+          </div>
         </li>
       </ul>
 
-      <!-- wczytaj więcej stron -->
-      <div class="mt-2 text-center">
+      <!-- „załaduj więcej” -->
+      <div v-if="state.hasMore" class="flex justify-center mt-2">
         <button
-            v-if="state.hasMore && !state.loading"
-            class="px-3 py-1.5 border rounded-md text-sm theme-border"
+            type="button"
+            class="px-3 py-1 text-xs rounded-md border theme-border"
+            :disabled="state.loading"
             @click="loadMore"
         >
-          Wczytaj więcej
+          {{ state.loading ? 'Ładowanie...' : 'Załaduj więcej' }}
         </button>
-        <p v-else-if="state.loading" class="text-sm theme-muted">
-          Ładowanie...
-        </p>
-        <p v-else class="text-xs theme-muted">
-          Brak kolejnych komentarzy
-        </p>
       </div>
     </div>
 
-    <!-- zgłoszenia komentarza -->
+    <!-- Overlay zgłoszeń -->
     <CommentReportModal
         v-if="reportForComment"
         :comment="reportForComment"
         :reasons="REPORT_REASONS"
         :loading="reportSubmitting"
-        @close="reportForComment = null"
+        @close="closeReportPanel"
         @submit="sendReport"
     />
 

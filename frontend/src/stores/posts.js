@@ -11,68 +11,84 @@ export const usePostsStore = defineStore('posts', () => {
     const total = ref(0)
     const error = ref(null)
 
-    // zestaw postów, dla których trwa wysyłanie głosu
+    // zostawione na przyszłość, ale nie blokujemy na tym przycisków
     const voting = ref(new Set())
 
     function clearError() {
         error.value = null
     }
 
-    function getId(post) {
-        if (!post) return null
-        if (post.id != null) return post.id
-        if (post.contentId != null) return post.contentId
-        return null
+    function getId(p) {
+        return p?.id ?? p?.contentId ?? p?.postId
+    }
+
+    function findIndexById(id) {
+        return items.value.findIndex(p => getId(p) === id)
+    }
+
+    function setPostLocal(id, updater) {
+        const idx = findIndexById(id)
+        if (idx === -1) return
+        const updated = updater(items.value[idx])
+        items.value.splice(idx, 1, updated)
     }
 
     function reset() {
         items.value = []
-        loading.value = false
         page.value = 0
         total.value = 0
         error.value = null
-        voting.value = new Set()
     }
 
-    function setPostLocal(id, updater) {
-        const idx = items.value.findIndex(p => getId(p) === id)
-        if (idx === -1) return null
-        const oldPost = items.value[idx]
-        const newPost = updater(oldPost)
-        if (newPost === oldPost) return oldPost
-
-        const copy = items.value.slice()
-        copy[idx] = newPost
-        items.value = copy
-        return newPost
+    function mapVoteToNumber(v) {
+        if (typeof v === 'number') return v
+        if (!v) return 0
+        if (v === 'UPVOTE') return 1
+        if (v === 'DOWNVOTE') return -1
+        return 0
     }
 
-    async function fetchNext(params = {}) {
+    function normalizePost(raw) {
+        if (!raw || typeof raw !== 'object') return raw
+
+        const voteSource =
+            raw.viewerVote ?? raw.loggedUserVote ?? raw.userVote ?? raw.vote
+
+        const viewerVote = mapVoteToNumber(voteSource)
+
+        const rating =
+            typeof raw.rating === 'number'
+                ? raw.rating
+                : 0
+
+        return {
+            ...raw,
+            viewerVote,
+            rating,
+        }
+    }
+
+    async function fetchNext() {
         if (loading.value) return
         clearError()
         loading.value = true
-
         try {
             const resp = await apiClient.get('/posts/recent', {
-                params: { page: page.value, size: size.value, ...params },
+                params: {
+                    page: page.value,
+                    size: size.value,
+                },
             })
 
             const data = resp.data
-            const raw = Array.isArray(data)
-                ? data
-                : data?.content ?? data?.items ?? []
+            const list = Array.isArray(data?.content) ? data.content : data
 
-            const list = raw.map(p => ({
-                ...p,
-                // viewerVote i rating przychodzą z backendu; jeśli brak, domyślnie 0
-                viewerVote: typeof p.viewerVote === 'number' ? p.viewerVote : 0,
-                rating: typeof p.rating === 'number' ? p.rating : 0,
-            }))
+            const normalized = (list || []).map(normalizePost)
 
             if (page.value === 0) {
-                items.value = list
+                items.value = normalized
             } else {
-                items.value = [...items.value, ...list]
+                items.value = [...items.value, ...normalized]
             }
 
             if (!Array.isArray(data) && typeof data?.totalElements === 'number') {
@@ -83,67 +99,68 @@ export const usePostsStore = defineStore('posts', () => {
 
             page.value += 1
         } catch (e) {
-            console.error('fetchNext error', e)
-            const status = e?.response?.status
-            if (status === 401) {
-                error.value = 'Musisz być zalogowany, aby zobaczyć posty.'
-            } else {
-                error.value = 'Nie udało się pobrać postów. Spróbuj ponownie.'
-            }
+            console.error('fetchNext posts error', e)
+            error.value = 'Nie udało się pobrać postów.'
         } finally {
             loading.value = false
         }
     }
 
-    async function createPost({ content, files }) {
+    async function createPost({ content, files = [] }) {
         clearError()
-        try {
-            const fd = new FormData()
-            fd.append('content', content || '')
-            ;(files || []).forEach(f => fd.append('photos', f))
+        const fd = new FormData()
+        fd.append('content', content)
+        files.forEach(f => fd.append('photos', f))
 
+        try {
             const resp = await apiClient.post('/posts/create', fd, {
                 headers: { 'Content-Type': 'multipart/form-data' },
             })
+            const created = normalizePost(resp.data)
 
-            const created = resp.data
-            const withVote = {
-                ...created,
-                viewerVote:
-                    typeof created.viewerVote === 'number' ? created.viewerVote : 0,
-                rating: typeof created.rating === 'number' ? created.rating : 0,
-            }
-
-            items.value = [withVote, ...items.value]
+            items.value = [created, ...items.value]
             total.value += 1
-            return withVote
+
+            return created
         } catch (e) {
             console.error('createPost error', e)
             const status = e?.response?.status
             if (status === 401) {
                 error.value = 'Musisz być zalogowany, aby dodać post.'
-            } else if (status && status >= 400 && status < 500) {
-                error.value = 'Nie udało się dodać posta (błąd żądania).'
             } else {
-                error.value = 'Nie udało się dodać posta (błąd serwera).'
+                error.value = 'Nie udało się utworzyć posta.'
             }
             throw e
         }
     }
 
-    async function editPost({ id, content }) {
+    // edycja posta (tekst + zdjęcia) – z obejściem "__EMPTY__"
+    async function editPost({ id, content, newPhotos = [], attachedPhotos = [] }) {
         clearError()
         try {
-            const resp = await apiClient.patch('/posts/edit', { id, content })
-            const updated = resp.data
+            const fd = new FormData()
+            fd.append('id', id)
+            fd.append('content', content || '')
+
+            if (attachedPhotos && attachedPhotos.length) {
+                attachedPhotos.forEach(name => {
+                    fd.append('attachedPhotos', name)
+                })
+            } else {
+                fd.append('attachedPhotos', '__EMPTY__')
+            }
+
+            newPhotos.forEach(file => {
+                fd.append('newPhotos', file)
+            })
+
+            const resp = await apiClient.patch('/posts/edit', fd, {
+                headers: { 'Content-Type': 'multipart/form-data' },
+            })
+            const updated = normalizePost(resp.data)
             const pid = getId(updated)
 
-            setPostLocal(pid, () => ({
-                ...updated,
-                viewerVote:
-                    typeof updated.viewerVote === 'number' ? updated.viewerVote : 0,
-                rating: typeof updated.rating === 'number' ? updated.rating : 0,
-            }))
+            setPostLocal(pid, () => updated)
 
             return updated
         } catch (e) {
@@ -176,79 +193,94 @@ export const usePostsStore = defineStore('posts', () => {
         }
     }
 
-    // lokalna zmiana głosu; zwraca poprzednią wartość viewerVote dla ewentualnego rollbacku
-    function applyVoteLocal(id, target) {
-        let prev = 0
+    // optymistyczna aktualizacja głosu
+    function applyLocalVote(id, direction) {
+        const idx = findIndexById(id)
+        if (idx === -1) return null
 
-        setPostLocal(id, old => {
-            if (!old) return old
+        const post = items.value[idx]
+        const prevVote = mapVoteToNumber(post.viewerVote)
+        const prevRating =
+            typeof post.rating === 'number' ? post.rating : 0
 
-            const current = typeof old.viewerVote === 'number' ? old.viewerVote : 0
-            prev = current
+        let newVote = prevVote
+        let newRating = prevRating
 
-            // kliknięcie tego samego głosu drugi raz usuwa głos użytkownika
-            const next = current === target ? 0 : target
-            const rating = typeof old.rating === 'number' ? old.rating : 0
-            const diff = next - current
-
-            return {
-                ...old,
-                viewerVote: next,
-                rating: rating + diff,
-            }
-        })
-
-        return prev
-    }
-
-    async function voteInternal(id, target) {
-        clearError()
-        if (!id) return
-        if (voting.value.has(id)) return
-
-        const setCopy = new Set(voting.value)
-        setCopy.add(id)
-        voting.value = setCopy
-
-        // zapamiętujemy poprzedni głos, żeby w razie błędu cofnąć
-        const prev = applyVoteLocal(id, target)
-
-        try {
-            if (target === 1) {
-                await apiClient.patch(`/posts/${id}/upvote`)
-            } else if (target === -1) {
-                await apiClient.patch(`/posts/${id}/downvote`)
-            }
-            // backend liczy głosy per użytkownik; my tylko pokazujemy stan bieżącego
-        } catch (e) {
-            console.error('vote error', e)
-            const status = e?.response?.status
-            if (status === 401) {
-                error.value = 'Musisz być zalogowany, aby głosować.'
-            } else {
-                error.value = 'Nie udało się zapisać głosu.'
-            }
-
-            // rollback – przywracamy poprzedni głos
-            applyVoteLocal(id, prev)
-            throw e
-        } finally {
-            const s = new Set(voting.value)
-            s.delete(id)
-            voting.value = s
+        if (prevVote === direction) {
+            // cofnięcie głosu
+            newVote = 0
+            newRating = prevRating - direction
+        } else if (prevVote === 0) {
+            // nowy głos
+            newVote = direction
+            newRating = prevRating + direction
+        } else if (prevVote === -direction) {
+            // zmiana +1 ↔ -1
+            newVote = direction
+            newRating = prevRating + 2 * direction
         }
+
+        const optimistic = {
+            ...post,
+            viewerVote: newVote,
+            rating: newRating,
+        }
+
+        items.value.splice(idx, 1, optimistic)
+
+        return { prevVote, prevRating }
     }
 
     async function voteUp(id) {
-        return voteInternal(id, 1)
+        clearError()
+        const backup = applyLocalVote(id, 1)
+
+        try {
+            const resp = await apiClient.patch(`/posts/${id}/upvote`)
+            const updated = normalizePost(resp.data)
+            const pid = getId(updated)
+            setPostLocal(pid, () => updated)
+        } catch (e) {
+            console.error('voteUp error', e)
+            if (backup) {
+                const idx = findIndexById(id)
+                if (idx !== -1) {
+                    const post = items.value[idx]
+                    items.value.splice(idx, 1, {
+                        ...post,
+                        viewerVote: backup.prevVote,
+                        rating: backup.prevRating,
+                    })
+                }
+            }
+        }
     }
 
     async function voteDown(id) {
-        return voteInternal(id, -1)
+        clearError()
+        const backup = applyLocalVote(id, -1)
+
+        try {
+            const resp = await apiClient.patch(`/posts/${id}/downvote`)
+            const updated = normalizePost(resp.data)
+            const pid = getId(updated)
+            setPostLocal(pid, () => updated)
+        } catch (e) {
+            console.error('voteDown error', e)
+            if (backup) {
+                const idx = findIndexById(id)
+                if (idx !== -1) {
+                    const post = items.value[idx]
+                    items.value.splice(idx, 1, {
+                        ...post,
+                        viewerVote: backup.prevVote,
+                        rating: backup.prevRating,
+                    })
+                }
+            }
+        }
     }
 
-    // UWAGA: backend ma enum ReportReason bez wartości OTHER
-    // używamy jednego z dozwolonych kodów, np. SPAM
     async function reportPost({ postId, reason = 'SPAM' }) {
         clearError()
         try {
