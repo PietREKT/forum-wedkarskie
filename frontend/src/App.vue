@@ -53,6 +53,7 @@ async function onLogout() {
             {{ tr('nav.posts', 'Posty') }}
           </RouterLink>
 
+<<<<<<< HEAD
           <!-- Wydarzenia  nieklikalne -->
           <span class="opacity-70 cursor-not-allowed" title="Brak trasy — moduł w budowie">
             {{ tr('nav.events', 'Wydarzenia') }}
@@ -63,6 +64,17 @@ async function onLogout() {
               class="hover:opacity-90 router-link"
               :to="{ path: '/map' }"
           >
+=======
+          <RouterLink
+              v-if="auth.isAuthenticated"
+              class="hover:opacity-90 router-link"
+              :to="{ path: '/events' }"
+          >
+            {{ tr('nav.events', 'Wydarzenia') }}
+          </RouterLink>
+
+          <span class="opacity-70 cursor-not-allowed" title="Brak trasy — moduł w budowie">
+>>>>>>> 5cb1da2acf7431bf82e973017dff08a8024dbd8e
             {{ tr('nav.map', 'Mapa') }}
           </RouterLink>
 
