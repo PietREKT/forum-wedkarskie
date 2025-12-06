@@ -4,11 +4,8 @@ import LoginView from '../views/LoginView.vue'
 import RegisterView from '../views/RegisterView.vue'
 import ProfileView from '../views/ProfileView.vue'
 import PostsListView from '../views/PostsListView.vue'
-<<<<<<< HEAD
-import FishingMapView from '../views/FishingMapView.vue'
-=======
 import EventsView from '../views/EventsView.vue'
->>>>>>> 5cb1da2acf7431bf82e973017dff08a8024dbd8e
+import FishingMapView from '../views/FishingMapView.vue'
 
 const routes = [
     { path: '/', redirect: '/login' },
