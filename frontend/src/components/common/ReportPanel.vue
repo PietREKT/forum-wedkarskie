@@ -1,66 +1,66 @@
 <template>
-  <section class="absolute top-10 right-4 z-30">
+  <div
+      class="absolute inset-x-0 top-0 z-30 flex justify-center"
+  >
     <div
-        class="w-72 rounded-lg border border-red-500/80
-             bg-white dark:bg-zinc-900
-             shadow-lg px-3 py-2 text-xs"
+        class="mt-3 w-full max-w-md rounded-2xl border border-[var(--color-border)]
+             bg-[var(--color-bg)] shadow-xl px-4 py-3 text-[var(--color-text)]"
     >
-      <p class="font-semibold text-red-700 dark:text-red-300">
-        Zgłoś post
-      </p>
-      <p class="mt-0.5 text-[11px] text-zinc-700 dark:text-zinc-300">
-        Wybierz powód zgłoszenia. Zgłoszenie zostanie przekazane moderatorowi.
+      <h4 class="text-sm font-semibold mb-2">
+        Zgłoś profil
+      </h4>
+      <p class="text-xs text-[var(--color-muted)] mb-3">
+        Wybierz powód zgłoszenia profilu. Zgłoszenie trafi do administratora.
       </p>
 
-      <div class="mt-2 flex flex-wrap gap-2">
+      <div class="space-y-1.5 max-h-40 overflow-y-auto pr-1">
         <button
             v-for="reason in reasons"
             :key="reason.key"
             type="button"
-            class="px-3 py-1.5 rounded-md border theme-border
-                 bg-red-50 dark:bg-red-900/40
-                 text-[11px] text-red-800 dark:text-red-100
-                 hover:bg-red-100 dark:hover:bg-red-900/70"
+            class="w-full text-left text-xs rounded-lg px-3 py-1.5
+                 border border-[var(--color-border)]
+                 hover:bg-red-500/10 hover:border-red-500/60"
             :disabled="loading"
-            @click="onSelect(reason.key)"
+            @click="$emit('select-reason', reason.key)"
         >
           {{ reason.label }}
         </button>
+      </div>
 
+      <p v-if="error" class="mt-2 text-xs text-red-600">
+        {{ error }}
+      </p>
+
+      <div class="mt-3 flex justify-end gap-2">
         <button
             type="button"
-            class="px-3 py-1.5 rounded-md border theme-border
-                 bg-zinc-50 dark:bg-zinc-800
-                 text-[11px] text-zinc-800 dark:text-zinc-100
-                 hover:bg-zinc-100 dark:hover:bg-zinc-700"
+            class="px-3 py-1.5 text-xs rounded-lg
+                 border border-[var(--color-border)]
+                 bg-[var(--color-bg)] hover:opacity-90"
             :disabled="loading"
-            @click="onCancel"
+            @click="$emit('cancel')"
         >
           Anuluj
         </button>
       </div>
-
-      <p v-if="error" class="mt-1 text-red-700 dark:text-red-300">
-        {{ error }}
-      </p>
     </div>
-  </section>
+  </div>
 </template>
 
 <script setup>
 const props = defineProps({
-  reasons: { type: Array, required: true },
-  loading: { type: Boolean, default: false },
-  error: { type: String, default: '' },
+  reasons: {
+    type: Array,
+    required: true,
+  },
+  loading: {
+    type: Boolean,
+    default: false,
+  },
+  error: {
+    type: String,
+    default: '',
+  },
 })
-
-const emit = defineEmits(['select-reason', 'cancel'])
-
-function onSelect(reasonKey) {
-  emit('select-reason', reasonKey)
-}
-
-function onCancel() {
-  emit('cancel')
-}
 </script>

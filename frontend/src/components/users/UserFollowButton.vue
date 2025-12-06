@@ -1,36 +1,46 @@
 <template>
   <button
-      v-if="canFollow"
       type="button"
-      class="px-2 py-1 text-[11px] rounded-md border theme-border
-           hover:bg-zinc-100 dark:hover:bg-zinc-800"
+      class="inline-flex items-center rounded-xl px-4 py-2 text-sm font-medium
+           border
+           bg-[var(--color-bg)]
+           transition
+           hover:bg-[var(--color-primary)] hover:text-white
+           disabled:opacity-60 disabled:cursor-not-allowed"
+      :class="{
+      'border-[var(--color-border)] text-[var(--color-text)]': !isFollowing,
+      'border-[var(--color-primary)] text-[var(--color-primary)]': isFollowing,
+    }"
+      :disabled="loading"
       @click="toggleFollow"
   >
-    {{ isFollowing ? 'Obserwujesz' : 'Obserwuj' }}
+    <span v-if="!isFollowing">Obserwuj</span>
+    <span v-else>Przestań obserwować</span>
   </button>
 </template>
 
 <script setup>
-import { computed } from 'vue'
-import { useFollowsStore } from '../../stores/follows'
-import { useAuthStore } from '../../stores/auth'
+import { ref } from 'vue'
 
 const props = defineProps({
-  username: { type: String, required: true },
+  username: {
+    type: String,
+    required: true,
+  },
 })
 
-const follows = useFollowsStore()
-const auth = useAuthStore()
+const loading = ref(false)
+const isFollowing = ref(false)
 
-const isFollowing = computed(() => follows.isFollowed(props.username))
-
-const canFollow = computed(() => {
-  const current = auth.user?.username
-  if (!current) return false
-  return current !== props.username
-})
-
-function toggleFollow() {
-  follows.toggle(props.username)
+async function toggleFollow() {
+  if (!props.username) return
+  loading.value = true
+  try {
+    // tu kiedyś wyślemy żądanie HTTP
+    await new Promise(resolve => setTimeout(resolve, 300))
+    isFollowing.value = !isFollowing.value
+  } finally {
+    loading.value = false
+  }
 }
 </script>
