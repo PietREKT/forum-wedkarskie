@@ -53,16 +53,24 @@ async function onLogout() {
             {{ tr('nav.posts', 'Posty') }}
           </RouterLink>
 
-          <!-- Pozycje w budowie: widoczne, ale nieklikalne -->
+          <!-- Wydarzenia  nieklikalne -->
           <span class="opacity-70 cursor-not-allowed" title="Brak trasy — moduł w budowie">
             {{ tr('nav.events', 'Wydarzenia') }}
           </span>
-          <span class="opacity-70 cursor-not-allowed" title="Brak trasy — moduł w budowie">
+
+          <!-- Mapa – KLIKALNA -->
+          <RouterLink
+              class="hover:opacity-90 router-link"
+              :to="{ path: '/map' }"
+          >
             {{ tr('nav.map', 'Mapa') }}
-          </span>
+          </RouterLink>
+
+          <!-- Poradniki  nieklikalne -->
           <span class="opacity-70 cursor-not-allowed" title="Brak trasy — moduł w budowie">
             {{ tr('nav.guides', 'Poradniki') }}
           </span>
+
 
           <!-- Profil -->
           <RouterLink
