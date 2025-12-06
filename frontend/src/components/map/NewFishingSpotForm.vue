@@ -1,18 +1,12 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
+import { apiClient } from '../../utils/axios.js'
+import { useAuthStore } from '../../stores/auth'
 
-// lista gatunków do wyboru
-const speciesOptions = [
-  'Szczupak',
-  'Sandacz',
-  'Leszcz',
-  'Karp',
-  'Amur',
-  'Sum',
-  'Okoń',
-  'Jaź',
-  'Kleń',
-]
+const auth = useAuthStore()
+
+// lista gatunków z backendu
+const fishOptions = ref([]) // FishDto: { name, avgLength, ... }
 
 // stan formularza
 const newSpotForm = ref({
@@ -28,76 +22,74 @@ const newSpotForm = ref({
   boatAccess: false,
   regulationText: '',
 })
-const selectedSpecies = ref([])
+
+const selectedSpecies = ref([]) // lista nazw ryb (stringów)
 
 const regulationInput = ref(null)
 const photosInput = ref(null)
-
 const regulationFile = ref(null)
 const photos = ref([])
 
 const submitted = ref(false)
 const errors = ref({})
 
-// obsługa plików
+// pobieranie gatunków z /api/fish
+async function loadFish() {
+  try {
+    const { data } = await apiClient.get('/fish', {
+      params: {
+        size: 200,
+      },
+    })
+    fishOptions.value = Array.isArray(data) ? data : []
+  } catch (e) {
+    console.error('Błąd pobierania listy ryb', e)
+  }
+}
+
+onMounted(() => {
+  loadFish()
+})
+
+// obsługa plików – na razie tylko w UI
 function triggerRegulationFile() {
   regulationInput.value?.click()
 }
+
 function triggerPhotosFile() {
   photosInput.value?.click()
 }
+
 function onRegulationFileChange(e) {
   const files = e.target.files
   regulationFile.value = files && files[0] ? files[0] : null
 }
+
 function onPhotosChange(e) {
   const files = e.target.files
   photos.value = files ? Array.from(files) : []
 }
 
-// walidacja
+// walidacja podstawowa
 function validate() {
   const e = {}
 
   if (!newSpotForm.value.name.trim()) e.name = 'Nazwa jest wymagana.'
   if (!newSpotForm.value.type) e.type = 'Wybierz typ łowiska.'
-  if (!newSpotForm.value.voivodeship)
-    e.voivodeship = 'Wybierz województwo.'
-  if (!newSpotForm.value.ownerType)
-    e.ownerType = 'Wybierz rodzaj łowiska.'
-  if (!newSpotForm.value.address.trim())
-    e.address = 'Adres / lokalizacja jest wymagana.'
+  if (!newSpotForm.value.voivodeship) e.voivodeship = 'Wybierz województwo.'
+  if (!newSpotForm.value.ownerType) e.ownerType = 'Wybierz rodzaj łowiska.'
+  if (!newSpotForm.value.address.trim()) e.address = 'Adres / lokalizacja jest wymagana.'
+
+  if (!auth.user) {
+    e.form = 'Musisz być zalogowany, aby zgłosić łowisko.'
+  }
 
   errors.value = e
   return Object.keys(e).length === 0
 }
 
-// wysłanie (na razie tylko demo)
-function submit() {
-  if (!validate()) return
-
-  const payload = {
-    name: newSpotForm.value.name.trim(),
-    type: newSpotForm.value.type,
-    voivodeship: newSpotForm.value.voivodeship,
-    ownerType: newSpotForm.value.ownerType,
-    address: newSpotForm.value.address.trim(),
-    latitude: newSpotForm.value.latitude || null,
-    longitude: newSpotForm.value.longitude || null,
-    surfaceHa: newSpotForm.value.surfaceHa || null,
-    hasPier: newSpotForm.value.hasPier,
-    boatAccess: newSpotForm.value.boatAccess,
-    species: [...selectedSpecies.value],
-    regulationText: newSpotForm.value.regulationText.trim(),
-  }
-
-  console.log('Zgłoszone nowe łowisko (demo, tylko frontend):', payload)
-  console.log('Plik regulaminu:', regulationFile.value)
-  console.log('Zdjęcia łowiska:', photos.value)
-
-  submitted.value = true
-
-  // reset
+// reset formularza po sukcesie
+function resetForm() {
   newSpotForm.value = {
     name: '',
     type: '',
@@ -115,10 +107,73 @@ function submit() {
   regulationFile.value = null
   photos.value = []
   errors.value = {}
+}
 
-  setTimeout(() => {
+// wysłanie zgłoszenia do backendu
+async function submit() {
+  if (!validate()) return
+
+  // budowa listy ryb: GetFishDto – korzystamy z trybu "po nazwie"
+  const fishPayload = selectedSpecies.value.map((name) => ({
+    id: null,
+    name,
+    methods: null,
+    waterType: null,
+  }))
+
+  // typ łowiska: enum FishingSpot.FISHING_SPOT_TYPE (PUBLIC / PRIVATE)
+  const typeEnum =
+      newSpotForm.value.ownerType === 'PZW'
+          ? 'PUBLIC'
+          : 'PRIVATE'
+
+  const payload = {
+    name: newSpotForm.value.name.trim(),
+    description: newSpotForm.value.regulationText.trim() || null,
+    type: typeEnum,
+    managers: [
+      {
+        id: auth.user.id, // UUID zalogowanego użytkownika
+      },
+    ],
+    fish: fishPayload,
+    locationDto: {
+      longitude: newSpotForm.value.longitude
+          ? parseFloat(newSpotForm.value.longitude)
+          : null,
+      latitude: newSpotForm.value.latitude
+          ? parseFloat(newSpotForm.value.latitude)
+          : null,
+      address: {
+        countryCode: 'PL',
+        municipality: null,
+        city: null,
+        street: null,
+        propertyNo: null,
+      },
+    },
+  }
+
+  try {
     submitted.value = false
-  }, 2500)
+    errors.value = {}
+
+    const { data } = await apiClient.post('/spots/create', payload)
+    console.log('Utworzone łowisko:', data)
+
+    submitted.value = true
+    resetForm()
+
+    setTimeout(() => {
+      submitted.value = false
+    }, 2500)
+  } catch (e) {
+    console.error('Błąd wysyłania zgłoszenia łowiska', e)
+    errors.value = {
+      ...errors.value,
+      form: 'Nie udało się wysłać zgłoszenia.',
+    }
+  }
 }
 </script>
 
@@ -126,10 +181,16 @@ function submit() {
   <div class="text-xs">
     <h3 class="font-semibold mb-2">Zgłoś nowe łowisko</h3>
 
+    <!-- komunikat błędu ogólnego -->
+    <p v-if="errors.form" class="mb-2 text-red-300">
+      {{ errors.form }}
+    </p>
+
     <div class="grid grid-cols-1 md:grid-cols-2 gap-2 mb-2">
       <div class="flex flex-col gap-1">
         <label>
-          Nazwa łowiska <span class="text-red-300">*</span>
+          Nazwa łowiska
+          <span class="text-red-300">*</span>
         </label>
         <input
             v-model="newSpotForm.name"
@@ -144,7 +205,8 @@ function submit() {
 
       <div class="flex flex-col gap-1">
         <label>
-          Typ łowiska <span class="text-red-300">*</span>
+          Typ łowiska
+          <span class="text-red-300">*</span>
         </label>
         <select
             v-model="newSpotForm.type"
@@ -165,7 +227,8 @@ function submit() {
 
       <div class="flex flex-col gap-1">
         <label>
-          Województwo <span class="text-red-300">*</span>
+          Województwo
+          <span class="text-red-300">*</span>
         </label>
         <select
             v-model="newSpotForm.voivodeship"
@@ -196,7 +259,8 @@ function submit() {
 
       <div class="flex flex-col gap-1">
         <label>
-          Rodzaj łowiska <span class="text-red-300">*</span>
+          Rodzaj łowiska
+          <span class="text-red-300">*</span>
         </label>
         <select
             v-model="newSpotForm.ownerType"
@@ -214,7 +278,8 @@ function submit() {
 
       <div class="flex flex-col gap-1 md:col-span-2">
         <label>
-          Adres / lokalizacja na mapie <span class="text-red-300">*</span>
+          Adres / lokalizacja na mapie
+          <span class="text-red-300">*</span>
         </label>
         <input
             v-model="newSpotForm.address"
@@ -228,7 +293,7 @@ function submit() {
       </div>
 
       <div class="flex flex-col gap-1">
-        <label> Szerokość geograficzna (lat) </label>
+        <label>Szerokość geograficzna (lat)</label>
         <input
             v-model="newSpotForm.latitude"
             type="text"
@@ -238,7 +303,7 @@ function submit() {
       </div>
 
       <div class="flex flex-col gap-1">
-        <label> Długość geograficzna (lng) </label>
+        <label>Długość geograficzna (lng)</label>
         <input
             v-model="newSpotForm.longitude"
             type="text"
@@ -248,7 +313,7 @@ function submit() {
       </div>
 
       <div class="flex flex-col gap-1">
-        <label> Powierzchnia (ha) </label>
+        <label>Powierzchnia (ha)</label>
         <input
             v-model="newSpotForm.surfaceHa"
             type="text"
@@ -258,7 +323,7 @@ function submit() {
       </div>
 
       <div class="flex flex-col gap-1">
-        <label> Przystań </label>
+        <label>Przystań</label>
         <select
             v-model="newSpotForm.hasPier"
             class="bg-white/15 text-white border border-white/60 rounded px-2 py-1 text-xs outline-none"
@@ -269,7 +334,7 @@ function submit() {
       </div>
 
       <div class="flex flex-col gap-1">
-        <label> Możliwość wodowania łódki </label>
+        <label>Możliwość wodowania łódki</label>
         <select
             v-model="newSpotForm.boatAccess"
             class="bg-white/15 text-white border border-white/60 rounded px-2 py-1 text-xs outline-none"
@@ -280,27 +345,27 @@ function submit() {
       </div>
 
       <div class="flex flex-col gap-1 md:col-span-2">
-        <label> Gatunki ryb (można zaznaczyć kilka) </label>
+        <label>Gatunki ryb (można zaznaczyć kilka)</label>
         <div class="grid grid-cols-2 sm:grid-cols-3 gap-1">
           <label
-              v-for="s in speciesOptions"
-              :key="s"
+              v-for="f in fishOptions"
+              :key="f.name"
               class="inline-flex items-center gap-1 cursor-pointer"
           >
             <input
                 type="checkbox"
-                :value="s"
+                :value="f.name"
                 v-model="selectedSpecies"
                 class="accent-white"
             />
-            <span>{{ s }}</span>
+            <span>{{ f.name }}</span>
           </label>
         </div>
       </div>
     </div>
 
     <div class="flex flex-col gap-1 mb-2">
-      <label> Regulamin / opis (tekst) </label>
+      <label>Regulamin / opis (tekst)</label>
       <textarea
           v-model="newSpotForm.regulationText"
           rows="3"
@@ -311,7 +376,7 @@ function submit() {
 
     <div class="flex flex-col sm:flex-row gap-3 mb-2">
       <div class="flex flex-col gap-1 text-xs flex-1">
-        <label> Załącz regulamin (plik, np. PDF / DOC / TXT) </label>
+        <label>Załącz regulamin (plik, np. PDF / DOC / TXT)</label>
         <input
             ref="regulationInput"
             type="file"
@@ -331,7 +396,7 @@ function submit() {
       </div>
 
       <div class="flex flex-col gap-1 text-xs flex-1">
-        <label> Zdjęcia łowiska (można wybrać kilka) </label>
+        <label>Zdjęcia łowiska (można wybrać kilka)</label>
         <input
             ref="photosInput"
             type="file"
@@ -360,11 +425,8 @@ function submit() {
       >
         Wyślij zgłoszenie
       </button>
-      <span
-          v-if="submitted"
-          class="opacity-90"
-      >
-        Zgłoszenie przyjęte (demo, tylko frontend).
+      <span v-if="submitted" class="opacity-90">
+        Zgłoszenie przyjęte.
       </span>
     </div>
   </div>

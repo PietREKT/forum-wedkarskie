@@ -8,21 +8,38 @@ const props = defineProps({
   },
 })
 
-const emit = defineEmits(['hide', 'update:filters'])
+const emit = defineEmits(['hide', 'update:filters', 'apply'])
 
-const localFilters = ref({ ...props.filters })
+const localFilters = ref({
+  spotType: props.filters.spotType ?? 'Dowolne',
+  mode: props.filters.mode ?? 'ALL', // ALL | RADIUS
+  radiusKm: props.filters.radiusKm ?? 50,
+})
 
 watch(
     () => props.filters,
     (val) => {
-      localFilters.value = { ...val }
+      localFilters.value = {
+        spotType: val.spotType ?? 'Dowolne',
+        mode: val.mode ?? 'ALL',
+        radiusKm: val.radiusKm ?? 50,
+      }
     },
-    { immediate: true, deep: true },
+    { deep: true },
 )
 
 function updateField(field, value) {
-  localFilters.value = { ...localFilters.value, [field]: value }
-  emit('update:filters', localFilters.value)
+  localFilters.value = {
+    ...localFilters.value,
+    [field]: value,
+  }
+  emit('update:filters', { ...localFilters.value })
+}
+
+function applyFilters() {
+  const snapshot = { ...localFilters.value }
+  emit('update:filters', snapshot)
+  emit('apply', snapshot)
 }
 </script>
 
@@ -42,48 +59,7 @@ function updateField(field, value) {
       </button>
     </header>
 
-    <div class="flex flex-col gap-1 text-xs">
-      <label class="font-medium">Województwo</label>
-      <select
-          class="bg-white/15 text-white border border-white/60 rounded px-2 py-1 text-xs outline-none"
-          :value="localFilters.voivodeship"
-          @change="updateField('voivodeship', $event.target.value)"
-      >
-        <option>Dowolne</option>
-        <option>Warmińsko-mazurskie</option>
-        <option>Mazowieckie</option>
-        <option>Śląskie</option>
-      </select>
-    </div>
-
-    <div class="flex flex-col gap-1 text-xs">
-      <label class="font-medium">Typ zbiornika</label>
-      <select
-          class="bg-white/15 text-white border border-white/60 rounded px-2 py-1 text-xs outline-none"
-          :value="localFilters.waterBodyType"
-          @change="updateField('waterBodyType', $event.target.value)"
-      >
-        <option>Dowolny</option>
-        <option>Rzeka</option>
-        <option>Jezioro</option>
-        <option>Staw</option>
-        <option>Torfowisko</option>
-        <option>Żwirownia</option>
-        <option>Zalewisko</option>
-      </select>
-    </div>
-
-    <div class="flex flex-col gap-1 text-xs">
-      <label class="font-medium">Gatunki</label>
-      <input
-          type="text"
-          placeholder="np. szczupak, sandacz"
-          class="bg-white/15 text-white placeholder:text-white/80 border border-white/60 rounded px-2 py-1 text-xs outline-none"
-          :value="localFilters.fishQuery"
-          @input="updateField('fishQuery', $event.target.value)"
-      />
-    </div>
-
+    <!-- Rodzaj łowiska (to możemy filtrować na podstawie pola type w DTO) -->
     <div class="flex flex-col gap-1 text-xs">
       <label class="font-medium">Rodzaj łowiska</label>
       <select
@@ -94,8 +70,48 @@ function updateField(field, value) {
         <option>Dowolne</option>
         <option>PZW / koło</option>
         <option>Prywatne / komercyjne</option>
-        <option>Własne</option>
       </select>
+    </div>
+
+    <!-- Tryb pobierania + promień -->
+    <div class="flex flex-col gap-1 text-xs">
+      <label class="font-medium">Tryb wyszukiwania</label>
+      <select
+          class="bg-white/15 text-white border border-white/60 rounded px-2 py-1 text-xs outline-none"
+          :value="localFilters.mode"
+          @change="updateField('mode', $event.target.value)"
+      >
+        <option value="ALL">Wszystkie zaakceptowane łowiska</option>
+        <option value="RADIUS">W promieniu od środka mapy</option>
+      </select>
+    </div>
+
+    <div
+        v-if="localFilters.mode === 'RADIUS'"
+        class="flex flex-col gap-1 text-xs"
+    >
+      <label class="font-medium">Promień [km]</label>
+      <input
+          type="number"
+          min="1"
+          max="500"
+          class="bg-white/15 text-white border border-white/60 rounded px-2 py-1 text-xs outline-none"
+          :value="localFilters.radiusKm"
+          @input="updateField('radiusKm', Number($event.target.value) || 0)"
+      />
+      <p class="opacity-80">
+        Użyje środka aktualnie widocznej mapy jako punktu odniesienia.
+      </p>
+    </div>
+
+    <div class="mt-2">
+      <button
+          type="button"
+          class="px-3 py-1 rounded-full border border-white/60 hover:bg-white/10 text-xs"
+          @click="applyFilters"
+      >
+        Zastosuj
+      </button>
     </div>
   </aside>
 </template>

@@ -1,5 +1,5 @@
 <script setup>
-import { onMounted, onBeforeUnmount, ref, computed } from 'vue'
+import { onMounted, onBeforeUnmount, ref, computed, watch } from 'vue'
 import L from 'leaflet'
 
 import FishingFiltersPanel from '../components/map/FishingFiltersPanel.vue'
@@ -10,100 +10,26 @@ const map = ref(null)
 const markersLayer = ref(null)
 const panelsVisible = ref(true)
 
-// DEMO dane łowisk (lekko zbliżone do struktury backendu)
-const spots = ref([
-  {
-    id: 1,
-    name: 'Jezioro Testowe',
-    type: 'Jezioro',
-    voivodeship: 'Warmińsko-mazurskie',
-    ownerType: 'PZW',
-    surfaceHa: 35,
-    hasPier: true,
-    boatAccess: true,
-    fish: ['Szczupak', 'Sandacz', 'Leszcz'],
-    description: 'Przykładowe jezioro do prezentacji widoku.',
-    avgRating: 4.3,
-    ratingCount: 27,
-    lat: 53.8,
-    lng: 20.5,
-    locationX: 20.5,
-    locationY: 53.8,
-  },
-  {
-    id: 2,
-    name: 'Łowisko komercyjne 1',
-    type: 'Staw',
-    voivodeship: 'Mazowieckie',
-    ownerType: 'Komercyjne',
-    surfaceHa: 12,
-    hasPier: false,
-    boatAccess: false,
-    fish: ['Karp', 'Amur', 'Sum'],
-    description: 'Komercyjne łowisko pokazowe.',
-    avgRating: 4.8,
-    ratingCount: 102,
-    lat: 52.15,
-    lng: 21.0,
-    locationX: 21.0,
-    locationY: 52.15,
-  },
-  {
-    id: 3,
-    name: 'Rzeka Przykładowa',
-    type: 'Rzeka',
-    voivodeship: 'Śląskie',
-    ownerType: 'PZW',
-    surfaceHa: null,
-    hasPier: false,
-    boatAccess: true,
-    fish: ['Okoń', 'Jaź', 'Kleń'],
-    description: 'Odcinek rzeki używany tylko jako przykład.',
-    avgRating: 3.9,
-    ratingCount: 11,
-    lat: 50.3,
-    lng: 18.9,
-    locationX: 18.9,
-    locationY: 50.3,
-  },
-])
+const spots = ref([])
+const loading = ref(false)
+const error = ref(null)
 
-const selectedSpot = ref(spots.value[0] || null)
+const selectedSpot = ref(null)
 
-// filtry (lokalne, tylko frontend)
 const filters = ref({
-  voivodeship: 'Dowolne',
-  waterBodyType: 'Dowolny',
-  fishQuery: '',
-  spotType: 'Dowolne',
+  spotType: 'Dowolne', // 'Dowolne' | 'PZW / koło' | 'Prywatne / komercyjne'
+  mode: 'ALL',         // ALL | RADIUS
+  radiusKm: 50,
 })
 
+// filtrowanie po typie łowiska (PUBLIC/PRIVATE)
 const visibleSpots = computed(() =>
     spots.value.filter((spot) => {
       const f = filters.value
-
-      if (f.voivodeship !== 'Dowolne' && spot.voivodeship !== f.voivodeship) {
+      if (f.spotType === 'PZW / koło' && spot.type !== 'PUBLIC') return false
+      if (f.spotType === 'Prywatne / komercyjne' && spot.type !== 'PRIVATE') {
         return false
       }
-
-      if (f.waterBodyType !== 'Dowolny' && spot.type !== f.waterBodyType) {
-        return false
-      }
-
-      if (f.spotType !== 'Dowolne') {
-        if (f.spotType === 'PZW / koło' && spot.ownerType !== 'PZW') return false
-        if (f.spotType === 'Prywatne / komercyjne' && spot.ownerType !== 'Komercyjne') return false
-        if (f.spotType === 'Własne' && spot.ownerType !== 'Własne') return false
-      }
-
-      if (f.fishQuery) {
-        const q = f.fishQuery.toLowerCase()
-        const hasFish = (spot.fish || []).some((name) =>
-            name.toLowerCase().includes(q),
-        )
-        if (!hasFish) return false
-      }
-
       return true
     }),
 )
@@ -114,12 +40,19 @@ function togglePanels() {
 
 function selectSpot(spot) {
   selectedSpot.value = spot
-  if (spot.lat != null && spot.lng != null && map.value) {
-    map.value.setView([spot.lat, spot.lng], 11)
+
+  const { lat, lng } = getSpotLatLng(spot)
+  if (lat != null && lng != null && map.value) {
+    map.value.setView([lat, lng], 11)
   }
 }
 
-// MAPA + MARKERY
+function onApplyFilters(snapshot) {
+  filters.value = { ...filters.value, ...snapshot }
+  reloadSpots()
+}
+
+// ---------------- MAPA ----------------
 
 function initMap() {
   const container = document.getElementById('fishing-map')
@@ -130,10 +63,7 @@ function initMap() {
     map.value = null
   }
 
-  const startLat = 52.2297
-  const startLng = 21.0122
-
-  const instance = L.map(container).setView([startLat, startLng], 6)
+  const instance = L.map(container).setView([52.2297, 21.0122], 6)
 
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '&copy; OpenStreetMap contributors',
@@ -152,20 +82,104 @@ function clearMarkers() {
   }
 }
 
+function getSpotLatLng(spot) {
+  // DTO listy ma locationX (lon) / locationY (lat)
+  if (spot.locationY != null && spot.locationX != null) {
+    return { lat: spot.locationY, lng: spot.locationX }
+  }
+  if (spot.lat != null && spot.lng != null) {
+    return { lat: spot.lat, lng: spot.lng }
+  }
+  return { lat: null, lng: null }
+}
+
 function renderMarkers() {
   if (!map.value || !markersLayer.value) return
+
   clearMarkers()
 
   for (const spot of visibleSpots.value) {
-    if (spot.lat == null || spot.lng == null) continue
-    const marker = L.marker([spot.lat, spot.lng])
+    const { lat, lng } = getSpotLatLng(spot)
+    if (lat == null || lng == null) continue
+
+    const marker = L.marker([lat, lng])
     marker.on('click', () => selectSpot(spot))
     markersLayer.value.addLayer(marker)
   }
 }
 
-onMounted(() => {
+// ---------------- POBIERANIE DANYCH ----------------
+
+async function loadAllSpots() {
+  loading.value = true
+  error.value = null
+  try {
+    const res = await fetch('/spots?page=0&size=200')
+    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+    const body = await res.json()
+    const content = Array.isArray(body) ? body : body.content ?? []
+    spots.value = content
+    if (!selectedSpot.value && spots.value.length > 0) {
+      selectedSpot.value = spots.value[0]
+    }
+    renderMarkers()
+  } catch (e) {
+    console.error('Błąd pobierania łowisk', e)
+    error.value = 'Nie udało się pobrać łowisk.'
+  } finally {
+    loading.value = false
+  }
+}
+
+async function loadSpotsInRadius() {
+  if (!map.value) {
+    await loadAllSpots()
+    return
+  }
+  loading.value = true
+  error.value = null
+  try {
+    const center = map.value.getCenter()
+    const x = center.lng
+    const y = center.lat
+    const radiusKm = filters.value.radiusKm || 50
+
+    const url =
+        `/spots/radius?x=${encodeURIComponent(x)}` +
+        `&y=${encodeURIComponent(y)}` +
+        `&radiusKm=${encodeURIComponent(radiusKm)}` +
+        `&page=0&size=200`
+
+    const res = await fetch(url)
+    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+    const body = await res.json()
+    const content = Array.isArray(body) ? body : body.content ?? []
+    spots.value = content
+    if (!selectedSpot.value && spots.value.length > 0) {
+      selectedSpot.value = spots.value[0]
+    }
+    renderMarkers()
+  } catch (e) {
+    console.error('Błąd pobierania łowisk w promieniu', e)
+    error.value = 'Nie udało się pobrać łowisk w promieniu.'
+  } finally {
+    loading.value = false
+  }
+}
+
+async function reloadSpots() {
+  if (filters.value.mode === 'RADIUS') {
+    await loadSpotsInRadius()
+  } else {
+    await loadAllSpots()
+  }
+}
+
+// ---------------- LIFECYCLE ----------------
+
+onMounted(async () => {
   initMap()
+  await loadAllSpots()
 })
 
 onBeforeUnmount(() => {
@@ -174,15 +188,33 @@ onBeforeUnmount(() => {
     map.value = null
   }
 })
+
+watch(
+    () => visibleSpots.value,
+    () => {
+      renderMarkers()
+    },
+)
 </script>
 
 <template>
   <div class="fixed inset-x-0 bottom-0 top-[56px]">
     <div class="relative w-full h-full">
-      <!-- Mapa -->
       <div id="fishing-map" class="absolute inset-0 z-0"></div>
 
-      <!-- Przycisk "Pokaż panele"  -->
+      <div
+          v-if="loading"
+          class="absolute left-4 bottom-4 z-20 px-3 py-1 rounded-full text-xs bg-black/80 text-white border border-white/60 backdrop-blur"
+      >
+        Ładowanie łowisk...
+      </div>
+      <div
+          v-else-if="error"
+          class="absolute left-4 bottom-4 z-20 px-3 py-1 rounded-full text-xs bg-red-700/80 text-white border border-white/60 backdrop-blur"
+      >
+        {{ error }}
+      </div>
+
       <Transition name="fade-btn">
         <button
             v-if="!panelsVisible"
@@ -193,20 +225,18 @@ onBeforeUnmount(() => {
         </button>
       </Transition>
 
-      <!-- Panele -->
       <Transition name="fade-panels">
         <div
             v-if="panelsVisible"
             class="relative z-10 h-full flex text-white min-h-0"
         >
-          <!-- Lewe filtry -->
           <FishingFiltersPanel
               class="w-1/4 max-w-sm"
               v-model:filters="filters"
               @hide="togglePanels"
+              @apply="onApplyFilters"
           />
 
-          <!-- Środkowa lista -->
           <FishingSearchPanel
               class="w-1/4 max-w-sm"
               :spots="visibleSpots"
@@ -214,7 +244,6 @@ onBeforeUnmount(() => {
               @select="selectSpot"
           />
 
-          <!-- Prawy panel szczegółów -->
           <FishingDetailsPanel
               class="flex-1"
               :spot="selectedSpot"
@@ -235,7 +264,6 @@ onBeforeUnmount(() => {
   opacity: 0;
   transform: translateX(-12px);
 }
-
 .fade-btn-enter-active,
 .fade-btn-leave-active {
   transition: opacity 0.15s ease, transform 0.15s ease;
