@@ -4,26 +4,28 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.piet.forumbackend.users.core.entities.User;
 
 @Entity
 @Getter
 @Setter
 @NoArgsConstructor
+@Table(name = "user_events",
+uniqueConstraints = @UniqueConstraint(columnNames = {"user_id", "event_id"}))
 public class UserEvent {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     Long id;
 
-    @ManyToOne
-    @JoinColumn(name = "event_id")
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "event_id", nullable = false)
     Event event;
 
-    @Enumerated(EnumType.STRING)
-    ATTENDANCE_STATUS status;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false)
+    User user;
 
-    public enum ATTENDANCE_STATUS {
-            INVITED,
-            MAYBE,
-            CONFIRMED
-    }
+    @Enumerated(EnumType.STRING)
+            @Column(nullable = false)
+    AttendanceStatus status;
 }
