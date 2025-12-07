@@ -4,6 +4,9 @@ import ProfileView from '../views/ProfileView.vue'
 import PostsListView from '../views/PostsListView.vue'
 import EventsView from '../views/EventsView.vue'
 import FishingMapView from '../views/FishingMapView.vue'
+import GuidesView from '../views/GuidesView.vue'
+import GuideDetailsPanel from '../components/guides/GuideDetailsPanel.vue'
+import GuideCreatePanel from '../components/guides/GuideCreatePanel.vue'
 
 export const routes = [
     { path: '/', redirect: '/login' },
@@ -13,4 +16,7 @@ export const routes = [
     { path: '/events', name: 'events', component: EventsView, meta: { requiresAuth: true } },
     { path: '/posts', name: 'posts', component: PostsListView, meta: { requiresAuth: true } },
     { path: '/map', name: 'map', component: FishingMapView },
+    { path: '/guides', name: 'guides', component: GuidesView },
+    { path: '/guides/:id', name: 'guides.details', component: GuideDetailsPanel },
+    { path: '/guides/create', name: 'guides.create', component: GuideCreatePanel },
 ]

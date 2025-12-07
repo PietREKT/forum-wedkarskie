@@ -6,6 +6,7 @@ import ProfileView from '../views/ProfileView.vue'
 import PostsListView from '../views/PostsListView.vue'
 import EventsView from '../views/EventsView.vue'
 import FishingMapView from '../views/FishingMapView.vue'
+import GuidesView from '../views/GuidesView.vue'
 
 const routes = [
     { path: '/', redirect: '/login' },
@@ -15,6 +16,7 @@ const routes = [
     { path: '/events', name: 'events', component: EventsView, meta: { requiresAuth: true } },
     { path: '/posts', name: 'posts', component: PostsListView, meta: { requiresAuth: true } },
     { path: '/map', name: 'map', component: FishingMapView },
+    { path: '/guides', name: 'guides', component: GuidesView },
 ]
 
 const router = createRouter({
