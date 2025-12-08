@@ -25,6 +25,7 @@ public class UserGroupDto implements Serializable {
     String name;
 
     public static UserGroupDto create(UserGroup group){
+        if (group == null) return null;
         return new UserGroupDto(
                 group.getId(),
                 group.getAdmins().stream().map(UsersDtoMapper::toUserDto).collect(Collectors.toSet()),

@@ -5,14 +5,12 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.piet.forumbackend.content.entities.enums.ContentType;
+import org.piet.forumbackend.reports.entities.ContentReport;
 import org.piet.forumbackend.users.core.entities.User;
 import org.piet.forumbackend.users.groups.entities.UserGroup;
 
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @Entity
 @Getter
@@ -27,6 +25,7 @@ public class Content {
     @ManyToOne(targetEntity = User.class)
     User author;
 
+    @Column(length = 2048)
     String content;
 
     Instant createdAt;
@@ -73,6 +72,13 @@ public class Content {
             orphanRemoval = true
     )
     List<ContentVote> votes = new ArrayList<>();
+
+    @OneToMany(
+            mappedBy = "reported",
+            cascade = CascadeType.ALL,
+            orphanRemoval = true
+    )
+    Set<ContentReport> reportSet;
 
     @PrePersist
     private void onCreate() {

@@ -108,4 +108,11 @@ public class PostController {
 
         return ResponseEntity.ok(PageDto.createDto(posts));
     }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<ContentDto> getById(@PathVariable Long id){
+        return ResponseEntity.ok(
+                contentService.getContentDtoById(id)
+        );
+    }
 }

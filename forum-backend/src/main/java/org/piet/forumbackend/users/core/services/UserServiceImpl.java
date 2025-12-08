@@ -2,10 +2,12 @@ package org.piet.forumbackend.users.core.services;
 
 import lombok.RequiredArgsConstructor;
 import org.piet.forumbackend.globals.exceptions.NotFoundException;
+import org.piet.forumbackend.globals.pagination.PaginationDto;
 import org.piet.forumbackend.globals.security.SecurityUserDto;
 import org.piet.forumbackend.users.core.dtos.UsersDtoMapper;
 import org.piet.forumbackend.users.core.dtos.requests.RegisterUserDto;
 import org.piet.forumbackend.users.core.dtos.responses.ListUserDto;
+import org.piet.forumbackend.users.core.entities.Role;
 import org.piet.forumbackend.users.core.entities.User;
 import org.piet.forumbackend.users.core.exceptions.UserNotLoggedInException;
 import org.piet.forumbackend.users.core.repos.UserRepository;
@@ -32,7 +34,7 @@ public class UserServiceImpl implements UserService {
     private final MessageSource messageSource;
 
     private void checkUserToBeBannedHasHigherPerms(User user, User currentUser) throws AccessDeniedException{
-        if (user.getRole().hasAtLeast(currentUser.getRole())){
+        if (user.getRole().hasPermsAtLeast(currentUser.getRole())){
             throw new AccessDeniedException(
                     messageSource.getMessage("error.admin.ban_higher",
                             null,
@@ -179,5 +181,22 @@ public class UserServiceImpl implements UserService {
         } catch (UserNotLoggedInException e){
             return null;
         }
+    }
+
+    @Override
+    public Page<ListUserDto> getAllUsers(PaginationDto pagination) {
+        return userRepository.findAll(pagination.toPageable()).map(UsersDtoMapper::toListUserDto);
+    }
+
+    @Override
+    public void changeUserRole(UUID userToChange, Role newRole) throws NotFoundException, UserNotLoggedInException {
+        User user = getUserById(userToChange);
+        User currentUser = getCurrentUser();
+
+        if (currentUser.getRole() != Role.ROOT && !currentUser.getRole().hasPermsBiggerThan(newRole))
+            throw new AccessDeniedException("You can't change roles higher in hierarchy than yours.");
+
+        user.setRole(newRole);
+        userRepository.save(user);
     }
 }

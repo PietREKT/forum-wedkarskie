@@ -84,13 +84,30 @@ public class ContentServiceImpl implements ContentService {
     }
 
     @Override
+    public ContentDto getContentDtoById(Long id) {
+        return contentRepository.findById(id)
+                .map(c ->
+                        ContentDtoMapper.toContentDto(
+                                c,
+                                c.getVotes()
+                                        .stream()
+                                        .filter(v -> v.getUser().equalsUser(userService.getCurrentUserOrNull()))
+                                        .findFirst()
+                                        .map(ContentVote::getVote)
+                                        .orElse(VoteType.NO_VOTE)
+                        )
+                )
+                .orElse(null);
+    }
+
+    @Override
     public Content createContent(User author, String content, ContentType type, Content parent, UserGroup group, List<MultipartFile> photos) throws BadRequestException, UnauthorizedAccessException, IOException {
         userService.checkIsMuted(author);
 
         Content c = new Content();
         c.setAuthor(author);
         c.setContent(content);
-        if (group != null){
+        if (group != null) {
             c.setGroup(group);
         }
         if (photos == null)
@@ -203,8 +220,9 @@ public class ContentServiceImpl implements ContentService {
                             LocaleContextHolder.getLocale())
             );
         }
+        String contentLog = content.toLogString();
         contentRepository.delete(content);
-        log.info("User with id: {} deleted content: {}", currentUser.getId(), content.toLogString());
+        log.info("User with id: {} deleted content: {}", currentUser.getId(), contentLog);
     }
 
     @Override

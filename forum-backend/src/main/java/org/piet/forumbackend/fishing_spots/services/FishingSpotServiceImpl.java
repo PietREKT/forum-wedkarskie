@@ -9,9 +9,11 @@ import org.locationtech.jts.geom.*;
 import org.locationtech.jts.util.GeometricShapeFactory;
 import org.piet.forumbackend.content.entities.enums.VerificationStatus;
 import org.piet.forumbackend.fish.entities.Fish;
-import org.piet.forumbackend.fishing_spots.dtos.AddressDto;
-import org.piet.forumbackend.fishing_spots.dtos.FishingSpotDto;
-import org.piet.forumbackend.fishing_spots.dtos.LocationDto;
+import org.piet.forumbackend.fish.services.FishService;
+import org.piet.forumbackend.fishing_spots.dtos.requests.AddressDto;
+import org.piet.forumbackend.fishing_spots.dtos.requests.CreateFishingSpotDto;
+import org.piet.forumbackend.fishing_spots.dtos.requests.LocationDto;
+import org.piet.forumbackend.fishing_spots.dtos.responses.FishingSpotDto;
 import org.piet.forumbackend.fishing_spots.entities.FishingSpot;
 import org.piet.forumbackend.fishing_spots.exceptions.FishingSpotNotFoundException;
 import org.piet.forumbackend.fishing_spots.exceptions.LocationDtoIncompleteException;
@@ -22,6 +24,8 @@ import org.piet.forumbackend.globals.exceptions.UnauthorizedAccessException;
 import org.piet.forumbackend.globals.properties.FileProperties;
 import org.piet.forumbackend.users.core.entities.Role;
 import org.piet.forumbackend.users.core.entities.User;
+import org.piet.forumbackend.users.core.exceptions.UserNotLoggedInException;
+import org.piet.forumbackend.users.core.services.UserService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.MessageSource;
 import org.springframework.context.i18n.LocaleContextHolder;
@@ -36,10 +40,11 @@ import org.springframework.web.util.UriComponentsBuilder;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
-import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
@@ -50,6 +55,8 @@ public class FishingSpotServiceImpl implements FishingSpotService {
     private final FishingSpotRepository fishingSpotRepository;
     private final MessageSource messageSource;
     private final FileProperties fileProperties;
+    private final UserService userService;
+    private final FishService fishService;
 
     @Value("${forum.api.tomtom_key}")
     private String TOM_TOM_API_KEY;
@@ -67,6 +74,13 @@ public class FishingSpotServiceImpl implements FishingSpotService {
     public void markFishingSpotAsRejected(FishingSpot fishingSpot) {
         fishingSpot.setVerificationStatus(VerificationStatus.ACCEPTED);
         fishingSpotRepository.save(fishingSpot);
+    }
+
+    @Override
+    public void revokeFishingSpotReview(Long spotId) throws FishingSpotNotFoundException {
+        FishingSpot spot = getFishingSpotById(spotId);
+        spot.setVerificationStatus(VerificationStatus.IN_REVIEW);
+        fishingSpotRepository.save(spot);
     }
 
     @Override
@@ -101,20 +115,33 @@ public class FishingSpotServiceImpl implements FishingSpotService {
     }
 
     @Override
-    public Page<FishingSpot> getFishingSpots(Pageable pageable) {
-        return fishingSpotRepository.findByVerificationStatus(VerificationStatus.ACCEPTED, pageable);
+    public Page<FishingSpot> getFishingSpotsByStatus(VerificationStatus status, Pageable pageable) {
+        return fishingSpotRepository.findByVerificationStatus(status, pageable);
     }
 
     //name desc type managers fish
     @Override
-    public FishingSpot createFishingSpot(String name, String desc, FishingSpot.FISHING_SPOT_TYPE type, List<User> managers, List<Fish> fish, LocationDto location, User sentBy) throws LocationDtoIncompleteException, IOException, LocationNotFoundException, UnauthorizedAccessException, BadRequestException {
+    public FishingSpot createFishingSpot(CreateFishingSpotDto dto) throws LocationDtoIncompleteException, IOException, LocationNotFoundException, UnauthorizedAccessException, BadRequestException, UserNotLoggedInException {
+        User sentBy = userService.getCurrentUser();
+
+        List<User> managers = dto.getManagerIds()
+                .stream()
+                .map(userService::getUserByIdOpt)
+                .map(opt -> opt.orElseThrow(() -> new BadRequestException("All managers must have valid ids.")))
+                .collect(Collectors.toList());
+        List<Fish> fish = dto.getFishIds()
+                .stream()
+                .map(fishService::getFishByIdOptional)
+                .map(opt -> opt.orElseThrow(() -> new BadRequestException("All fish must have valid ids.")))
+                .collect(Collectors.toList());
+
+
+        LocationDto location = dto.getLocationDto();
+
         FishingSpot spot = new FishingSpot();
-        if (managers == null) {
-            managers = new ArrayList<>();
-        }
         managers.add(sentBy);
 
-        if (type == FishingSpot.FISHING_SPOT_TYPE.PUBLIC && !sentBy.hasPermLevelAtLeast(Role.PZW)) {
+        if (dto.getType() == FishingSpot.FISHING_SPOT_TYPE.PUBLIC && !sentBy.hasPermLevelAtLeast(Role.PZW)) {
             log.warn("User with ID: {} tried to access forbidden resource: \"createFishingSpot\" - PUBLIC type", sentBy.getId());
             throw new UnauthorizedAccessException(
                     messageSource.getMessage("error.users.unauthorized_access",
@@ -123,7 +150,7 @@ public class FishingSpotServiceImpl implements FishingSpotService {
             );
         }
 
-        if (type == FishingSpot.FISHING_SPOT_TYPE.PUBLIC && !managers.stream().allMatch(u -> u.hasPermLevelAtLeast(Role.PZW))) {
+        if (dto.getType() == FishingSpot.FISHING_SPOT_TYPE.PUBLIC && !managers.stream().allMatch(u -> u.hasPermLevelAtLeast(Role.PZW))) {
             String ids = String.join(", ", managers.stream().filter(u -> !u.hasPermLevelAtLeast(Role.PZW)).map(u -> u.getId().toString()).toList());
             throw new BadRequestException(
                     messageSource.getMessage("error.spots.not_all_have_perms",
@@ -150,8 +177,8 @@ public class FishingSpotServiceImpl implements FishingSpotService {
         }
 
         spot.setFish(fish);
-        spot.setName(name);
-        spot.setDescription(desc);
+        spot.setName(dto.getName());
+        spot.setDescription(dto.getDescription());
         spot.setManagers(managers);
         spot.setOwner(sentBy);
 
@@ -289,5 +316,10 @@ public class FishingSpotServiceImpl implements FishingSpotService {
     public Page<FishingSpotDto> getUnverified(Pageable pageable) {
         return fishingSpotRepository.findByVerificationStatus(VerificationStatus.IN_REVIEW, pageable)
                 .map(FishingSpotDto::create);
+    }
+
+    @Override
+    public boolean isOwner(UUID userId, Long fishingSpotId) {
+        return fishingSpotRepository.existsByIdAndOwner_Id(fishingSpotId, userId);
     }
 }

@@ -2,6 +2,7 @@ package org.piet.forumbackend.content.services;
 
 import lombok.RequiredArgsConstructor;
 import org.piet.forumbackend.content.dtos.TutorialDtoMapper;
+import org.piet.forumbackend.content.dtos.responses.tutorials.ListTutorialDto;
 import org.piet.forumbackend.content.dtos.responses.tutorials.TutorialDto;
 import org.piet.forumbackend.content.entities.Tutorial;
 import org.piet.forumbackend.content.entities.enums.VerificationStatus;
@@ -34,7 +35,7 @@ public class TutorialServiceImpl implements TutorialService {
     private final MessageSource messageSource;
 
     private void canAccept(Tutorial tutorial, User currentUser) throws NotFoundException, BadRequestException {
-        if (!currentUser.getRole().hasAtLeast(Role.ADMIN)) {
+        if (!currentUser.getRole().hasPermsAtLeast(Role.ADMIN)) {
             throw new AccessDeniedException(
                     messageSource.getMessage("error.admins.tutorials.accept",
                             null,
@@ -121,6 +122,12 @@ public class TutorialServiceImpl implements TutorialService {
     @Override
     public Page<TutorialDto> getTutorialsByFish(Fish fish, Pageable pageable) {
         return tutorialRepository.findByFish(fish, pageable).map(TutorialDtoMapper::toTutorialDto);
+    }
+
+    @Override
+    public Page<ListTutorialDto> getTutorialsVerifiedAsDtos(Pageable pageable) {
+        return tutorialRepository.findByVerificationStatus(VerificationStatus.ACCEPTED, pageable)
+                .map(TutorialDtoMapper::toListTutorialDto);
     }
 
     @Override

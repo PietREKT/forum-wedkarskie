@@ -16,39 +16,39 @@ import org.springframework.web.bind.annotation.*;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("${forum.api.prefix}/users/groups/owner")
+@RequestMapping("${forum.api.prefix}/users/groups/{groupId}/owner")
 @RequiredArgsConstructor
 public class UserGroupOwnerController {
     private final UserService userService;
     private final UserGroupService userGroupService;
 
     @PatchMapping("/admins/add")
-    public ResponseEntity<?> addAdmin(@Valid @RequestBody ModifyMemberUserGroupDto dto) throws UserNotLoggedInException, NotFoundException, AccessDeniedException {
+    public ResponseEntity<?> addAdmin(@PathVariable UUID groupId, @Valid @RequestBody ModifyMemberUserGroupDto dto) throws UserNotLoggedInException, NotFoundException, AccessDeniedException {
         User currentUser = userService.getCurrentUser();
-        User newAdmin = userService.getUserById(dto.getGetUserDto().getId());
+        User newAdmin = userService.getUserById(dto.getUserId());
 
-        userGroupService.addAdmin(dto.getId(), newAdmin, currentUser);
+        userGroupService.addAdmin(groupId, newAdmin, currentUser);
         return ResponseEntity.ok().build();
     }
     @PatchMapping("/admins/remove")
-    public ResponseEntity<?> removeAdmin(@Valid @RequestBody ModifyMemberUserGroupDto dto) throws UserNotLoggedInException, NotFoundException, AccessDeniedException {
+    public ResponseEntity<?> removeAdmin(@PathVariable UUID groupId, @Valid @RequestBody ModifyMemberUserGroupDto dto) throws UserNotLoggedInException, NotFoundException, AccessDeniedException {
         User currentUser = userService.getCurrentUser();
-        User newAdmin = userService.getUserById(dto.getGetUserDto().getId());
+        User newAdmin = userService.getUserById(dto.getUserId());
 
-        userGroupService.removeAdmin(dto.getId(), newAdmin, currentUser);
+        userGroupService.removeAdmin(groupId, newAdmin, currentUser);
         return ResponseEntity.ok().build();
     }
 
     @PatchMapping("/transfer")
-    public ResponseEntity<?> transferOwnership(@Valid @RequestBody TransferOwnershipDto dto) throws UserNotLoggedInException, NotFoundException, AccessDeniedException {
+    public ResponseEntity<?> transferOwnership(@PathVariable UUID groupId, @Valid @RequestBody TransferOwnershipDto dto) throws UserNotLoggedInException, NotFoundException, AccessDeniedException {
         User currentUser = userService.getCurrentUser();
-        User newAdmin = userService.getUserById(dto.getGetUserDto().getId());
+        User newAdmin = userService.getUserById(groupId);
 
-        userGroupService.transferOwnership(dto.getId(), newAdmin, currentUser, dto.getRemoveFromAdmins());
+        userGroupService.transferOwnership(groupId, newAdmin, currentUser, dto.getRemoveFromAdmins());
         return ResponseEntity.ok().build();
     }
 
-    @DeleteMapping("/{groupId}")
+    @DeleteMapping("/delete")
     public ResponseEntity<?> deleteGroup(@PathVariable UUID groupId) throws UserNotLoggedInException, AccessDeniedException, NotFoundException {
         User currentUser = userService.getCurrentUser();
         userGroupService.deleteUserGroup(groupId, currentUser);

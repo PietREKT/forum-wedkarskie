@@ -9,7 +9,9 @@ import org.piet.forumbackend.content.entities.enums.VerificationStatus;
 import org.piet.forumbackend.fish.entities.Fish;
 import org.piet.forumbackend.users.core.entities.User;
 
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 @Entity
 @Getter
@@ -53,7 +55,17 @@ public class FishingSpot {
     )
     private List<Fish> fish;
 
-    public enum FISHING_SPOT_TYPE{
+    @OneToMany(
+            mappedBy = "spot",
+            cascade = CascadeType.ALL,
+            orphanRemoval = true)
+    private Set<FishingSpotOpinion> opinions = new HashSet<>();
+
+    public void addOpinion(FishingSpotOpinion opinion){
+        opinions.add(opinion);
+    }
+
+    public enum FISHING_SPOT_TYPE {
         PRIVATE,
         PUBLIC
     }

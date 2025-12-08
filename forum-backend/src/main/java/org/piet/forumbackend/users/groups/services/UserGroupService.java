@@ -1,8 +1,13 @@
 package org.piet.forumbackend.users.groups.services;
 
 import org.piet.forumbackend.globals.exceptions.NotFoundException;
+import org.piet.forumbackend.globals.pagination.PaginationDto;
+import org.piet.forumbackend.users.core.dtos.responses.ListUserDto;
 import org.piet.forumbackend.users.core.entities.User;
+import org.piet.forumbackend.users.groups.dtos.responses.ListUserGroupDto;
 import org.piet.forumbackend.users.groups.entities.UserGroup;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.AccessDeniedException;
 
 import java.util.List;
@@ -13,6 +18,13 @@ public interface UserGroupService {
     UserGroup getById(UUID id) throws NotFoundException;
 
     Optional<UserGroup> getByIdOpt(UUID id);
+
+    default Page<ListUserGroupDto> getGroupsByMember(UUID userId, PaginationDto pagination) {
+        return getGroupsByMember(userId, pagination.toPageable());
+    }
+
+    Page<ListUserGroupDto> getGroupsByMember(UUID userId, Pageable pageable);
+
 
     void addMemberCandidate(UserGroup group, User memberCandidate, User currentUser) throws AccessDeniedException;
     default void addMemberCandidate(UUID groupId, User memberCandidate, User currentUser) throws NotFoundException, AccessDeniedException {
@@ -76,4 +88,17 @@ public interface UserGroupService {
         var group = getById(groupId);
         return changeName(group, newName, currentUser);
     }
+
+
+    Page<ListUserDto> getMemberCandidates(UUID groupId, Pageable pageable);
+
+    default Page<ListUserDto> getMemberCandidates(UUID groupId, PaginationDto pagination) {
+        return getMemberCandidates(groupId, pagination.toPageable());
+    }
+
+    default Page<ListUserGroupDto> getGroupsByCandidateId(UUID userId, PaginationDto pagination) {
+        return getGroupsByCandidateId(userId, pagination.toPageable());
+    }
+
+    Page<ListUserGroupDto> getGroupsByCandidateId(UUID userId, Pageable pageable);
 }

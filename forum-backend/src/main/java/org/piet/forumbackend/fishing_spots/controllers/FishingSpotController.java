@@ -4,12 +4,13 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.piet.forumbackend.fish.dtos.GetFishDto;
-import org.piet.forumbackend.fish.entities.Fish;
+import org.piet.forumbackend.content.entities.enums.VerificationStatus;
+import org.piet.forumbackend.events.dtos.responses.EventDto;
+import org.piet.forumbackend.events.services.EventsService;
 import org.piet.forumbackend.fish.services.FishService;
-import org.piet.forumbackend.fishing_spots.dtos.CreateFishingSpotDto;
-import org.piet.forumbackend.fishing_spots.dtos.FishingSpotDto;
 import org.piet.forumbackend.fishing_spots.dtos.FishingSpotListDto;
+import org.piet.forumbackend.fishing_spots.dtos.requests.CreateFishingSpotDto;
+import org.piet.forumbackend.fishing_spots.dtos.responses.FishingSpotDto;
 import org.piet.forumbackend.fishing_spots.exceptions.FishingSpotNotFoundException;
 import org.piet.forumbackend.fishing_spots.exceptions.LocationDtoIncompleteException;
 import org.piet.forumbackend.fishing_spots.exceptions.LocationNotFoundException;
@@ -19,7 +20,6 @@ import org.piet.forumbackend.globals.exceptions.NotFoundException;
 import org.piet.forumbackend.globals.exceptions.UnauthorizedAccessException;
 import org.piet.forumbackend.globals.pagination.PageDto;
 import org.piet.forumbackend.globals.pagination.PaginationDto;
-import org.piet.forumbackend.users.core.entities.User;
 import org.piet.forumbackend.users.core.exceptions.UserNotLoggedInException;
 import org.piet.forumbackend.users.core.services.UserServiceImpl;
 import org.springdoc.core.annotations.ParameterObject;
@@ -30,8 +30,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.Optional;
-import java.util.stream.Collectors;
+import java.util.Map;
 
 @Slf4j
 @RestController
@@ -43,6 +42,7 @@ public class FishingSpotController {
     private final FishingSpotService fishingSpotService;
     private final UserServiceImpl userService;
     private final FishService fishService;
+    private final EventsService eventsService;
 
     @GetMapping("/radius")
     public ResponseEntity<List<FishingSpotListDto>> getSpotsInRadius(
@@ -59,63 +59,21 @@ public class FishingSpotController {
 
     @PostMapping("/create")
     public ResponseEntity<FishingSpotDto> createSpot(@Valid @RequestBody CreateFishingSpotDto dto, Authentication auth) throws UserNotLoggedInException, NotFoundException, UnauthorizedAccessException, LocationDtoIncompleteException, BadRequestException, IOException, LocationNotFoundException {
-        User u = userService.getUserFromAuth(auth);
-        List<User> managers =
-                dto.getManagers()
-                        .stream()
-                        .map(m -> userService.getUserByIdOpt(m.getId()))
-                        .filter(Optional::isPresent)
-                        .map(Optional::get)
-                        .collect(Collectors.toList());
-        List<Fish> fish;
-        if (dto.getFish().stream().allMatch(f -> f.getId() != null)) {
-            fish = dto.getFish()
-                    .stream()
-                    .map(GetFishDto::getId)
-                    .map(fishService::getFishByIdOptional)
-                    .filter(Optional::isPresent)
-                    .map(Optional::get)
-                    .toList();
-        } else if (dto.getFish().stream().allMatch(f -> f.getName() != null)){
-            fish = dto.getFish()
-                    .stream()
-                    .map(GetFishDto::getName)
-                    .map(fishService::getFishByNameOptional)
-                    .filter(Optional::isPresent)
-                    .map(Optional::get)
-                    .toList();
-        }
-        else {
-            throw new BadRequestException("fish needs id or name"); //placeholder
-        }
-
-        if (fish.size() != dto.getFish().size()) {
-            log.warn("Fish are not complete :(");
-            throw new BadRequestException("Not all fish were found");
-        }
-        if (managers.size() != dto.getManagers().size()) {
-            log.warn("Fish are not complete :(");
-            throw new BadRequestException("Not all fish were found");
-        }
-
-        var spot = fishingSpotService.createFishingSpot(
-                dto.getName(),
-                dto.getDescription(),
-                dto.getType(),
-                managers,
-                fish,
-                dto.getLocationDto(),
-                u
-        );
+        var spot = fishingSpotService.createFishingSpot(dto);
 
         return ResponseEntity.ok(FishingSpotDto.create(spot));
     }
 
     @GetMapping
     public ResponseEntity<PageDto<FishingSpotListDto>> getSpots(PaginationDto dto) {
-        var spots = fishingSpotService.getFishingSpots(dto)
+        var spots = fishingSpotService.getFishingSpotsByStatus(VerificationStatus.ACCEPTED, dto)
                 .map(FishingSpotListDto::create);
         return ResponseEntity.ok(PageDto.createDto(spots));
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<FishingSpotDto> getById(@PathVariable Long id) throws FishingSpotNotFoundException {
+        return ResponseEntity.ok(FishingSpotDto.create(fishingSpotService.getFishingSpotById(id)));
     }
 
     @DeleteMapping("/{id}/delete")
@@ -123,5 +81,21 @@ public class FishingSpotController {
         fishingSpotService.deleteFishingSpot(id, userService.getCurrentUser());
 
         return ResponseEntity.ok().build();
+    }
+
+    @GetMapping("/{spotId}/events")
+    public ResponseEntity<PageDto<EventDto>> getEventsAtSpot(@PathVariable Long spotId, PaginationDto pagination) {
+        return ResponseEntity.ok(
+                eventsService.getEventsAtSpot(spotId, pagination)
+        );
+    }
+
+    @GetMapping("/{spotId}/owner")
+    public ResponseEntity<?> isOwner(@PathVariable Long spotId) throws UserNotLoggedInException {
+        var map = Map.of("fishing_spot:", spotId,
+                "is_owner", fishingSpotService.isOwner(userService.getCurrentUser().getId(), spotId)
+        );
+
+        return ResponseEntity.ok(map);
     }
 }

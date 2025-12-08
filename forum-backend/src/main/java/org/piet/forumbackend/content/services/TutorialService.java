@@ -1,5 +1,6 @@
 package org.piet.forumbackend.content.services;
 
+import org.piet.forumbackend.content.dtos.responses.tutorials.ListTutorialDto;
 import org.piet.forumbackend.content.dtos.responses.tutorials.TutorialDto;
 import org.piet.forumbackend.content.entities.Tutorial;
 import org.piet.forumbackend.fish.entities.Fish;
@@ -45,6 +46,11 @@ public interface TutorialService {
     default Page<TutorialDto> getTutorialsUnverified(PaginationDto pagination){
         return getTutorialsUnverified(pagination.toPageable(Sort.by(Sort.Direction.ASC,
                 "createdAt")));
+    }
+
+    Page<ListTutorialDto> getTutorialsVerifiedAsDtos(Pageable pageable);
+    default Page<ListTutorialDto> getTutorialsVerifiedAsDtos(PaginationDto pagination){
+        return getTutorialsVerifiedAsDtos(pagination.toPageable());
     }
 
     void deleteTutorial(Long tutorialId, User currentUser) throws org.springframework.security.access.AccessDeniedException;

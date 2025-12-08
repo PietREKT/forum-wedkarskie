@@ -10,6 +10,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.Optional;
+import java.util.UUID;
 
 public interface FishingSpotRepository extends JpaRepository<FishingSpot, Long> {
     Optional<FishingSpot> findByName(String name);
@@ -23,4 +24,6 @@ public interface FishingSpotRepository extends JpaRepository<FishingSpot, Long> 
     Page<FishingSpot> findByLocation(@Param("radius") Geometry radius, Pageable pageable);
 
     Page<FishingSpot> findByVerificationStatus(VerificationStatus verificationStatus, Pageable pageable);
+
+    boolean existsByIdAndOwner_Id(Long id, UUID ownerId);
 }

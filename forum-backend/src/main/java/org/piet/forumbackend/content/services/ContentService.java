@@ -56,4 +56,6 @@ public interface ContentService {
 
     public Page<Content> getUserPosts(User user, PaginationDto pagination);
 
+    public ContentDto getContentDtoById(Long id);
+
 }
