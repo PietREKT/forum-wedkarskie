@@ -28,6 +28,7 @@ public class ContentReport {
     }
 
     @ManyToOne(optional = false)
+            @JoinColumn(name = "content_id", nullable = false)
     Content reported;
 
     @ManyToOne(optional = false)
