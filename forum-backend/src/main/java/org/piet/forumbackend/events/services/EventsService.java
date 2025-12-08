@@ -28,28 +28,30 @@ public interface EventsService {
     PageDto<EventDto> getEventsAtSpot(Long spotId, PaginationDto pagination);
     PageDto<EventDto> getEventsForGroup(UUID groupId, PaginationDto pagination);
     PageDto<EventDto> getEventsCreatedByUser(UUID userId, PaginationDto pagination);
-    PageDto<EventDto> getUpcomingEventsForUser(User user, PaginationDto pagination);
+    default PageDto<EventDto> getUpcomingEventsForUser(User user, PaginationDto pagination){
+        return getUpcomingEventsForUser(user.getId(), pagination);
+    }
     PageDto<EventDto> getUpcomingEventsForUser(UUID userId, PaginationDto pagination);
 
-    void inviteUser(Long eventId, Long userIdToInvite, Long inviterId);
+    void inviteUser(Long eventId, UUID userIdToInvite, UUID inviterId) throws NotFoundException;
 
-    void respondToInvite(Long eventId, AttendanceStatus status);
+    void respondToInvite(Long eventId, AttendanceStatus status) throws UserNotLoggedInException, NotFoundException;
 
-    void removeUserFromEvent(Long eventId, Long userIdToRemove);
+    void removeUserFromEvent(Long eventId, UUID userIdToRemove) throws UserNotLoggedInException, NotFoundException;
 
-    PageDto<UserEventDto> getParticipants(Long eventId, PaginationDto pagination);
+    PageDto<UserEventDto> getParticipants(Long eventId, PaginationDto pagination) throws NotFoundException;
 
     /**
      *
      * @param userId ID of the user that should be queried
      * @return Event attendance for specified user.
      */
-    PageDto<UserEventDto> getUserEvents(Long userId);
+    PageDto<UserEventDto> getUserEvents(UUID userId, PaginationDto pagination);
 
     /**
      *
      * @return Event Attendance for current user
      */
-    PageDto<UserEventDto> getUserEvents();
+    PageDto<UserEventDto> getUserEvents(PaginationDto pagination) throws UserNotLoggedInException;
 
 }

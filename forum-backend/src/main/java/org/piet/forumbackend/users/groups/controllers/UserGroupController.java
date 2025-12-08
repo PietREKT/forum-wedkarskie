@@ -2,8 +2,13 @@ package org.piet.forumbackend.users.groups.controllers;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.piet.forumbackend.events.dtos.responses.EventDto;
+import org.piet.forumbackend.events.services.EventsService;
 import org.piet.forumbackend.globals.exceptions.NotFoundException;
+import org.piet.forumbackend.globals.pagination.PageDto;
+import org.piet.forumbackend.globals.pagination.PaginationDto;
 import org.piet.forumbackend.users.core.dtos.requests.GetUserDto;
+import org.piet.forumbackend.users.core.dtos.responses.ListUserDto;
 import org.piet.forumbackend.users.core.entities.User;
 import org.piet.forumbackend.users.core.exceptions.UserNotLoggedInException;
 import org.piet.forumbackend.users.core.services.UserService;
@@ -26,6 +31,7 @@ import java.util.UUID;
 public class UserGroupController {
     private final UserService userService;
     private final UserGroupService userGroupService;
+    private final EventsService eventsService;
 
     @PostMapping("/create")
     public ResponseEntity<UserGroupDto> createGroup(@Valid @RequestBody CreateUserGroupDto dto, Authentication authentication) throws UserNotLoggedInException {
@@ -42,12 +48,14 @@ public class UserGroupController {
         return ResponseEntity.ok(UserGroupDto.create(group));
     }
 
-    @PatchMapping("/invite")
-    public ResponseEntity<?> inviteMember(@Valid @RequestBody ModifyMemberUserGroupDto dto, Authentication authentication) throws UserNotLoggedInException, NotFoundException, AccessDeniedException {
+    @PatchMapping("/{groupId}/invite")
+    public ResponseEntity<?> inviteMember(@PathVariable UUID groupId,
+                                          @Valid @RequestBody ModifyMemberUserGroupDto dto,
+                                          Authentication authentication) throws UserNotLoggedInException, NotFoundException, AccessDeniedException {
         User currentUser = userService.getUserFromAuth(authentication);
-        User modifyUser = userService.getUserById(dto.getGetUserDto().getId());
+        User modifyUser = userService.getUserById(dto.getUserId());
 
-        userGroupService.addMemberCandidate(dto.getId(), modifyUser, currentUser);
+        userGroupService.addMemberCandidate(groupId, modifyUser, currentUser);
 
         return ResponseEntity.ok().build();
     }
@@ -66,5 +74,19 @@ public class UserGroupController {
         UserGroup group = userGroupService.getById(groupId);
 
         return ResponseEntity.ok(UserGroupDto.create(group));
+    }
+
+    @GetMapping("/{groupId}/events")
+    public ResponseEntity<PageDto<EventDto>> getEventsForGroup(@PathVariable UUID groupId, PaginationDto pagination){
+        return ResponseEntity.ok(
+                eventsService.getEventsForGroup(groupId, pagination)
+        );
+    }
+
+    @GetMapping("/{groupId}/candidates")
+    public ResponseEntity<PageDto<ListUserDto>> getGroupCandidates(@PathVariable UUID groupId, PaginationDto pagination) {
+        var page = userGroupService.getMemberCandidates(groupId, pagination);
+
+        return ResponseEntity.ok(PageDto.createDto(page));
     }
 }

@@ -1,7 +1,7 @@
 package org.piet.forumbackend.events.dtos.responses;
 
 import lombok.Value;
-import org.piet.forumbackend.fishing_spots.dtos.FishingSpotDto;
+import org.piet.forumbackend.fishing_spots.dtos.responses.FishingSpotDto;
 import org.piet.forumbackend.users.groups.dtos.responses.UserGroupDto;
 
 import java.io.Serializable;

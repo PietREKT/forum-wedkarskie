@@ -33,10 +33,16 @@ public class ContentReportAdminController {
         return ResponseEntity.ok(dtos);
     }
 
-    @GetMapping("/reports/{contentId}")
+    @GetMapping("/{contentId}")
     ResponseEntity<ContentReportDto> getContentReports(@PathVariable Long contentId) throws NotFoundException {
         Content content = contentService.getContentById(contentId);
         var dto = contentReportService.getReportSummary(content);
         return ResponseEntity.ok(dto);
+    }
+
+    @PostMapping("/{contentId}/dismiss")
+    public ResponseEntity<?> dismissContentReports(@PathVariable Long contentId){
+        contentReportService.dismissReports(contentId);
+        return ResponseEntity.noContent().build();
     }
 }

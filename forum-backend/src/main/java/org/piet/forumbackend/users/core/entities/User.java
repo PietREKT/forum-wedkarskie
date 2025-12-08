@@ -108,7 +108,7 @@ public class User implements UserDetails {
     }
 
     public boolean hasPermLevelAtLeast(Role other) {
-        return role.hasAtLeast(other);
+        return role.hasPermsAtLeast(other);
     }
 
     @Override

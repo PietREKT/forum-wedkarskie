@@ -4,6 +4,7 @@ import org.piet.forumbackend.globals.exceptions.NotFoundException;
 import org.piet.forumbackend.globals.pagination.PaginationDto;
 import org.piet.forumbackend.users.core.dtos.requests.RegisterUserDto;
 import org.piet.forumbackend.users.core.dtos.responses.ListUserDto;
+import org.piet.forumbackend.users.core.entities.Role;
 import org.piet.forumbackend.users.core.entities.User;
 import org.piet.forumbackend.users.core.exceptions.UserNotLoggedInException;
 import org.springframework.data.domain.Page;
@@ -51,4 +52,8 @@ public interface UserService {
     }
 
     User getCurrentUserOrNull();
+
+    Page<ListUserDto> getAllUsers(PaginationDto pagination);
+
+    void changeUserRole(UUID userToChange, Role newRole) throws NotFoundException, UserNotLoggedInException;
 }

@@ -10,7 +10,7 @@ public class ContentDtoMapper {
     public static ContentDto toContentDto(Content content, VoteType userVote){
         return new ContentDto(
                 content.getId(),
-                new ContentUserDto(content.getAuthor().getUsername()),
+                new ContentUserDto(content.getAuthor().getUsername(), content.getAuthor().getId()),
                 content.getContent(),
                 content.getCreatedAt(),
                 content.getContentType(),
@@ -25,7 +25,7 @@ public class ContentDtoMapper {
     public static ContentDto toContentDto(Content content){
         return new ContentDto(
                 content.getId(),
-                new ContentUserDto(content.getAuthor().getUsername()),
+                new ContentUserDto(content.getAuthor().getUsername(), content.getAuthor().getId()),
                 content.getContent(),
                 content.getCreatedAt(),
                 content.getContentType(),

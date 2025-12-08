@@ -1,7 +1,6 @@
 package org.piet.forumbackend.content.reports.dtos;
 
 import lombok.Value;
-import org.piet.forumbackend.content.dtos.responses.content.ReportedContentDto;
 import org.piet.forumbackend.content.entities.Content;
 
 import java.io.Serializable;

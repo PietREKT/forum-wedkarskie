@@ -2,7 +2,7 @@ package org.piet.forumbackend.events.dtos.responses;
 
 import lombok.Value;
 import org.hibernate.validator.constraints.Length;
-import org.piet.forumbackend.fishing_spots.dtos.FishingSpotDto;
+import org.piet.forumbackend.fishing_spots.dtos.responses.FishingSpotDto;
 import org.piet.forumbackend.users.core.dtos.responses.UserDto;
 import org.piet.forumbackend.users.groups.dtos.responses.UserGroupDto;
 
@@ -26,4 +26,5 @@ public class EventDto implements Serializable {
     UserDto creator;
     UserGroupDto group;
     Set<EventParticipantDto> userEvents;
+    boolean isParticipating;
 }

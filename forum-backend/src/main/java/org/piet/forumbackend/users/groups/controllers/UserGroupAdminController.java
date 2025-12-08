@@ -19,50 +19,50 @@ import org.springframework.web.bind.annotation.*;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("${forum.api.prefix}/users/groups/admin")
+@RequestMapping("${forum.api.prefix}/users/groups/{groupId}admin")
 @RequiredArgsConstructor
 public class UserGroupAdminController {
     private final UserService userService;
     private final UserGroupService userGroupService;
 
     @PatchMapping("/name")
-    public ResponseEntity<UserGroupDto> changeName(@Valid @RequestBody ChangeUserGroupNameDto dto, Authentication authentication) throws UserNotLoggedInException, AccessDeniedException, NotFoundException {
+    public ResponseEntity<UserGroupDto> changeName(@PathVariable UUID groupId, @Valid @RequestBody ChangeUserGroupNameDto dto, Authentication authentication) throws UserNotLoggedInException, AccessDeniedException, NotFoundException {
         User currentUser = userService.getUserFromAuth(authentication);
-        UserGroup group = userGroupService.changeName(dto.getId(), dto.getName(), currentUser);
+        UserGroup group = userGroupService.changeName(groupId, dto.getName(), currentUser);
 
         return ResponseEntity.ok(UserGroupDto.create(group));
     }
 
-    @PatchMapping("/kick")
-    public ResponseEntity<?> kickUser(@Valid @RequestBody ModifyMemberUserGroupDto dto, Authentication authentication) throws UserNotLoggedInException, NotFoundException, AccessDeniedException {
+    @PostMapping("/kick")
+    public ResponseEntity<?> kickUser(@PathVariable UUID groupId, @Valid @RequestBody ModifyMemberUserGroupDto dto, Authentication authentication) throws UserNotLoggedInException, NotFoundException, AccessDeniedException {
         User currentUser = userService.getUserFromAuth(authentication);
-        User member = userService.getUserById(dto.getGetUserDto().getId());
-        userGroupService.removeMember(dto.getId(), member, currentUser);
+        User member = userService.getUserById(dto.getUserId());
+        userGroupService.removeMember(groupId, member, currentUser);
 
         return ResponseEntity.ok().build();
     }
 
-    @PatchMapping("/candidates/accept")
-    public ResponseEntity<?> acceptCandidate(@Valid @RequestBody ModifyMemberUserGroupDto dto, Authentication authentication) throws UserNotLoggedInException, NotFoundException, AccessDeniedException {
+    @PostMapping("/candidates/accept")
+    public ResponseEntity<?> acceptCandidate(@PathVariable UUID groupId, @Valid @RequestBody ModifyMemberUserGroupDto dto, Authentication authentication) throws UserNotLoggedInException, NotFoundException, AccessDeniedException {
         User currentUser = userService.getUserFromAuth(authentication);
-        User member = userService.getUserById(dto.getGetUserDto().getId());
+        User member = userService.getUserById(dto.getUserId());
 
-        userGroupService.addMember(dto.getId(), member, currentUser);
+        userGroupService.addMember(groupId, member, currentUser);
 
         return ResponseEntity.ok().build();
     }
 
-    @PatchMapping("/candidates/reject")
-    public ResponseEntity<?> rejectCandidate(@Valid @RequestBody ModifyMemberUserGroupDto dto, Authentication authentication) throws UserNotLoggedInException, NotFoundException, AccessDeniedException {
+    @PostMapping("/candidates/reject")
+    public ResponseEntity<?> rejectCandidate(@PathVariable UUID groupId, @Valid @RequestBody ModifyMemberUserGroupDto dto, Authentication authentication) throws UserNotLoggedInException, NotFoundException, AccessDeniedException {
         User currentUser = userService.getUserFromAuth(authentication);
-        User member = userService.getUserById(dto.getGetUserDto().getId());
+        User member = userService.getUserById(dto.getUserId());
 
-        userGroupService.rejectMemberCandidate(dto.getId(), member, currentUser);
+        userGroupService.rejectMemberCandidate(groupId, member, currentUser);
 
         return ResponseEntity.ok().build();
     }
 
-    @PatchMapping("/{groupId}/resign")
+    @PostMapping("/resign")
     public ResponseEntity<?> resignFromAdmin(@PathVariable UUID groupId, Authentication authentication) throws UserNotLoggedInException, AccessDeniedException, NotFoundException {
         User currentUser = userService.getUserFromAuth(authentication);
         userGroupService.resignAdmin(groupId, currentUser);

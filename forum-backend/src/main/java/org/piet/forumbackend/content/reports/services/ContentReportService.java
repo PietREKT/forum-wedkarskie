@@ -21,6 +21,8 @@ public interface ContentReportService {
 
     public void dismissReportsByReason(Content content, ReportReason reason);
 
+    public void dismissReports(Long contentId);
+
     public Long getReportsCountForContent(Content content);
 
     public List<HotReportedContentDto> getRecentlyReportedContent(Long amount, TemporalUnit unit, Integer pageNo, Integer pageSize);

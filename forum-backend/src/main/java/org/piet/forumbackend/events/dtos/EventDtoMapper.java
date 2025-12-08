@@ -6,14 +6,15 @@ import org.piet.forumbackend.events.dtos.responses.ListEventDto;
 import org.piet.forumbackend.events.dtos.responses.UserEventDto;
 import org.piet.forumbackend.events.entites.Event;
 import org.piet.forumbackend.events.entites.UserEvent;
-import org.piet.forumbackend.fishing_spots.dtos.FishingSpotDto;
+import org.piet.forumbackend.fishing_spots.dtos.responses.FishingSpotDto;
 import org.piet.forumbackend.users.core.dtos.UsersDtoMapper;
+import org.piet.forumbackend.users.core.entities.User;
 import org.piet.forumbackend.users.groups.dtos.responses.UserGroupDto;
 
 import java.util.stream.Collectors;
 
 public class EventDtoMapper {
-    public static ListEventDto toListEventDto(Event event){
+    public static ListEventDto toListEventDto(Event event) {
         return new ListEventDto(
                 event.getId(),
                 event.getName(),
@@ -24,7 +25,7 @@ public class EventDtoMapper {
         );
     }
 
-    public static UserEventDto toUserEventDto(UserEvent userEvent){
+    public static UserEventDto toUserEventDto(UserEvent userEvent) {
         return new UserEventDto(
                 toListEventDto(userEvent.getEvent()),
                 UsersDtoMapper.toListUserDto(userEvent.getUser()),
@@ -32,11 +33,11 @@ public class EventDtoMapper {
         );
     }
 
-    public static EventParticipantDto toEventParticipantDto(UserEvent userEvent){
+    public static EventParticipantDto toEventParticipantDto(UserEvent userEvent) {
         return new EventParticipantDto(UsersDtoMapper.toListUserDto(userEvent.getUser()), userEvent.getStatus());
     }
 
-    public static EventDto toEventDto(Event event){
+    public static EventDto toEventDto(Event event) {
         return new EventDto(
                 event.getId(),
                 event.getName(),
@@ -46,7 +47,28 @@ public class EventDtoMapper {
                 FishingSpotDto.create(event.getLocation()),
                 UsersDtoMapper.toUserDto(event.getCreator()),
                 UserGroupDto.create(event.getGroup()),
-                event.getUserEvents().stream().map(EventDtoMapper::toEventParticipantDto).collect(Collectors.toSet())
+                event.getUserEvents().stream().map(EventDtoMapper::toEventParticipantDto).collect(Collectors.toSet()),
+                false
+        );
+    }
+
+    public static EventDto toEventDto(Event event, User currentUser) {
+        if (currentUser == null)
+            return toEventDto(event);
+        return new EventDto(
+                event.getId(),
+                event.getName(),
+                event.getDescription(),
+                event.getStartsAt(),
+                event.getEndsAt(),
+                FishingSpotDto.create(event.getLocation()),
+                UsersDtoMapper.toUserDto(event.getCreator()),
+                UserGroupDto.create(event.getGroup()),
+                event.getUserEvents().stream().map(EventDtoMapper::toEventParticipantDto).collect(Collectors.toSet()),
+                event.getCreator().equalsUser(currentUser)
+                        || event.getUserEvents()
+                        .stream()
+                        .anyMatch(ue -> ue.getUser().equalsUser(currentUser))
         );
     }
 }

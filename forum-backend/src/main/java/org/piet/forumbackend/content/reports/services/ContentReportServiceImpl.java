@@ -61,6 +61,11 @@ public class ContentReportServiceImpl implements ContentReportService {
     }
 
     @Override
+    public void dismissReports(Long contentId) {
+        contentReportRepository.deleteContentReportsByReported_Id(contentId);
+    }
+
+    @Override
     public Long getReportsCountForContent(Content content) {
         return contentReportRepository.countByReported(content);
     }

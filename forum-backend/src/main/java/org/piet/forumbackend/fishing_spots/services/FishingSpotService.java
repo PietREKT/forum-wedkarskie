@@ -1,8 +1,8 @@
 package org.piet.forumbackend.fishing_spots.services;
 
-import org.piet.forumbackend.fish.entities.Fish;
-import org.piet.forumbackend.fishing_spots.dtos.FishingSpotDto;
-import org.piet.forumbackend.fishing_spots.dtos.LocationDto;
+import org.piet.forumbackend.content.entities.enums.VerificationStatus;
+import org.piet.forumbackend.fishing_spots.dtos.requests.CreateFishingSpotDto;
+import org.piet.forumbackend.fishing_spots.dtos.responses.FishingSpotDto;
 import org.piet.forumbackend.fishing_spots.entities.FishingSpot;
 import org.piet.forumbackend.fishing_spots.exceptions.FishingSpotNotFoundException;
 import org.piet.forumbackend.fishing_spots.exceptions.LocationDtoIncompleteException;
@@ -11,6 +11,7 @@ import org.piet.forumbackend.globals.exceptions.BadRequestException;
 import org.piet.forumbackend.globals.exceptions.UnauthorizedAccessException;
 import org.piet.forumbackend.globals.pagination.PaginationDto;
 import org.piet.forumbackend.users.core.entities.User;
+import org.piet.forumbackend.users.core.exceptions.UserNotLoggedInException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -22,6 +23,7 @@ import java.util.List;
 public interface FishingSpotService {
     void markFishingSpotAsVerified(FishingSpot fishingSpot);
     void markFishingSpotAsRejected(FishingSpot fishingSpot);
+    void revokeFishingSpotReview(Long spotId) throws FishingSpotNotFoundException;
 
     void deleteFishingSpot(FishingSpot fishingSpot, User currentUser);
 
@@ -29,26 +31,21 @@ public interface FishingSpotService {
 
     FishingSpot getFishingSpotByName(String name) throws FishingSpotNotFoundException;
 
-    FishingSpot createFishingSpot(String name,
-                                         String desc,
-                                         FishingSpot.FISHING_SPOT_TYPE type,
-                                         List<User> managers,
-                                         List<Fish> fish,
-                                         LocationDto location,
-                                         User sentBy)
+    FishingSpot createFishingSpot(CreateFishingSpotDto dto)
             throws LocationDtoIncompleteException,
             IOException,
             LocationNotFoundException,
             UnauthorizedAccessException,
-            BadRequestException;
+            BadRequestException, UserNotLoggedInException;
 
     FishingSpot updateStatue(FishingSpot fishingSpot, MultipartFile newStatue, User user) throws BadRequestException, IOException, UnauthorizedAccessException;
 
     List<FishingSpot> getFishingSpotsInRadius(Double x, Double y, Integer radiusKm, Pageable pageable);
 
-    Page<FishingSpot> getFishingSpots(Pageable pageable);
-    default Page<FishingSpot> getFishingSpots(PaginationDto dto){
-        return getFishingSpots(dto.toPageable());
+    Page<FishingSpot> getFishingSpotsByStatus(VerificationStatus status, Pageable pageable);
+
+    default Page<FishingSpot> getFishingSpotsByStatus(VerificationStatus status, PaginationDto dto){
+        return getFishingSpotsByStatus(status, dto.toPageable());
     };
 
     default void deleteFishingSpot(Long id, User currentUser) throws FishingSpotNotFoundException {

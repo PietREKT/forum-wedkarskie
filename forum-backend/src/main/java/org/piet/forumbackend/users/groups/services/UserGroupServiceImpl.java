@@ -3,11 +3,17 @@ package org.piet.forumbackend.users.groups.services;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.piet.forumbackend.globals.exceptions.NotFoundException;
+import org.piet.forumbackend.users.core.dtos.UsersDtoMapper;
+import org.piet.forumbackend.users.core.dtos.responses.ListUserDto;
 import org.piet.forumbackend.users.core.entities.User;
+import org.piet.forumbackend.users.groups.dtos.UserGroupDtoMapper;
+import org.piet.forumbackend.users.groups.dtos.responses.ListUserGroupDto;
 import org.piet.forumbackend.users.groups.entities.UserGroup;
 import org.piet.forumbackend.users.groups.repositories.UserGroupRepository;
 import org.springframework.context.MessageSource;
 import org.springframework.context.i18n.LocaleContextHolder;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 
@@ -97,6 +103,7 @@ public class UserGroupServiceImpl implements UserGroupService {
         checkAdmin(group, currentUser);
 
         group.addMember(memberCandidate);
+        group.removeMemberCandidate(memberCandidate);
         log.info("{} accepted/added {} into {}", currentUser.toLogStringShort(), memberCandidate.toLogStringShort(), group.toLogStringShort());
         userGroupRepository.save(group);
     }
@@ -169,5 +176,23 @@ public class UserGroupServiceImpl implements UserGroupService {
         group.setOwner(newOwner);
         log.info("{} transferred ownership of {} to {}", oldOwner.toLogStringShort(), group.toLogStringShort(), newOwner.toLogStringShort());
         userGroupRepository.save(group);
+    }
+
+    @Override
+    public Page<ListUserGroupDto> getGroupsByMember(UUID userId, Pageable pageable) {
+        return userGroupRepository.findAllByMember_Id(userId, pageable)
+                .map(UserGroupDtoMapper::toListUserGroupDto);
+    }
+
+    @Override
+    public Page<ListUserDto> getMemberCandidates(UUID groupId, Pageable pageable){
+        return userGroupRepository.findMemberCandidatesById(groupId, pageable)
+                .map(UsersDtoMapper::toListUserDto);
+    }
+
+    @Override
+    public Page<ListUserGroupDto> getGroupsByCandidateId(UUID userId, Pageable pageable) {
+        return userGroupRepository.findAllByMemberCandidatesContainsUser(userId, pageable)
+                .map(UserGroupDtoMapper::toListUserGroupDto);
     }
 }

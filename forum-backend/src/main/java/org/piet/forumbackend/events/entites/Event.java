@@ -50,4 +50,17 @@ public class Event {
             orphanRemoval = true
     )
     private Set<UserEvent> userEvents = new HashSet<>();
+
+    public void addUserEvent(UserEvent userEvent){
+        userEvents.add(userEvent);
+    }
+
+    public String toLogStringShort() {
+        return "Event: { name = " +
+                    name +
+                ", creator: " + creator.toLogStringShort() +
+                ", group: " + (group != null ? group.toLogStringShort() : " not specified") +
+                ", participants: " + userEvents.size() +
+                " }";
+    }
 }
