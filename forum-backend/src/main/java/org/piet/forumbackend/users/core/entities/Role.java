@@ -24,8 +24,12 @@ public enum Role {
         this.includeInPermissionTree = true;
     }
 
-    public boolean hasAtLeast(Role other){
+    public boolean hasPermsAtLeast(Role other){
         return this.permLevel >= other.permLevel;
+    }
+
+    public boolean hasPermsBiggerThan(Role other){
+        return this.permLevel > other.permLevel;
     }
 
     public GrantedAuthority getAsAuthority(){

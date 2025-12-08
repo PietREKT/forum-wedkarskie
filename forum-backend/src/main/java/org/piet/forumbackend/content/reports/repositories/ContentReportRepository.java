@@ -14,6 +14,8 @@ import java.util.List;
 
 public interface ContentReportRepository extends JpaRepository<ContentReport, Long> {
 
+    void deleteContentReportsByReported_Id(Long reportedId);
+
     public interface ReasonCountProjection {
         ReportReason getReason();
         Long getCount();

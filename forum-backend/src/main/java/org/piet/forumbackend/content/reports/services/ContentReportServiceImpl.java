@@ -8,6 +8,7 @@ import org.piet.forumbackend.content.reports.entities.ContentReport;
 import org.piet.forumbackend.content.reports.entities.enums.ReportReason;
 import org.piet.forumbackend.content.reports.repositories.ContentReportRepository;
 import org.piet.forumbackend.content.repositories.ContentRepository;
+import org.piet.forumbackend.globals.exceptions.BadRequestException;
 import org.piet.forumbackend.users.core.entities.User;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -43,7 +44,10 @@ public class ContentReportServiceImpl implements ContentReportService {
     }
 
     @Override
-    public ContentReport create(Content reportedContent, User reportedBy, ReportReason reason) {
+    public ContentReport create(Content reportedContent, User reportedBy, ReportReason reason) throws BadRequestException {
+        if (reportedContent == null)
+            throw new BadRequestException("Invalid content ID provided");
+
         ContentReport contentReport = new ContentReport();
         contentReport.setReportedBy(reportedBy);
         contentReport.setReason(reason);
@@ -54,6 +58,11 @@ public class ContentReportServiceImpl implements ContentReportService {
     @Override
     public void dismissReportsByReason(Content content, ReportReason reason) {
         contentReportRepository.deleteByReportedAndReason(content, reason);
+    }
+
+    @Override
+    public void dismissReports(Long contentId) {
+        contentReportRepository.deleteContentReportsByReported_Id(contentId);
     }
 
     @Override

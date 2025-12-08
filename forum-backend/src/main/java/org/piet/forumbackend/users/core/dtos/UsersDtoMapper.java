@@ -25,7 +25,8 @@ public class UsersDtoMapper {
 
     public static ContentUserDto toPostUserDto(User user){
         return new ContentUserDto(
-                user.getUsername()
+                user.getUsername(),
+                user.getId()
         );
     }
 

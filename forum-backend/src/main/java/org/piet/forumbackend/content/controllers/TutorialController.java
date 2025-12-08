@@ -3,6 +3,7 @@ package org.piet.forumbackend.content.controllers;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.piet.forumbackend.content.dtos.requests.tutorials.CreateTutorialDto;
+import org.piet.forumbackend.content.dtos.responses.tutorials.ListTutorialDto;
 import org.piet.forumbackend.content.dtos.responses.tutorials.TutorialDto;
 import org.piet.forumbackend.content.services.TutorialService;
 import org.piet.forumbackend.fish.entities.Fish;
@@ -16,6 +17,7 @@ import org.piet.forumbackend.globals.pagination.PaginationDto;
 import org.piet.forumbackend.users.core.entities.User;
 import org.piet.forumbackend.users.core.exceptions.UserNotLoggedInException;
 import org.piet.forumbackend.users.core.services.UserService;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -45,6 +47,14 @@ public class TutorialController {
         return ResponseEntity.ok(tut);
     }
 
+    @GetMapping
+    public ResponseEntity<PageDto<ListTutorialDto>> getTutorialsBulk(PaginationDto pagination){
+        var page = tutorialService.getTutorialsVerifiedAsDtos(
+                pagination.toPageable(Sort.by(Sort.Direction.DESC, "createdAt"))
+        );
+        return ResponseEntity.ok(PageDto.createDto(page));
+    }
+
     @GetMapping("/method")
     public ResponseEntity<PageDto<TutorialDto>> getByMethod(@RequestParam FishingMethod method, PaginationDto pagination) {
         return ResponseEntity.ok(
@@ -54,7 +64,7 @@ public class TutorialController {
         );
     }
     @GetMapping("/fish")
-    public ResponseEntity<PageDto<TutorialDto>> getByMethod(@RequestParam Long fishId, PaginationDto pagination) throws FishNotFoundException {
+    public ResponseEntity<PageDto<TutorialDto>> getByFish(@RequestParam Long fishId, PaginationDto pagination) throws FishNotFoundException {
         Fish fish = fishService.getFishById(fishId);
         return ResponseEntity.ok(
                 PageDto.createDto(

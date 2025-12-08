@@ -1,4 +1,4 @@
-package org.piet.forumbackend.fishing_spots.dtos;
+package org.piet.forumbackend.fishing_spots.dtos.requests;
 
 import lombok.Value;
 

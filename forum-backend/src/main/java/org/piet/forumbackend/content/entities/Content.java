@@ -27,6 +27,7 @@ public class Content {
     @ManyToOne(targetEntity = User.class)
     User author;
 
+    @Column(length = 2048)
     String content;
 
     Instant createdAt;
