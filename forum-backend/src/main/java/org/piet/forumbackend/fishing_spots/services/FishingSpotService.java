@@ -19,6 +19,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.UUID;
 
 public interface FishingSpotService {
     void markFishingSpotAsVerified(FishingSpot fishingSpot);
@@ -68,6 +69,8 @@ public interface FishingSpotService {
     default Page<FishingSpotDto> getUnverified(PaginationDto pagination){
         return getUnverified(pagination.toPageable(Sort.by(Sort.Direction.ASC, "createdAt")));
     }
+
+    boolean isOwner(UUID userId, Long fishingSpotId);
 }
 
 

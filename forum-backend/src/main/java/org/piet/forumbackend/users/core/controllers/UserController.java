@@ -1,6 +1,5 @@
 package org.piet.forumbackend.users.core.controllers;
 
-import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.piet.forumbackend.events.dtos.responses.EventDto;
@@ -15,7 +14,6 @@ import org.piet.forumbackend.users.core.services.UserServiceImpl;
 import org.piet.forumbackend.users.groups.dtos.responses.ListUserGroupDto;
 import org.piet.forumbackend.users.groups.services.UserGroupService;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -31,37 +29,6 @@ public class UserController {
     private final UserServiceImpl userService;
     private final EventsService eventsService;
     private final UserGroupService userGroupService;
-
-    @Operation(summary = "Get user info")
-    @GetMapping("/me")
-    public ResponseEntity<UserDto> getUserInfo(Authentication auth) throws UserNotLoggedInException {
-        UserDto dto = UsersDtoMapper.toUserDto(userService.getUserFromAuth(auth));
-        return ResponseEntity.ok(dto);
-    }
-
-    @GetMapping("/me/groups")
-    public ResponseEntity<PageDto<ListUserGroupDto>> getUserGroups(PaginationDto pagination) throws UserNotLoggedInException {
-        var page = userGroupService.getGroupsByMember(userService.getCurrentUser().getId(), pagination);
-        return ResponseEntity.ok(PageDto.createDto(page));
-    }
-
-    @GetMapping("/me/groups/invites")
-    public ResponseEntity<PageDto<ListUserGroupDto>> getInvitesToGroups(PaginationDto paginationDto) throws UserNotLoggedInException {
-        var page = userGroupService.getGroupsByCandidateId(userService.getCurrentUser().getId(), paginationDto);
-        return ResponseEntity.ok(PageDto.createDto(page));
-    }
-
-    @GetMapping("/me/events/created")
-    public ResponseEntity<PageDto<EventDto>> getEventsCreatedByCurrentUser(PaginationDto pagination) throws UserNotLoggedInException {
-        UUID userId = userService.getCurrentUser().getId();
-        return ResponseEntity.ok(eventsService.getEventsCreatedByUser(userId, pagination));
-    }
-
-    @GetMapping("/me/events/upcoming")
-    public ResponseEntity<PageDto<EventDto>> getUpcomingEventsForCurrentUser(PaginationDto pagination) throws UserNotLoggedInException {
-        UUID userId = userService.getCurrentUser().getId();
-        return ResponseEntity.ok(eventsService.getUpcomingEventsForUser(userId, pagination));
-    }
 
     @GetMapping("/{userId}")
     public ResponseEntity<UserDto> getUserInfoById(@PathVariable UUID userId) throws NotFoundException {

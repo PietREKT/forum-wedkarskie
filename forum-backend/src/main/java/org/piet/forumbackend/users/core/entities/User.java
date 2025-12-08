@@ -8,6 +8,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.hibernate.validator.constraints.Length;
 import org.piet.forumbackend.events.entites.UserEvent;
+import org.piet.forumbackend.fishing_spots.entities.FishingSpot;
 import org.piet.forumbackend.globals.utils.RoleConverter;
 import org.piet.forumbackend.users.friends.entities.FriendRequest;
 import org.piet.forumbackend.users.groups.entities.UserGroup;
@@ -76,6 +77,13 @@ public class User implements UserDetails {
     Set<FriendRequest> sentRequests = new HashSet<>();
     @OneToMany(mappedBy = "receiver", cascade = CascadeType.ALL, orphanRemoval = true)
     Set<FriendRequest> receivedRequests = new HashSet<>();
+
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(name = "user_favourite_spots",
+        joinColumns = @JoinColumn(name = "user_id"),
+            inverseJoinColumns = @JoinColumn(name = "spot_id")
+    )
+    Set<FishingSpot> favourites = new HashSet<>();
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {

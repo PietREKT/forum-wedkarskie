@@ -43,6 +43,7 @@ import java.net.URI;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
@@ -315,5 +316,10 @@ public class FishingSpotServiceImpl implements FishingSpotService {
     public Page<FishingSpotDto> getUnverified(Pageable pageable) {
         return fishingSpotRepository.findByVerificationStatus(VerificationStatus.IN_REVIEW, pageable)
                 .map(FishingSpotDto::create);
+    }
+
+    @Override
+    public boolean isOwner(UUID userId, Long fishingSpotId) {
+        return fishingSpotRepository.existsByIdAndOwner_Id(fishingSpotId, userId);
     }
 }

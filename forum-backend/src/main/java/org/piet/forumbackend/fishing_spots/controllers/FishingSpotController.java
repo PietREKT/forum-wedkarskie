@@ -30,6 +30,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 
 @Slf4j
 @RestController
@@ -83,9 +84,18 @@ public class FishingSpotController {
     }
 
     @GetMapping("/{spotId}/events")
-    public ResponseEntity<PageDto<EventDto>> getEventsAtSpot(@PathVariable Long spotId, PaginationDto pagination){
+    public ResponseEntity<PageDto<EventDto>> getEventsAtSpot(@PathVariable Long spotId, PaginationDto pagination) {
         return ResponseEntity.ok(
                 eventsService.getEventsAtSpot(spotId, pagination)
         );
+    }
+
+    @GetMapping("/{spotId}/owner")
+    public ResponseEntity<?> isOwner(@PathVariable Long spotId) throws UserNotLoggedInException {
+        var map = Map.of("fishing_spot:", spotId,
+                "is_owner", fishingSpotService.isOwner(userService.getCurrentUser().getId(), spotId)
+        );
+
+        return ResponseEntity.ok(map);
     }
 }
