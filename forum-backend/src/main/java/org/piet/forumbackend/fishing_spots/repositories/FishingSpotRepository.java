@@ -29,4 +29,11 @@ public interface FishingSpotRepository extends JpaRepository<FishingSpot, Long> 
     boolean existsByIdAndOwner_Id(Long id, UUID ownerId);
 
     List<FishingSpot> findTop10ByNameStartingWithIgnoreCaseOrderByNameAsc(String query);
+
+    @Query("""
+            select fs from User u
+                        join u.favourites fs
+                   where u.id=:userId
+            """)
+    Page<FishingSpot> findAllUserFavourites(UUID userId, Pageable pageable);
 }

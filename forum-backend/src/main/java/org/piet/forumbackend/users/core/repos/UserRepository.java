@@ -18,4 +18,5 @@ public interface UserRepository extends JpaRepository<User, UUID> {
     Page<User> findByMutedUntilAfter(Instant mutedUntilAfter, Pageable pageable);
 
     List<User> findTop10ByUsernameStartingWithIgnoreCaseOrderByUsernameAsc(String prefix);
+
 }

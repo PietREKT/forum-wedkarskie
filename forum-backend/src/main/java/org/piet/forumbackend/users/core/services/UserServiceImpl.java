@@ -21,6 +21,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.util.List;
@@ -29,6 +30,7 @@ import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class UserServiceImpl implements UserService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
@@ -92,6 +94,7 @@ public class UserServiceImpl implements UserService {
         return userRepository.findById(id);
     }
 
+    @Transactional
     public User registerUser(RegisterUserDto dto) {
         User u = new User();
         u.setEmail(dto.getEmail());
@@ -125,6 +128,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @Transactional
     public void banUser(UUID userId, Instant until, String reason, User currentUser) throws NotFoundException {
         User user = getUserById(userId);
 
@@ -136,6 +140,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @Transactional
     public void unbanUser(UUID userId) throws NotFoundException {
         User user = getUserById(userId);
 
@@ -145,6 +150,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @Transactional
     public void muteUser(UUID userId, Instant until, String reason, User currentUser) throws NotFoundException {
         User user = getUserById(userId);
         checkUserToBeBannedHasHigherPerms(user, currentUser);
@@ -154,6 +160,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @Transactional
     public void unmuteUser(UUID userId) throws NotFoundException {
         User user = getUserById(userId);
 
@@ -190,6 +197,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @Transactional
     public void changeUserRole(UUID userToChange, Role newRole) throws NotFoundException, UserNotLoggedInException {
         User user = getUserById(userToChange);
         User currentUser = getCurrentUser();

@@ -1,5 +1,6 @@
 package org.piet.forumbackend.fishing_spots.dtos.requests;
 
+import jakarta.validation.constraints.NotNull;
 import lombok.Value;
 
 import java.io.Serializable;
@@ -9,5 +10,6 @@ import java.io.Serializable;
  */
 @Value
 public class GetFishingSpotDto implements Serializable {
+    @NotNull
     Long id;
 }

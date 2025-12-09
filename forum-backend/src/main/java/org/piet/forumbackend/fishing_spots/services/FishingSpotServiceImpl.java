@@ -21,11 +21,14 @@ import org.piet.forumbackend.fishing_spots.exceptions.LocationDtoIncompleteExcep
 import org.piet.forumbackend.fishing_spots.exceptions.LocationNotFoundException;
 import org.piet.forumbackend.fishing_spots.repositories.FishingSpotRepository;
 import org.piet.forumbackend.globals.exceptions.BadRequestException;
+import org.piet.forumbackend.globals.exceptions.NotFoundException;
 import org.piet.forumbackend.globals.exceptions.UnauthorizedAccessException;
+import org.piet.forumbackend.globals.pagination.PaginationDto;
 import org.piet.forumbackend.globals.properties.FileProperties;
 import org.piet.forumbackend.users.core.entities.Role;
 import org.piet.forumbackend.users.core.entities.User;
 import org.piet.forumbackend.users.core.exceptions.UserNotLoggedInException;
+import org.piet.forumbackend.users.core.repos.UserRepository;
 import org.piet.forumbackend.users.core.services.UserService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.MessageSource;
@@ -34,6 +37,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -52,7 +56,9 @@ import java.util.stream.StreamSupport;
 @Service
 @RequiredArgsConstructor
 @Log4j2
+@Transactional(readOnly = true)
 public class FishingSpotServiceImpl implements FishingSpotService {
+    private final UserRepository userRepository;
     private final FishingSpotRepository fishingSpotRepository;
     private final MessageSource messageSource;
     private final FileProperties fileProperties;
@@ -66,18 +72,21 @@ public class FishingSpotServiceImpl implements FishingSpotService {
     private Double MINIMUM_CONFIDENCE;
 
     @Override
+    @Transactional
     public void markFishingSpotAsVerified(FishingSpot fishingSpot) {
         fishingSpot.setVerificationStatus(VerificationStatus.ACCEPTED);
         fishingSpotRepository.save(fishingSpot);
     }
 
     @Override
+    @Transactional
     public void markFishingSpotAsRejected(FishingSpot fishingSpot) {
         fishingSpot.setVerificationStatus(VerificationStatus.ACCEPTED);
         fishingSpotRepository.save(fishingSpot);
     }
 
     @Override
+    @Transactional
     public void revokeFishingSpotReview(Long spotId) throws FishingSpotNotFoundException {
         FishingSpot spot = getFishingSpotById(spotId);
         spot.setVerificationStatus(VerificationStatus.IN_REVIEW);
@@ -85,6 +94,7 @@ public class FishingSpotServiceImpl implements FishingSpotService {
     }
 
     @Override
+    @Transactional
     public void deleteFishingSpot(FishingSpot fishingSpot, User currentUser) {
         if (!currentUser.isAdmin() && !fishingSpot.getOwner().equalsUser(currentUser)) {
             throw new AccessDeniedException(
@@ -124,6 +134,7 @@ public class FishingSpotServiceImpl implements FishingSpotService {
 
     //name desc type managers fish
     @Override
+    @Transactional
     public FishingSpot createFishingSpot(CreateFishingSpotDto dto) throws LocationDtoIncompleteException, IOException, LocationNotFoundException, UnauthorizedAccessException, BadRequestException, UserNotLoggedInException {
         User sentBy = userService.getCurrentUser();
 
@@ -189,6 +200,7 @@ public class FishingSpotServiceImpl implements FishingSpotService {
     }
 
     @Override
+    @Transactional
     public FishingSpot updateStatue(FishingSpot fishingSpot, MultipartFile newStatue, User user) throws BadRequestException, IOException, UnauthorizedAccessException {
         if (fishingSpot.getManagers().stream().noneMatch(u -> u.equalsUser(user))) {
             log.warn("User with id: {} tried to update statue for a fishing spot with id: {} despite lacking permissions.", user.getId(), fishingSpot.getId());
@@ -294,6 +306,7 @@ public class FishingSpotServiceImpl implements FishingSpotService {
     }
 
     @Override
+    @Transactional
     public void transferOwnership(Long spotId, User newOwner, User currentUser) throws FishingSpotNotFoundException {
         FishingSpot spot = getFishingSpotById(spotId);
 
@@ -324,5 +337,37 @@ public class FishingSpotServiceImpl implements FishingSpotService {
     @Override
     public boolean isOwner(UUID userId, Long fishingSpotId) {
         return fishingSpotRepository.existsByIdAndOwner_Id(fishingSpotId, userId);
+    }
+
+    @Override
+    public Page<FishingSpotListDto> getUserFavourites(UUID userId, PaginationDto pagination) throws UserNotLoggedInException {
+        return fishingSpotRepository.findAllUserFavourites(userId, pagination.toPageable())
+                .map(FishingSpotListDto::create);
+    }
+
+    @Override
+    public Page<FishingSpotListDto> getUserCurrentFavourites(PaginationDto pagination) throws UserNotLoggedInException {
+        return fishingSpotRepository.findAllUserFavourites(userService.getCurrentUser().getId(), pagination.toPageable())
+                .map(FishingSpotListDto::create);
+    }
+
+    @Override
+    @Transactional
+    public void addFishingSpotToFavourites(Long spotId) throws NotFoundException, UserNotLoggedInException {
+        FishingSpot spot = getFishingSpotById(spotId);
+        User currentUser = userService.getCurrentUser();
+
+        currentUser.addFavouriteFishingSpot(spot);
+        userRepository.save(currentUser);
+    }
+
+    @Override
+    @Transactional
+    public void removeFishingSpotFromFavourites(Long spotId) throws NotFoundException, UserNotLoggedInException {
+        FishingSpot spot = getFishingSpotById(spotId);
+        User currentUser = userService.getCurrentUser();
+
+        currentUser.removeFavouriteFishingSpot(spot);
+        userRepository.save(currentUser);
     }
 }
