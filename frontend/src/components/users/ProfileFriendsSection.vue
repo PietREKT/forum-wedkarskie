@@ -1,4 +1,3 @@
-<!-- src/components/users/ProfileFriendsSection.vue -->
 <template>
   <div
       v-if="isOwner"
@@ -9,7 +8,7 @@
     <!-- WYSZUKIWARKA UŻYTKOWNIKÓW -->
     <div class="space-y-2">
       <label class="block text-sm text-[var(--color-muted)]">
-        Wyszukaj użytkownika po nicku
+        Wyszukaj użytkownika po pseudonimie
       </label>
       <div class="flex gap-2">
         <input
@@ -217,10 +216,8 @@ async function onSearchUsers() {
     const { data } = await searchUsersByUsername(q)
     searchResults.value = Array.isArray(data) ? data : []
   } catch (err) {
-    searchError.value =
-        err?.response?.data?.message ||
-        err?.message ||
-        'Nie udało się wyszukać użytkowników.'
+    console.error('onSearchUsers error', err)
+    searchError.value = 'Nie udało się wyszukać użytkowników (błąd serwera).'
   } finally {
     searchLoading.value = false
   }

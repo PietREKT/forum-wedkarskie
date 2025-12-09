@@ -30,7 +30,7 @@
       />
 
       <div class="grid grid-cols-1 md:grid-cols-3 gap-8 items-start">
-        <!-- Avatar + nick -->
+        <!-- Avatar + pseudonim -->
         <div class="flex items-center md:block gap-5">
           <div
               class="h-28 w-28 rounded-full bg-[var(--color-bg)]
@@ -46,7 +46,7 @@
           </div>
 
           <div class="mt-4 md:mt-6">
-            <p class="text-xs text-[var(--color-muted)]">nik</p>
+            <p class="text-xs text-[var(--color-muted)]">Pseudonim</p>
             <h2 class="text-xl font-semibold">
               {{ displayedUsername || 'użytkownik' }}
             </h2>
@@ -55,31 +55,21 @@
 
         <!-- Dane tekstowe + akcje -->
         <div class="md:col-span-2">
-          <h3 class="text-lg font-semibold mb-3">Dane</h3>
-          <dl class="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-3">
-            <div>
-              <dt class="text-sm text-[var(--color-muted)]">Imię</dt>
-              <dd class="text-base">{{ user?.name || '—' }}</dd>
-            </div>
-            <div>
-              <dt class="text-sm text-[var(--color-muted)]">Nazwisko</dt>
-              <dd class="text-base">{{ user?.surname || '—' }}</dd>
-            </div>
-            <div>
-              <dt class="text-sm text-[var(--color-muted)]">E-mail</dt>
-              <dd class="text-base">{{ user?.email || '—' }}</dd>
-            </div>
-          </dl>
+          <h3 class="text-lg font-semibold mb-1">Imię i nazwisko</h3>
+          <p class="text-base mb-4">
+            {{ fullName }}
+          </p>
 
-          <div class="mt-6 flex flex-wrap gap-3">
-            <!-- posty danego użytkownika -->
+          <div class="mt-2 flex flex-wrap gap-3">
+            <!-- posty danego użytkownika – tylko na własnym profilu -->
             <RouterLink
+                v-if="isOwner"
                 :to="`/posts?userId=${encodeURIComponent(user?.id ?? '')}`"
                 class="inline-flex items-center justify-center min-w-[140px] h-9 px-4
                      rounded-full text-xs font-medium
                      bg-[var(--color-primary)] hover:bg-[var(--color-primary-600)]
                      text-white transition shadow"
-                title="Zobacz posty użytkownika"
+                title="Zobacz swoje posty"
             >
               Posty użytkownika
             </RouterLink>
@@ -140,7 +130,7 @@
             <form class="space-y-4" @submit.prevent="onSaveProfile">
               <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <label class="text-sm space-y-1">
-                  <span class="block text-[var(--color-muted)]">Nowy nick</span>
+                  <span class="block text-[var(--color-muted)]">Nowy pseudonim</span>
                   <input
                       v-model="editUsername"
                       type="text"
@@ -219,25 +209,6 @@
 
     <!-- Sekcje profilu -->
     <section class="grid grid-cols-1 md:grid-cols-2 gap-6">
-      <!-- Posty użytkownika -->
-      <div
-          class="bg-[var(--color-surface)] text-[var(--color-text)] rounded-2xl shadow p-6"
-      >
-        <h3 class="text-lg font-semibold mb-4">Posty użytkownika</h3>
-        <div
-            class="h-40 md:h-44 rounded-xl border-2 border-[var(--color-border)]
-                 flex flex-col items-center justify-center text-[var(--color-muted)] gap-3"
-        >
-          <span>Lista postów tego użytkownika</span>
-          <RouterLink
-              :to="`/posts?userId=${encodeURIComponent(user?.id ?? '')}`"
-              class="px-4 py-1.5 text-xs rounded-lg bg-[var(--color-primary)] text-white hover:bg-[var(--color-primary-600)]"
-          >
-            Przejdź do postów
-          </RouterLink>
-        </div>
-      </div>
-
       <!-- Obserwowani – osobny komponent -->
       <ProfileFriendsSection />
 
@@ -246,25 +217,114 @@
           class="bg-[var(--color-surface)] text-[var(--color-text)] rounded-2xl shadow p-6"
       >
         <h3 class="text-lg font-semibold mb-4">Grupy użytkownika</h3>
+
         <div
+            v-if="groupsLoading"
             class="h-28 rounded-xl border-2 border-[var(--color-border)]
                  flex items-center justify-center text-[var(--color-muted)] text-center px-4"
         >
-          Tutaj będzie lista grup użytkownika.
+          Ładowanie listy grup...
+        </div>
+
+        <div
+            v-else-if="groupsError"
+            class="h-28 rounded-xl border-2 border-red-500/60 bg-red-500/5
+                 flex items-center justify-center text-xs text-red-300 text-center px-4"
+        >
+          {{ groupsError }}
+        </div>
+
+        <div
+            v-else-if="groups.length === 0"
+            class="h-28 rounded-xl border-2 border-[var(--color-border)]
+                 flex items-center justify-center text-[var(--color-muted)] text-center px-4"
+        >
+          Brak grup użytkownika.
+        </div>
+
+        <div
+            v-else
+            class="max-h-48 rounded-xl border-2 border-[var(--color-border)]
+                 overflow-y-auto divide-y divide-[var(--color-border)]"
+        >
+          <div
+              v-for="group in groups"
+              :key="group.id"
+              class="flex items-center justify-between px-4 py-3 gap-3"
+          >
+            <div>
+              <p class="text-sm font-medium">
+                {{ group.name }}
+              </p>
+              <p v-if="group.memberCount != null" class="text-xs text-[var(--color-muted)]">
+                {{ group.memberCount }} członków
+              </p>
+            </div>
+          </div>
         </div>
       </div>
 
-      <!-- 4. Łowiska użytkownika -->
+      <!-- Łowiska użytkownika -->
       <div
           class="bg-[var(--color-surface)] text-[var(--color-text)] rounded-2xl shadow p-6"
       >
         <h3 class="text-lg font-semibold mb-4">Łowiska użytkownika</h3>
+
         <div
+            v-if="ownedSpots.length === 0 && favouriteSpots.length === 0"
             class="h-28 rounded-xl border-2 border-[var(--color-border)]
                  flex items-center justify-center text-[var(--color-muted)] text-center px-4"
         >
-          Tu będzie lista polubionych i zgłoszonych przez użytkownika łowisk
-          (z przekierowaniem do mapy).
+          Brak przypisanych łowisk. Ta sekcja pokaże polubione i zgłoszone łowiska
+          użytkownika (z przekierowaniem do mapy, gdy backend będzie gotowy).
+        </div>
+
+        <div
+            v-else
+            class="max-h-48 rounded-xl border-2 border-[var(--color-border)]
+                 overflow-y-auto divide-y divide-[var(--color-border)]"
+        >
+          <template v-if="ownedSpots.length">
+            <div class="bg-black/10 px-4 py-2 text-xs text-[var(--color-muted)]">
+              Twoje łowiska
+            </div>
+            <div
+                v-for="spot in ownedSpots"
+                :key="'own-' + (spot.id ?? spotDisplayName(spot))"
+                class="px-4 py-2 flex flex-col gap-0.5"
+            >
+              <span class="text-sm font-medium">
+                {{ spotDisplayName(spot) }}
+              </span>
+              <span
+                  v-if="spotLocation(spot)"
+                  class="text-xs text-[var(--color-muted)]"
+              >
+                {{ spotLocation(spot) }}
+              </span>
+            </div>
+          </template>
+
+          <template v-if="favouriteSpots.length">
+            <div class="bg-black/10 px-4 py-2 text-xs text-[var(--color-muted)]">
+              Polubione łowiska
+            </div>
+            <div
+                v-for="spot in favouriteSpots"
+                :key="'fav-' + (spot.id ?? spotDisplayName(spot))"
+                class="px-4 py-2 flex flex-col gap-0.5"
+            >
+              <span class="text-sm font-medium">
+                {{ spotDisplayName(spot) }}
+              </span>
+              <span
+                  v-if="spotLocation(spot)"
+                  class="text-xs text-[var(--color-muted)]"
+              >
+                {{ spotLocation(spot) }}
+              </span>
+            </div>
+          </template>
         </div>
       </div>
     </section>
@@ -276,6 +336,7 @@ import { computed, ref, watch, onMounted } from 'vue'
 import { useRoute, RouterLink } from 'vue-router'
 import { useAuthStore } from '../stores/auth.js'
 import { useUserStore } from '../stores/userStore.js'
+import { apiClient } from '../utils/axios.js'
 import UserFollowButton from '../components/users/UserFollowButton.vue'
 import ReportPanel from '../components/common/ReportPanel.vue'
 import ProfileFriendsSection from '../components/users/ProfileFriendsSection.vue'
@@ -300,6 +361,13 @@ const avatarUrl = computed(() => user.value?.avatarUrl || '')
 const isOwner = computed(() => {
   if (!loggedUser.value?.username || !displayedUsername.value) return false
   return loggedUser.value.username === displayedUsername.value
+})
+
+const fullName = computed(() => {
+  const first = user.value?.name || ''
+  const last = user.value?.surname || ''
+  const text = `${first} ${last}`.trim()
+  return text || '—'
 })
 
 const loading = ref(false)
@@ -392,6 +460,60 @@ function cancelReport() {
   reportError.value = ''
 }
 
+// GRUPY UŻYTKOWNIKA
+const groups = ref([])
+const groupsLoading = ref(false)
+const groupsError = ref('')
+
+async function loadUserGroups() {
+  if (!isOwner.value) {
+    groups.value = []
+    groupsError.value = ''
+    groupsLoading.value = false
+    return
+  }
+
+  groupsLoading.value = true
+  groupsError.value = ''
+
+  try {
+    const { data } = await apiClient.get('/users/me/groups')
+    const items = Array.isArray(data?.content) ? data.content : []
+    groups.value = items.map(g => ({
+      id: g.id,
+      name: g.name,
+      memberCount: g.memberCount ?? null,
+    }))
+  } catch (err) {
+    console.error('loadUserGroups error', err)
+    groupsError.value = 'Nie udało się pobrać grup użytkownika (błąd serwera).'
+  } finally {
+    groupsLoading.value = false
+  }
+}
+
+// ŁOWISKA – z danych użytkownika (jeśli backend je zwróci)
+const favouriteSpots = computed(() => {
+  const raw = user.value?.favouriteSpots || user.value?.favoriteSpots || []
+  return Array.isArray(raw) ? raw : []
+})
+
+const ownedSpots = computed(() => {
+  const raw = user.value?.ownedSpots || user.value?.mySpots || []
+  return Array.isArray(raw) ? raw : []
+})
+
+function spotDisplayName(spot) {
+  if (!spot) return 'Łowisko'
+  if (typeof spot === 'string') return spot
+  return spot.name || spot.title || 'Łowisko'
+}
+
+function spotLocation(spot) {
+  if (!spot || typeof spot === 'string') return ''
+  return spot.voivodeship || spot.region || spot.address || ''
+}
+
 // odświeżenie danych profilu
 async function onRefresh() {
   loading.value = true
@@ -400,12 +522,13 @@ async function onRefresh() {
       auth.bootstrapSession(),
       userStore.fetchMe(true),
     ])
+    await loadUserGroups()
   } finally {
     loading.value = false
   }
 }
 
 onMounted(() => {
-  userStore.fetchMe().catch(() => {})
+  onRefresh().catch(() => {})
 })
 </script>
