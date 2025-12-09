@@ -3,6 +3,8 @@ package org.piet.forumbackend.reports.services;
 import org.piet.forumbackend.content.entities.Content;
 import org.piet.forumbackend.content.repositories.ContentRepository;
 import org.piet.forumbackend.globals.exceptions.BadRequestException;
+import org.piet.forumbackend.globals.pagination.PageDto;
+import org.piet.forumbackend.globals.pagination.PaginationDto;
 import org.piet.forumbackend.reports.dtos.content.internal.HotReportedContentProjectionDto;
 import org.piet.forumbackend.reports.dtos.content.responses.ContentReportDto;
 import org.piet.forumbackend.reports.dtos.content.responses.HotReportedContentDto;
@@ -35,8 +37,8 @@ public class ContentReportServiceImpl implements ContentReportService {
     }
 
     @Override
-    public List<ContentReport> getReportsByContentId(Content content) {
-        return contentReportRepository.findByReported(content);
+    public PageDto<ContentReport> getReportsByContentId(Content content, PaginationDto pagination) {
+        return PageDto.of(contentReportRepository.findByReported(content, pagination.toPageable()));
     }
 
     @Override
@@ -72,10 +74,19 @@ public class ContentReportServiceImpl implements ContentReportService {
     }
 
     @Override
-    public List<HotReportedContentDto> getRecentlyReportedContent(Long amount, ChronoUnit unit, Integer pageNo, Integer pageSize) {
+    public PageDto<HotReportedContentDto> getRecentlyReportedContent(Long amount, ChronoUnit unit, PaginationDto pagination) throws BadRequestException {
         Instant now = Instant.now();
 
-        Instant since = Instant.now().minus(amount, unit);
+        Duration duration = switch (unit){
+            case MINUTES, HOURS, DAYS, WEEKS -> unit.getDuration().multipliedBy(amount);
+            default -> throw new BadRequestException("Unsupported unit: " + unit);
+        };
+
+        if (duration.compareTo(ChronoUnit.MONTHS.getDuration()) > 0){
+            throw new BadRequestException("You can't query reports older than 1 month");
+        }
+
+        Instant since = Instant.now().minus(duration);
         List<ContentReportRepository.HotReportProjection> projections = contentReportRepository.getHotReports(since);
         var aggregated = projections
                 .stream()
@@ -91,8 +102,8 @@ public class ContentReportServiceImpl implements ContentReportService {
                     );
                 })
                 .sorted(Comparator.comparingDouble(HotReportedContentProjectionDto::getScore).reversed())
-                .skip((long) pageNo * pageSize)
-                .limit(pageSize)
+                .skip((long) pagination.getPage() * pagination.getSize())
+                .limit(pagination.getSize())
                 .toList();
 
         Map<Long, Content> contentMap = contentRepository.findAllById(
@@ -101,9 +112,11 @@ public class ContentReportServiceImpl implements ContentReportService {
                 .stream()
                 .collect(Collectors.toMap(Content::getId, c -> c));
 
-        return aggregated.stream().map(proj ->
+        var dtos =  aggregated.stream().map(proj ->
                 HotReportedContentDto.create(contentMap.get(proj.getContentId()), proj)
         ).toList();
+
+        return PageDto.fromPaged(dtos, pagination, projections.size());
     }
 
     @Override

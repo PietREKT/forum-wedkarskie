@@ -149,7 +149,7 @@ public class EventsServiceImpl implements EventsService {
                         Instant.now(),
                         pagination.toPageable())
                 .map(e -> EventDtoMapper.toEventDto(e, userService.getCurrentUserOrNull()));
-        return PageDto.createDto(page);
+        return PageDto.of(page);
     }
 
     @Override
@@ -157,7 +157,7 @@ public class EventsServiceImpl implements EventsService {
         var page = eventRepository.findAllByGroup_IdAndFuture(groupId, Instant.now(), pagination.toPageable())
                 .map(e -> EventDtoMapper.toEventDto(e, userService.getCurrentUserOrNull()));
 
-        return PageDto.createDto(page);
+        return PageDto.of(page);
     }
 
     @Override
@@ -167,7 +167,7 @@ public class EventsServiceImpl implements EventsService {
                 pagination.toPageable())
                 .map(e -> EventDtoMapper.toEventDto(e, userService.getCurrentUserOrNull()));
 
-        return PageDto.createDto(page);
+        return PageDto.of(page);
     }
 
     @Override
@@ -176,7 +176,7 @@ public class EventsServiceImpl implements EventsService {
                 Instant.now(),
                 pagination.toPageable())
                 .map(e -> EventDtoMapper.toEventDto(e, userService.getCurrentUserOrNull()));
-        return PageDto.createDto(page);
+        return PageDto.of(page);
     }
 
     @Override
@@ -224,7 +224,7 @@ public class EventsServiceImpl implements EventsService {
     public PageDto<UserEventDto> getParticipants(Long eventId, PaginationDto pagination) throws NotFoundException {
         var userEvents = userEventRepository.findAllByEvent_Id(eventId, pagination.toPageable())
                 .map(EventDtoMapper::toUserEventDto);
-        return PageDto.createDto(userEvents);
+        return PageDto.of(userEvents);
     }
 
     @Override
@@ -235,7 +235,7 @@ public class EventsServiceImpl implements EventsService {
                 pagination.toPageable())
                 .map(EventDtoMapper::toUserEventDto);
 
-        return PageDto.createDto(page);
+        return PageDto.of(page);
     }
 
     @Override

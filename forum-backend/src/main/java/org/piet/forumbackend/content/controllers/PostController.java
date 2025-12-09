@@ -106,7 +106,7 @@ public class PostController {
         User user = userService.getUserById(userId);
         var posts = contentService.getUserPosts(user, pagination).map(ContentDtoMapper::toContentDto);
 
-        return ResponseEntity.ok(PageDto.createDto(posts));
+        return ResponseEntity.ok(PageDto.of(posts));
     }
 
     @GetMapping("/{id}")

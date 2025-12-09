@@ -30,7 +30,7 @@ public class FishingSpotOpinionController {
         var page = fishingSpotOpinionService.getOpinionsBySpotId(spotId,
                 pagination.toPageable(Sort.by(Sort.Direction.DESC,"createdAt")));
 
-        return ResponseEntity.ok(PageDto.createDto(page));
+        return ResponseEntity.ok(PageDto.of(page));
     }
 
     @PostMapping

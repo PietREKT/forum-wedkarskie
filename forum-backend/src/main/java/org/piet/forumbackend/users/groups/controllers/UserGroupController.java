@@ -87,6 +87,6 @@ public class UserGroupController {
     public ResponseEntity<PageDto<ListUserDto>> getGroupCandidates(@PathVariable UUID groupId, PaginationDto pagination) {
         var page = userGroupService.getMemberCandidates(groupId, pagination);
 
-        return ResponseEntity.ok(PageDto.createDto(page));
+        return ResponseEntity.ok(PageDto.of(page));
     }
 }

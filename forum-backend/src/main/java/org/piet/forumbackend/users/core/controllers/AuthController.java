@@ -16,12 +16,17 @@ import org.piet.forumbackend.users.core.services.UserServiceImpl;
 import org.springframework.context.MessageSource;
 import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.time.Instant;
+
+import static org.piet.forumbackend.globals.utils.UserMessagesDateTimeFormatter.BAN_TIME_FORMATTER;
 
 @RestController
 @RequestMapping("${forum.api.prefix}/auth")
@@ -38,6 +43,9 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<UserDto> login(HttpServletRequest req, HttpServletResponse res, @RequestBody LoginUserDto dto) throws NotFoundException {
         User u = userService.getUserByUsername(dto.getUsername());
+        if (u.isBanned(Instant.now())){
+            throw new AccessDeniedException("You are banned until: " + BAN_TIME_FORMATTER.format(u.getBannedUntil()));
+        }
         if (encoder.matches(dto.getPassword(), u.getPassword())) {
             boolean secure = req.isSecure() || "https".equalsIgnoreCase(req.getHeader("X-Forwarded-Proto"));
             cookieBuilder.writeAuthCookie(res, jwtService.generate(u), secure);

@@ -38,7 +38,7 @@ public class UserController {
     @GetMapping("/{userId}/groups")
     public ResponseEntity<PageDto<ListUserGroupDto>> getUserGroupsById(@PathVariable UUID userId, PaginationDto pagination) throws UserNotLoggedInException {
         var page = userGroupService.getGroupsByMember(userId, pagination);
-        return ResponseEntity.ok(PageDto.createDto(page));
+        return ResponseEntity.ok(PageDto.of(page));
     }
 
 

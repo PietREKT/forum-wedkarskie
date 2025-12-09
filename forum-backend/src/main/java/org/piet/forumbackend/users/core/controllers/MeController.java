@@ -37,13 +37,13 @@ public class MeController {
     @GetMapping("/groups")
     public ResponseEntity<PageDto<ListUserGroupDto>> getUserGroups(PaginationDto pagination) throws UserNotLoggedInException {
         var page = userGroupService.getGroupsByMember(userService.getCurrentUser().getId(), pagination);
-        return ResponseEntity.ok(PageDto.createDto(page));
+        return ResponseEntity.ok(PageDto.of(page));
     }
 
     @GetMapping("/groups/invites")
     public ResponseEntity<PageDto<ListUserGroupDto>> getInvitesToGroups(PaginationDto paginationDto) throws UserNotLoggedInException {
         var page = userGroupService.getGroupsByCandidateId(userService.getCurrentUser().getId(), paginationDto);
-        return ResponseEntity.ok(PageDto.createDto(page));
+        return ResponseEntity.ok(PageDto.of(page));
     }
 
     @GetMapping("/events/created")

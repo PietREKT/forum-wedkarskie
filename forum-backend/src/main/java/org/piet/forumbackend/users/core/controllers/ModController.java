@@ -38,6 +38,6 @@ public class ModController {
     public ResponseEntity<PageDto<ListUserDto>> getMutedUsers(PaginationDto pagination){
         var users = userService.getMutedUsers(pagination);
 
-        return ResponseEntity.ok(PageDto.createDto(users));
+        return ResponseEntity.ok(PageDto.of(users));
     }
 }

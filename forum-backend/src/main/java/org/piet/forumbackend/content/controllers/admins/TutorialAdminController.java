@@ -28,7 +28,7 @@ public class TutorialAdminController {
     public ResponseEntity<PageDto<TutorialDto>> getUnverified(PaginationDto pagination) {
         Page<TutorialDto> dtos = tutorialService.getTutorialsUnverified(pagination);
 
-        return ResponseEntity.ok(PageDto.createDto(dtos));
+        return ResponseEntity.ok(PageDto.of(dtos));
     }
 
     @PatchMapping("/{id}/accept")

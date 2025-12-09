@@ -43,12 +43,12 @@ public class AdminController {
     public ResponseEntity<PageDto<ListUserDto>> getBannedUsers(PaginationDto pagination){
         var users = userService.getBannedUsers(pagination);
 
-        return ResponseEntity.ok(PageDto.createDto(users));
+        return ResponseEntity.ok(PageDto.of(users));
     }
 
     @GetMapping("/list")
     public ResponseEntity<PageDto<ListUserDto>> getAllUsers(PaginationDto pagination){
-        return ResponseEntity.ok(PageDto.createDto(userService.getAllUsers(pagination)));
+        return ResponseEntity.ok(PageDto.of(userService.getAllUsers(pagination)));
     }
 
     @PostMapping("/{userId}/roles/change")

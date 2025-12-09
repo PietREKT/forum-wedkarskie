@@ -52,13 +52,13 @@ public class TutorialController {
         var page = tutorialService.getTutorialsVerifiedAsDtos(
                 pagination.toPageable(Sort.by(Sort.Direction.DESC, "createdAt"))
         );
-        return ResponseEntity.ok(PageDto.createDto(page));
+        return ResponseEntity.ok(PageDto.of(page));
     }
 
     @GetMapping("/method")
     public ResponseEntity<PageDto<TutorialDto>> getByMethod(@RequestParam FishingMethod method, PaginationDto pagination) {
         return ResponseEntity.ok(
-                PageDto.createDto(
+                PageDto.of(
                         tutorialService.getTutorialsByMethod(method, pagination)
                 )
         );
@@ -67,7 +67,7 @@ public class TutorialController {
     public ResponseEntity<PageDto<TutorialDto>> getByFish(@RequestParam Long fishId, PaginationDto pagination) throws FishNotFoundException {
         Fish fish = fishService.getFishById(fishId);
         return ResponseEntity.ok(
-                PageDto.createDto(
+                PageDto.of(
                         tutorialService.getTutorialsByFish(fish, pagination)
                 )
         );

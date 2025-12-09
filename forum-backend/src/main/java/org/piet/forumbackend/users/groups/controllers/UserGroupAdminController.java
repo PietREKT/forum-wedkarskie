@@ -19,7 +19,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("${forum.api.prefix}/users/groups/{groupId}admin")
+@RequestMapping("${forum.api.prefix}/users/groups/{groupId}/admin")
 @RequiredArgsConstructor
 public class UserGroupAdminController {
     private final UserService userService;

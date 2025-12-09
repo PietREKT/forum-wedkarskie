@@ -182,7 +182,7 @@ public class ContentServiceImpl implements ContentService {
     public PageDto<ContentDto> getContentByParent(Content parent, User currentUser, Pageable pageable) {
         Page<Content> contentPage = contentRepository.findByParent(parent, pageable);
         if (currentUser != null) {
-            return PageDto.createDto(contentPage.map(c -> ContentDtoMapper.toContentDto(c,
+            return PageDto.of(contentPage.map(c -> ContentDtoMapper.toContentDto(c,
                             c.getVotes().stream()
                                     .filter(v -> v.getUser().equalsUser(currentUser))
                                     .findFirst()
@@ -191,14 +191,14 @@ public class ContentServiceImpl implements ContentService {
                     )
             ));
         }
-        return PageDto.createDto(contentPage.map(ContentDtoMapper::toContentDto));
+        return PageDto.of(contentPage.map(ContentDtoMapper::toContentDto));
     }
 
     @Override
     public PageDto<ContentDto> getRecentPosts(PaginationDto pagination, User currentUser) {
         Pageable pageable = pagination.toPageable(Sort.by(Sort.Direction.DESC, "createdAt"));
         Page<Content> contentPage = contentRepository.findByContentType(ContentType.POST, pageable);
-        return PageDto.createDto(contentPage.map(c ->
+        return PageDto.of(contentPage.map(c ->
                         ContentDtoMapper.toContentDto(
                                 c,
                                 c.getVotes().stream()

@@ -68,7 +68,7 @@ public class FishingSpotController {
     public ResponseEntity<PageDto<FishingSpotListDto>> getSpots(PaginationDto dto) {
         var spots = fishingSpotService.getFishingSpotsByStatus(VerificationStatus.ACCEPTED, dto)
                 .map(FishingSpotListDto::create);
-        return ResponseEntity.ok(PageDto.createDto(spots));
+        return ResponseEntity.ok(PageDto.of(spots));
     }
 
     @GetMapping("/{id}")

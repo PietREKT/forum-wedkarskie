@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.piet.forumbackend.content.entities.Content;
 import org.piet.forumbackend.content.services.ContentService;
 import org.piet.forumbackend.globals.exceptions.NotFoundException;
+import org.piet.forumbackend.globals.pagination.PageDto;
 import org.piet.forumbackend.globals.pagination.PaginationDto;
 import org.piet.forumbackend.reports.dtos.content.responses.ContentReportDto;
 import org.piet.forumbackend.reports.dtos.content.responses.HotReportedContentDto;
@@ -13,7 +14,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.temporal.ChronoUnit;
-import java.util.List;
 
 @RestController
 @RequestMapping("${forum.api.prefix}/admin/reports")
@@ -23,12 +23,12 @@ public class ContentReportAdminController {
     private final ContentService contentService;
 
     @GetMapping("/summary")
-    ResponseEntity<List<HotReportedContentDto>> getReportsSummary(
+    ResponseEntity<PageDto<HotReportedContentDto>> getReportsSummary(
             @ParameterObject PaginationDto paginationDto,
             @RequestParam(name = "amount", required = false, defaultValue = "1") Long amount,
             @RequestParam(name = "unit", required = false, defaultValue = "WEEKS") ChronoUnit unit
     ) {
-        var dtos = contentReportService.getRecentlyReportedContent(amount, unit, paginationDto.getPage(), paginationDto.getSize());
+        var dtos = contentReportService.getRecentlyReportedContent(amount, unit, paginationDto);
 
         return ResponseEntity.ok(dtos);
     }

@@ -30,7 +30,7 @@ public class FishingSpotAdminController {
     public ResponseEntity<PageDto<FishingSpotDto>> getUnverified(PaginationDto pagination){
         var spots = fishingSpotService.getUnverified(pagination);
 
-        return ResponseEntity.ok(PageDto.createDto(spots));
+        return ResponseEntity.ok(PageDto.of(spots));
     }
 
     @PostMapping("/{id}/accept")
