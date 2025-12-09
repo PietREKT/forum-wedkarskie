@@ -11,11 +11,21 @@ export const usePostsStore = defineStore('posts', () => {
     const total = ref(0)
     const error = ref(null)
 
-    // zostawione na przyszłość, ale nie blokujemy na tym przycisków
-    const voting = ref(new Set())
+    // null = globalny feed (/posts/recent)
+    // nie-null = posty użytkownika (/posts/user/{userId})
+    const userFilterId = ref(null)
 
     function clearError() {
         error.value = null
+    }
+
+    function setErrorFromAxios(e, fallbackMessage) {
+        const backendMessage =
+            e?.response?.data?.message ||
+            e?.response?.data?.error ||
+            e?.response?.data?.detail
+
+        error.value = backendMessage || fallbackMessage
     }
 
     function getId(p) {
@@ -33,11 +43,16 @@ export const usePostsStore = defineStore('posts', () => {
         items.value.splice(idx, 1, updated)
     }
 
-    function reset() {
+    function reset(userId = null) {
         items.value = []
         page.value = 0
         total.value = 0
         error.value = null
+        userFilterId.value = userId
+    }
+
+    function setUserFilter(userId) {
+        reset(userId ?? null)
     }
 
     function mapVoteToNumber(v) {
@@ -73,7 +88,11 @@ export const usePostsStore = defineStore('posts', () => {
         clearError()
         loading.value = true
         try {
-            const resp = await apiClient.get('/posts/recent', {
+            const basePath = userFilterId.value
+                ? `/posts/user/${encodeURIComponent(userFilterId.value)}`
+                : '/posts/recent'
+
+            const resp = await apiClient.get(basePath, {
                 params: {
                     page: page.value,
                     size: size.value,
@@ -100,7 +119,31 @@ export const usePostsStore = defineStore('posts', () => {
             page.value += 1
         } catch (e) {
             console.error('fetchNext posts error', e)
-            error.value = 'Nie udało się pobrać postów.'
+            setErrorFromAxios(e, 'Nie udało się pobrać postów.')
+            throw e
+        } finally {
+            loading.value = false
+        }
+    }
+
+    // pobranie pojedynczego posta – np. dla widoku szczegółów / panelu admina
+    async function fetchById(id) {
+        clearError()
+        loading.value = true
+        try {
+            const resp = await apiClient.get(`/posts/${id}`)
+            const post = normalizePost(resp.data)
+
+            const existingIdx = findIndexById(getId(post))
+            if (existingIdx !== -1) {
+                items.value.splice(existingIdx, 1, post)
+            }
+
+            return post
+        } catch (e) {
+            console.error('fetchById post error', e)
+            setErrorFromAxios(e, 'Nie udało się pobrać posta.')
+            throw e
         } finally {
             loading.value = false
         }
@@ -128,7 +171,7 @@ export const usePostsStore = defineStore('posts', () => {
             if (status === 401) {
                 error.value = 'Musisz być zalogowany, aby dodać post.'
             } else {
-                error.value = 'Nie udało się utworzyć posta.'
+                setErrorFromAxios(e, 'Nie udało się utworzyć posta.')
             }
             throw e
         }
@@ -169,7 +212,7 @@ export const usePostsStore = defineStore('posts', () => {
             if (status === 401) {
                 error.value = 'Musisz być zalogowany, aby edytować post.'
             } else {
-                error.value = 'Nie udało się zaktualizować posta.'
+                setErrorFromAxios(e, 'Nie udało się zaktualizować posta.')
             }
             throw e
         }
@@ -187,7 +230,7 @@ export const usePostsStore = defineStore('posts', () => {
             if (status === 401) {
                 error.value = 'Musisz być zalogowany, aby usuwać posty.'
             } else {
-                error.value = 'Nie udało się usunąć posta.'
+                setErrorFromAxios(e, 'Nie udało się usunąć posta.')
             }
             throw e
         }
@@ -207,15 +250,12 @@ export const usePostsStore = defineStore('posts', () => {
         let newRating = prevRating
 
         if (prevVote === direction) {
-            // cofnięcie głosu
             newVote = 0
             newRating = prevRating - direction
         } else if (prevVote === 0) {
-            // nowy głos
             newVote = direction
             newRating = prevRating + direction
         } else if (prevVote === -direction) {
-            // zmiana +1 ↔ -1
             newVote = direction
             newRating = prevRating + 2 * direction
         }
@@ -253,6 +293,7 @@ export const usePostsStore = defineStore('posts', () => {
                     })
                 }
             }
+            // brak globalnego komunikatu – głosowanie nie jest krytyczne
         }
     }
 
@@ -283,6 +324,12 @@ export const usePostsStore = defineStore('posts', () => {
 
     async function reportPost({ postId, reason = 'SPAM' }) {
         clearError()
+
+        if (!postId) {
+            error.value = 'Brak identyfikatora zgłaszanego posta.'
+            throw new Error('Missing postId')
+        }
+
         try {
             await apiClient.post('/reports/posts/report', {
                 contentId: postId,
@@ -294,7 +341,7 @@ export const usePostsStore = defineStore('posts', () => {
             if (status === 401) {
                 error.value = 'Musisz być zalogowany, aby zgłaszać posty.'
             } else {
-                error.value = 'Nie udało się zgłosić posta.'
+                setErrorFromAxios(e, 'Nie udało się zgłosić posta.')
             }
             throw e
         }
@@ -307,11 +354,14 @@ export const usePostsStore = defineStore('posts', () => {
         size,
         total,
         error,
-        voting,
+        userFilterId,
+
         clearError,
         getId,
         reset,
+        setUserFilter,
         fetchNext,
+        fetchById,
         createPost,
         editPost,
         deletePost,
