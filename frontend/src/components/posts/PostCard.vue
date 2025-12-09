@@ -16,6 +16,22 @@
       </div>
     </div>
 
+    <!-- małe okienko błędu głosowania -->
+    <div
+        v-if="voteError"
+        class="absolute top-2 right-4 z-40 mt-8 pointer-events-none"
+    >
+      <div
+          class="rounded-md border border-red-500
+           bg-red-100 dark:bg-red-900
+           px-3 py-1.5 text-xs
+           text-red-800 dark:text-red-100
+           shadow-lg"
+      >
+        {{ voteError }}
+      </div>
+    </div>
+
     <!-- Autor + akcje -->
     <div class="flex items-start justify-between gap-4">
       <header class="flex items-center gap-3">
@@ -47,16 +63,16 @@
           </div>
         </RouterLink>
 
-        <!-- Obserwuj -->
+        <!-- Obserwuj tylko dla zalogowanych -->
         <UserFollowButton
-            v-if="authorUsername"
+            v-if="authorUsername && isAuth"
             class="ml-2"
             :username="authorUsername"
         />
       </header>
 
-      <!-- Menu Akcje -->
-      <div class="relative">
+      <!-- Menu Akcje (tylko dla zalogowanych) -->
+      <div v-if="showActions" class="relative">
         <button
             type="button"
             class="px-2 py-1 text-xs border rounded-md
@@ -208,7 +224,7 @@
       </div>
     </section>
 
-    <!-- Małe okienko zgłoszenia (osobny komponent) -->
+    <!-- Panel zgłoszenia -->
     <ReportPanel
         v-if="reporting"
         :reasons="reportReasons"
@@ -241,9 +257,16 @@
       </span>
     </footer>
 
-    <!-- Potwierdzenie usunięcia -->
+    <!-- Komentarze -->
+    <section class="mt-4">
+      <CommentsSection :post-id="postId" />
+    </section>
+
+    <!-- Potwierdzenie usunięcia (tylko autor) -->
     <section v-if="showDeleteConfirm" class="mt-4">
-      <div class="rounded-lg border theme-border bg-red-50 dark:bg-red-900/20 px-3 py-2 text-xs flex items-start justify-between gap-3">
+      <div
+          class="rounded-lg border theme-border bg-red-50 dark:bg-red-900/20 px-3 py-2 text-xs flex items-start justify-between gap-3"
+      >
         <div>
           <p class="font-semibold text-red-700 dark:text-red-300">
             Usunąć ten post?
@@ -272,11 +295,6 @@
         </div>
       </div>
     </section>
-
-    <!-- Komentarze -->
-    <section class="mt-4">
-      <CommentsSection :post-id="postId" />
-    </section>
   </article>
 </template>
 
@@ -303,22 +321,22 @@ const editContent = ref('')
 const savingEdit = ref(false)
 const localError = ref('')
 
-// stan zdjęć w trybie edycji
 const existingPhotos = ref(
     props.post?.attachedPhotos ? [...props.post.attachedPhotos] : [],
 )
 const newFiles = ref([])
 const newPreviews = ref([])
 
-// usuwanie
 const showDeleteConfirm = ref(false)
 const deleting = ref(false)
 
-// zgłoszenia
 const reporting = ref(false)
 const sendingReport = ref(false)
 const reportError = ref('')
 const reportSuccess = ref(false)
+
+const voteError = ref('')
+let voteErrorTimer = null
 
 const reportReasons = [
   { key: 'SPAM', label: 'Spam' },
@@ -329,6 +347,10 @@ const reportReasons = [
 
 const postId = computed(() => posts.getId(props.post))
 
+const currentUser = computed(() => auth.user)
+const isAuth = computed(() => !!auth.user)
+const currentUsername = computed(() => currentUser.value?.username || '')
+
 const authorUsername = computed(() => props.post?.author?.username || '')
 const avatarSrc = computed(() => {
   const url = props.post?.author?.avatarUrl || props.post?.author?.avatar
@@ -336,8 +358,7 @@ const avatarSrc = computed(() => {
 })
 const authorInitials = computed(() => {
   const u = authorUsername.value
-  if (!u) return '??'
-  return u.slice(0, 2).toUpperCase()
+  return u ? u.slice(0, 2).toUpperCase() : '??'
 })
 
 const createdAtFormatted = computed(() => {
@@ -352,28 +373,33 @@ const createdAtFormatted = computed(() => {
 
 const firstPhoto = computed(() => {
   const arr = props.post?.attachedPhotos || props.post?.photos || []
-  if (!arr || !arr.length) return ''
-  return mediaUrl(arr[0])
+  return arr?.length ? mediaUrl(arr[0]) : ''
 })
 
 const canSaveEdit = computed(() => editContent.value.trim().length > 0)
 
-const currentUsername = computed(() => auth.user?.username || '')
-
+// edycja/usuwanie tylko dla autora (nie dla admina)
 const canEdit = computed(() => {
   return (
+      isAuth.value &&
       currentUsername.value &&
-      authorUsername.value &&
       currentUsername.value === authorUsername.value
   )
 })
-const canDelete = canEdit
+
+// usuwanie na widoku listy: tylko autor
+const canDelete = computed(() => canEdit.value)
+
+// zgłaszanie: każdy zalogowany, który nie jest autorem
 const canReport = computed(() => {
-  return (
-      currentUsername.value &&
-      authorUsername.value &&
-      currentUsername.value !== authorUsername.value
-  )
+  if (!isAuth.value) return false
+  return currentUsername.value !== authorUsername.value
+})
+
+// menu akcji widoczne tylko gdy zalogowany i ma cokolwiek do zrobienia
+const showActions = computed(() => {
+  if (!isAuth.value) return false
+  return canEdit.value || canDelete.value || canReport.value
 })
 
 function toggleMenu() {
@@ -414,8 +440,10 @@ async function applyEdit() {
     localError.value = 'Treść posta nie może być pusta.'
     return
   }
+
   savingEdit.value = true
   localError.value = ''
+
   try {
     await posts.editPost({
       id: postId.value,
@@ -437,7 +465,6 @@ function cancelEdit() {
   resetEditPhotos()
 }
 
-// kliknięcie "Usuń" w menu
 function onDeleteClick() {
   showDeleteConfirm.value = true
   menuOpen.value = false
@@ -447,41 +474,35 @@ function cancelDelete() {
   showDeleteConfirm.value = false
 }
 
-// potwierdzenie usunięcia
 async function confirmDelete() {
   if (!postId.value) return
   deleting.value = true
+
   try {
     await posts.deletePost(postId.value)
-  } catch {
-    posts.items = posts.items.filter(p => posts.getId(p) !== postId.value)
-    posts.clearError()
   } finally {
     deleting.value = false
     showDeleteConfirm.value = false
   }
 }
 
-// panel zgłoszenia
 function toggleReportPanel() {
+  if (!canReport.value) return
+  reporting.value = true
   reportError.value = ''
-  reporting.value = !reporting.value
-  if (reporting.value) {
-    menuOpen.value = false
-  }
+  menuOpen.value = false
 }
 
 async function sendReport(reasonKey) {
   if (!postId.value) return
   sendingReport.value = true
   reportError.value = ''
+
   try {
     await posts.reportPost({ postId: postId.value, reason: reasonKey })
     reporting.value = false
     reportSuccess.value = true
-    setTimeout(() => {
-      reportSuccess.value = false
-    }, 3000)
+    setTimeout(() => (reportSuccess.value = false), 3000)
   } catch {
     reportError.value = 'Nie udało się wysłać zgłoszenia.'
   } finally {
@@ -494,19 +515,35 @@ function cancelReport() {
   reportError.value = ''
 }
 
+function showVoteError(msg) {
+  voteError.value = msg
+  if (voteErrorTimer) clearTimeout(voteErrorTimer)
+  voteErrorTimer = setTimeout(() => (voteError.value = ''), 3000)
+}
+
 async function voteUp() {
   if (!postId.value) return
+  if (!isAuth.value) {
+    showVoteError('Musisz być zalogowany, aby oceniać posty.')
+    return
+  }
   try {
     await posts.voteUp(postId.value)
   } catch {
+    showVoteError('Nie udało się zapisać głosu.')
   }
 }
 
 async function voteDown() {
   if (!postId.value) return
+  if (!isAuth.value) {
+    showVoteError('Musisz być zalogowany, aby oceniać posty.')
+    return
+  }
   try {
     await posts.voteDown(postId.value)
   } catch {
+    showVoteError('Nie udało się zapisać głosu.')
   }
 }
 </script>
