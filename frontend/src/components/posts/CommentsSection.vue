@@ -109,7 +109,6 @@ async function submit() {
   }
 }
 
-
 function startReply(c) {
   replyToId.value = c.id
   replyContent.value = ''
@@ -130,7 +129,7 @@ async function sendReply() {
   try {
     await comments.add(props.postId, {
       content: text,
-      parentId, // zawsze ID komentarza głównego w wątku
+      parentId,
     })
     showStatus('Odpowiedź została dodana.', 'success')
   } catch {
@@ -143,7 +142,6 @@ async function sendReply() {
 /* dzieci / drzewo */
 
 function childrenOf(id) {
-  // dociągnij odpowiedzi
   comments.fetchChildren(props.postId, id)
   return (state.value.list || []).filter(c => c.parentId === id)
 }
@@ -177,12 +175,16 @@ function toggleMenu(id) {
   menuFor.value = menuFor.value === id ? null : id
 }
 
+// edycja/usuwanie tylko przez autora (nie przez admina)
 function canEditOrDelete(c) {
   if (!currentUser.value) return false
-  const isAdmin = currentUser.value.role === 'ADMIN'
-  const sameAuthor =
-      currentUser.value.username === (c?.author?.username || '')
-  return isAdmin || sameAuthor
+  return currentUser.value.username === (c?.author?.username || '')
+}
+
+// zgłoszenie: zalogowany i nie jest autorem
+function canReport(c) {
+  if (!currentUser.value) return false
+  return currentUser.value.username !== (c?.author?.username || '')
 }
 
 /* edycja */
@@ -244,6 +246,7 @@ function loadMore() {
 /* zgłoszenia */
 
 function openReportPanel(c) {
+  if (!canReport(c)) return
   reportForComment.value = c
   menuFor.value = null
 }
@@ -366,8 +369,8 @@ async function sendReport(reason) {
               </p>
             </div>
 
-            <!-- menu akcji -->
-            <div class="relative">
+            <!-- menu akcji – tylko dla zalogowanych -->
+            <div v-if="isAuth" class="relative">
               <button
                   type="button"
                   class="text-xs px-2 py-1 rounded-md border theme-border theme-bg"
@@ -408,7 +411,7 @@ async function sendReport(reason) {
                       Usuń
                     </button>
                   </li>
-                  <li>
+                  <li v-if="canReport(c)">
                     <button
                         type="button"
                         class="w-full text-left px-3 py-1 hover:theme-hover"
@@ -444,8 +447,8 @@ async function sendReport(reason) {
                   </p>
                 </div>
 
-                <!-- menu akcji dla odpowiedzi -->
-                <div class="relative">
+                <!-- menu akcji dla odpowiedzi – tylko zalogowani -->
+                <div v-if="isAuth" class="relative">
                   <button
                       type="button"
                       class="text-[11px] px-2 py-1 rounded-md border theme-border theme-bg"
@@ -486,7 +489,7 @@ async function sendReport(reason) {
                           Usuń
                         </button>
                       </li>
-                      <li>
+                      <li v-if="canReport(r)">
                         <button
                             type="button"
                             class="w-full text-left px-3 py-1 hover:theme-hover"

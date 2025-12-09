@@ -1,3 +1,4 @@
+// src/stores/auth.js
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { apiClient } from '../utils/axios.js'
@@ -8,12 +9,27 @@ export const useAuthStore = defineStore('auth', () => {
     const user = ref(
         typeof localStorage !== 'undefined'
             ? JSON.parse(localStorage.getItem(LS_KEY) || 'null')
-            : null
+            : null,
     )
     const status = ref('idle')
     const error = ref(null)
 
     const isAuthenticated = computed(() => !!user.value)
+
+    // ADMIN lub ROOT – działa też dla ROLE_ADMIN / ROLE_ROOT
+    const isAdmin = computed(() => {
+        let role = user.value?.role
+
+        if (!role) return false
+
+        // jeśli backend zwraca obiekt { name: "ROOT" }
+        if (typeof role === 'object' && role.name) {
+            role = role.name
+        }
+
+        const r = String(role).toUpperCase()
+        return r.includes('ADMIN') || r.includes('ROOT')
+    })
 
     function _setUser(u) {
         user.value = u
@@ -27,7 +43,6 @@ export const useAuthStore = defineStore('auth', () => {
         return user.value
     }
 
-    // LOGIN
     async function login(username, password) {
         status.value = 'loading'
         error.value = null
@@ -39,13 +54,15 @@ export const useAuthStore = defineStore('auth', () => {
             return u
         } catch (err) {
             status.value = 'error'
-            error.value = err?.response?.data?.message || err?.message || 'Nie udało się zalogować.'
+            error.value =
+                err?.response?.data?.message ||
+                err?.message ||
+                'Nie udało się zalogować.'
             _setUser(null)
             throw err
         }
     }
 
-    // REGISTER
     async function register(payload) {
         status.value = 'loading'
         error.value = null
@@ -56,12 +73,14 @@ export const useAuthStore = defineStore('auth', () => {
             return u
         } catch (err) {
             status.value = 'error'
-            error.value = err?.response?.data?.message || err?.message || 'Nie udało się zarejestrować.'
+            error.value =
+                err?.response?.data?.message ||
+                err?.message ||
+                'Nie udało się zarejestrować.'
             throw err
         }
     }
 
-    // LOGOUT
     async function logout() {
         try {
             await apiClient.post('/auth/logout')
@@ -77,6 +96,7 @@ export const useAuthStore = defineStore('auth', () => {
         status,
         error,
         isAuthenticated,
+        isAdmin,
         bootstrapSession,
         login,
         register,

@@ -69,36 +69,33 @@
               <dt class="text-sm text-[var(--color-muted)]">E-mail</dt>
               <dd class="text-base">{{ user?.email || '—' }}</dd>
             </div>
-            <!-- ID ukryte – nie pokazujemy na profilu
-            <div>
-              <dt class="text-sm text-[var(--color-muted)]">ID</dt>
-              <dd class="text-base">{{ user?.id ?? '—' }}</dd>
-            </div>
-            -->
           </dl>
 
           <div class="mt-6 flex flex-wrap gap-3">
             <!-- posty danego użytkownika -->
             <RouterLink
                 :to="`/posts?userId=${encodeURIComponent(user?.id ?? '')}`"
-                class="inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-medium
-                     bg-[var(--color-primary)] hover:bg-[var(--color-primary-600)] text-white transition shadow"
+                class="inline-flex items-center justify-center min-w-[140px] h-9 px-4
+                     rounded-full text-xs font-medium
+                     bg-[var(--color-primary)] hover:bg-[var(--color-primary-600)]
+                     text-white transition shadow"
                 title="Zobacz posty użytkownika"
             >
               Posty użytkownika
             </RouterLink>
 
-            <!-- Obserwuj – tylko jeśli oglądamy cudzy profil -->
+            <!-- Obserwuj -->
             <UserFollowButton
                 v-if="!isOwner && displayedUsername"
                 :username="displayedUsername"
             />
 
-            <!-- Zgłoś profil – tylko jeśli oglądamy cudzy profil -->
+            <!-- Zgłoś profil -->
             <button
                 v-if="!isOwner && displayedUsername"
                 type="button"
-                class="inline-flex items-center rounded-xl px-4 py-2 text-sm font-medium
+                class="inline-flex items-center justify-center min-w-[140px] h-9 px-4
+                     rounded-full text-xs font-medium
                      border border-red-500/80 text-red-500/90
                      bg-[var(--color-bg)] hover:bg-red-500/10"
                 @click="toggleReportPanel"
@@ -106,11 +103,12 @@
               Zgłoś profil
             </button>
 
-            <!-- edycja profilu – tylko właściciel -->
+            <!-- edycja profilu zabezp -->
             <button
                 v-if="isOwner"
                 type="button"
-                class="inline-flex items-center rounded-xl px-4 py-2 text-sm font-medium
+                class="inline-flex items-center justify-center min-w-[140px] h-9 px-4
+                     rounded-full text-xs font-medium
                      border border-[var(--color-border)]
                      bg-[var(--color-bg)] text-[var(--color-text)] hover:opacity-90"
                 @click="toggleEdit"
@@ -122,7 +120,8 @@
             <button
                 type="button"
                 @click="onRefresh"
-                class="inline-flex items-center rounded-xl px-4 py-2 text-sm font-medium
+                class="inline-flex items-center justify-center min-w-[140px] h-9 px-4
+                     rounded-full text-xs font-medium
                      border border-[var(--color-border)]
                      bg-[var(--color-bg)] text-[var(--color-text)] hover:opacity-90"
                 :disabled="loading"
@@ -131,7 +130,7 @@
             </button>
           </div>
 
-          <!-- formularz edycji profilu (nick, hasło, avatar) -->
+          <!-- formularz edycji profilu-->
           <div
               v-if="editMode && isOwner"
               class="mt-6 border-t border-[var(--color-border)] pt-4 space-y-4"
@@ -220,7 +219,7 @@
 
     <!-- Sekcje profilu -->
     <section class="grid grid-cols-1 md:grid-cols-2 gap-6">
-      <!-- 1. Posty użytkownika -->
+      <!-- Posty użytkownika -->
       <div
           class="bg-[var(--color-surface)] text-[var(--color-text)] rounded-2xl shadow p-6"
       >
@@ -239,22 +238,10 @@
         </div>
       </div>
 
-      <!-- 2. Obserwowani – widoczne tylko dla właściciela profilu -->
-      <div
-          v-if="isOwner"
-          class="bg-[var(--color-surface)] text-[var(--color-text)] rounded-2xl shadow p-6"
-      >
-        <h3 class="text-lg font-semibold mb-4">Obserwowani</h3>
-        <div
-            class="h-40 md:h-44 rounded-xl border-2 border-[var(--color-border)]
-                 flex items-center justify-center text-[var(--color-muted)] text-center px-4"
-        >
-          Tu będzie lista obserwowanych użytkowników (na podstawie przycisku
-          „Obserwuj”).
-        </div>
-      </div>
+      <!-- Obserwowani – osobny komponent -->
+      <ProfileFriendsSection />
 
-      <!-- 3. Grupy użytkownika -->
+      <!-- Grupy użytkownika -->
       <div
           class="bg-[var(--color-surface)] text-[var(--color-text)] rounded-2xl shadow p-6"
       >
@@ -285,18 +272,20 @@
 </template>
 
 <script setup>
-import { computed, ref, watch } from 'vue'
+import { computed, ref, watch, onMounted } from 'vue'
 import { useRoute, RouterLink } from 'vue-router'
-import { useAuthStore } from '../stores/auth'
+import { useAuthStore } from '../stores/auth.js'
+import { useUserStore } from '../stores/userStore.js'
 import UserFollowButton from '../components/users/UserFollowButton.vue'
 import ReportPanel from '../components/common/ReportPanel.vue'
+import ProfileFriendsSection from '../components/users/ProfileFriendsSection.vue'
 
 const route = useRoute()
 const auth = useAuthStore()
+const userStore = useUserStore()
 
-const loggedUser = computed(() => auth.user || null)
+const loggedUser = computed(() => userStore.me || auth.user || null)
 
-// nazwa użytkownika z query (?u=) lub zalogowany
 const displayedUsername = computed(() => {
   const fromQuery = route.query.u
   if (typeof fromQuery === 'string' && fromQuery.trim().length > 0) {
@@ -305,9 +294,7 @@ const displayedUsername = computed(() => {
   return loggedUser.value?.username || ''
 })
 
-// na razie dane profilu = dane zalogowanego
 const user = computed(() => loggedUser.value)
-
 const avatarUrl = computed(() => user.value?.avatarUrl || '')
 
 const isOwner = computed(() => {
@@ -338,7 +325,7 @@ watch(
         saveSuccess.value = false
         if (avatarInput.value) avatarInput.value.value = ''
       }
-    }
+    },
 )
 
 function toggleEdit() {
@@ -409,9 +396,16 @@ function cancelReport() {
 async function onRefresh() {
   loading.value = true
   try {
-    await auth.bootstrapSession()
+    await Promise.all([
+      auth.bootstrapSession(),
+      userStore.fetchMe(true),
+    ])
   } finally {
     loading.value = false
   }
 }
+
+onMounted(() => {
+  userStore.fetchMe().catch(() => {})
+})
 </script>
