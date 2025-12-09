@@ -19,6 +19,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.nio.file.FileSystemException;
 import java.util.List;
+import java.util.UUID;
 
 
 public interface ContentService {
@@ -54,8 +55,10 @@ public interface ContentService {
 
     public void deleteContentFolder(Content content) throws UnauthorizedAccessException;
 
-    public Page<Content> getUserPosts(User user, PaginationDto pagination);
+    public Page<ContentDto> getUserPosts(User user, PaginationDto pagination);
 
     public ContentDto getContentDtoById(Long id);
+
+    public Page<ContentDto> getRecentPostsByGroup(UUID groupId, PaginationDto pagination);
 
 }

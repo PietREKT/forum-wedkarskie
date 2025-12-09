@@ -141,16 +141,16 @@ INSERT INTO user_group_candidates (group_id, user_id)
 VALUES ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', '44444444-4444-4444-4444-444444444444');
 
 
-INSERT INTO content (id, author_id, content, created_at, content_type, parent_id)
-VALUES (1, '00000000-0000-0000-0000-000000000001', 'Pierwszy testowy post na forum.', '2025-01-01T10:00:00Z', 'POST',
+INSERT INTO content (author_id, content, created_at, content_type, parent_id)
+VALUES ('00000000-0000-0000-0000-000000000001', 'Pierwszy testowy post na forum.', '2025-01-01T10:00:00Z', 'POST',
         NULL),
-       (2, '33333333-3333-3333-3333-333333333333', 'Drugi testowy post o ulubionych łowiskach.', '2025-01-02T12:30:00Z',
+       ( '33333333-3333-3333-3333-333333333333', 'Drugi testowy post o ulubionych łowiskach.', '2025-01-02T12:30:00Z',
         'POST', NULL),
-       (3, '00000000-0000-0000-0000-000000000001', 'Post o sprzęcie wędkarskim.', '2025-01-03T09:15:00Z', 'POST', NULL);
+       ('00000000-0000-0000-0000-000000000001', 'Post o sprzęcie wędkarskim.', '2025-01-03T09:15:00Z', 'POST', NULL);
 
 -- Comment under post #1 (child content)
-INSERT INTO content (id, author_id, content, created_at, content_type, parent_id)
-VALUES (4, '33333333-3333-3333-3333-333333333333', 'Komentarz pod pierwszym postem.', '2025-01-03T10:00:00Z', 'COMMENT',
+INSERT INTO content ( author_id, content, created_at, content_type, parent_id)
+VALUES ( '33333333-3333-3333-3333-333333333333', 'Komentarz pod pierwszym postem.', '2025-01-03T10:00:00Z', 'COMMENT',
         1);
 
 ------------------------------------------------------------
@@ -206,7 +206,6 @@ INSERT INTO fishing_methods (fish_id, method) VALUES
 -- assumes PostGIS + SRID 4326
 -- owner_id = '2222...' (existing user)
 INSERT INTO fishing_spot (
-    id,
     name,
     description,
     location,
@@ -215,8 +214,7 @@ INSERT INTO fishing_spot (
     statute_url,
     owner_id
 ) VALUES
-    (1,
-     'Łowisko Testowe',
+    ('Łowisko Testowe',
      'Małe prywatne łowisko używane do testów aplikacji.',
      ST_SetSRID(ST_MakePoint(22.5667, 51.2500), 4326),  -- lng, lat
      'PRIVATE',

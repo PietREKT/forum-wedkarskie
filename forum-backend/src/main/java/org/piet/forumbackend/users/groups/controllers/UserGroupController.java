@@ -2,6 +2,8 @@ package org.piet.forumbackend.users.groups.controllers;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.piet.forumbackend.content.dtos.responses.content.ContentDto;
+import org.piet.forumbackend.content.services.ContentService;
 import org.piet.forumbackend.events.dtos.responses.EventDto;
 import org.piet.forumbackend.events.services.EventsService;
 import org.piet.forumbackend.globals.exceptions.NotFoundException;
@@ -34,6 +36,7 @@ public class UserGroupController {
     private final UserService userService;
     private final UserGroupService userGroupService;
     private final EventsService eventsService;
+    private final ContentService contentService;
 
     @PostMapping("/create")
     public ResponseEntity<UserGroupDto> createGroup(@Valid @RequestBody CreateUserGroupDto dto, Authentication authentication) throws UserNotLoggedInException {
@@ -95,6 +98,13 @@ public class UserGroupController {
     @GetMapping("/{groupId}/candidates")
     public ResponseEntity<PageDto<ListUserDto>> getGroupCandidates(@PathVariable UUID groupId, PaginationDto pagination) {
         var page = userGroupService.getMemberCandidates(groupId, pagination);
+
+        return ResponseEntity.ok(PageDto.of(page));
+    }
+
+    @GetMapping("/{groupId}/posts")
+    public ResponseEntity<PageDto<ContentDto>> getRecentPosts(@PathVariable UUID groupId, PaginationDto pagination){
+        var page = contentService.getRecentPostsByGroup(groupId, pagination);
 
         return ResponseEntity.ok(PageDto.of(page));
     }

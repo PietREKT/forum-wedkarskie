@@ -33,10 +33,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.FileSystemException;
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @Service
 @Log4j2
@@ -89,15 +86,18 @@ public class ContentServiceImpl implements ContentService {
                 .map(c ->
                         ContentDtoMapper.toContentDto(
                                 c,
-                                c.getVotes()
-                                        .stream()
-                                        .filter(v -> v.getUser().equalsUser(userService.getCurrentUserOrNull()))
-                                        .findFirst()
-                                        .map(ContentVote::getVote)
-                                        .orElse(VoteType.NO_VOTE)
+                                c.getVotes(),
+                                userService.getCurrentUserOrNull()
                         )
                 )
                 .orElse(null);
+    }
+
+    @Override
+    public Page<ContentDto> getRecentPostsByGroup(UUID groupId, PaginationDto pagination) {
+        return contentRepository.findAllByGroup_Id(groupId,
+                pagination.toPageable(Sort.by(Sort.Direction.DESC, "createdAt")))
+                .map(c -> ContentDtoMapper.toContentDto(c, c.getVotes(), userService.getCurrentUserOrNull()));
     }
 
     @Override
@@ -183,11 +183,8 @@ public class ContentServiceImpl implements ContentService {
         Page<Content> contentPage = contentRepository.findByParent(parent, pageable);
         if (currentUser != null) {
             return PageDto.of(contentPage.map(c -> ContentDtoMapper.toContentDto(c,
-                            c.getVotes().stream()
-                                    .filter(v -> v.getUser().equalsUser(currentUser))
-                                    .findFirst()
-                                    .map(ContentVote::getVote)
-                                    .orElse(VoteType.NO_VOTE)
+                            c.getVotes(),
+                            currentUser
                     )
             ));
         }
@@ -201,11 +198,8 @@ public class ContentServiceImpl implements ContentService {
         return PageDto.of(contentPage.map(c ->
                         ContentDtoMapper.toContentDto(
                                 c,
-                                c.getVotes().stream()
-                                        .filter(v -> v.getUser().equalsUser(currentUser))
-                                        .findFirst()
-                                        .map(ContentVote::getVote)
-                                        .orElse(VoteType.NO_VOTE)
+                                c.getVotes(),
+                                currentUser
                         )
                 )
         );
@@ -320,11 +314,12 @@ public class ContentServiceImpl implements ContentService {
     }
 
     @Override
-    public Page<Content> getUserPosts(User user, PaginationDto pagination) {
+    public Page<ContentDto> getUserPosts(User user, PaginationDto pagination) {
+        User currentUser = userService.getCurrentUserOrNull();
         return contentRepository.findByContentTypeAndAuthor(ContentType.POST,
                 user,
                 pagination.toPageable(Sort.by(Sort.Direction.DESC, "createdAt"))
-        );
+        ).map(c -> ContentDtoMapper.toContentDto(c, c.getVotes(), currentUser));
 
     }
 }

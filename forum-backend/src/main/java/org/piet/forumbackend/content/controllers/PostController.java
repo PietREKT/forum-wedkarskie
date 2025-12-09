@@ -95,7 +95,7 @@ public class PostController {
     }
 
     @GetMapping("/recent")
-    public ResponseEntity<PageDto<ContentDto>> getRecentPosts(@ParameterObject PaginationDto paginationDto) throws UserNotLoggedInException {
+    public ResponseEntity<PageDto<ContentDto>> getRecentPostsWithUserVote(@ParameterObject PaginationDto paginationDto) throws UserNotLoggedInException {
         var page = contentService.getRecentPosts(paginationDto, userService.getCurrentUserOrNull());
 
         return ResponseEntity.ok(page);
@@ -104,7 +104,7 @@ public class PostController {
     @GetMapping("/user/{userId}")
     public ResponseEntity<PageDto<ContentDto>> getByAuthor(@PathVariable UUID userId , PaginationDto pagination) throws NotFoundException {
         User user = userService.getUserById(userId);
-        var posts = contentService.getUserPosts(user, pagination).map(ContentDtoMapper::toContentDto);
+        var posts = contentService.getUserPosts(user, pagination);
 
         return ResponseEntity.ok(PageDto.of(posts));
     }
