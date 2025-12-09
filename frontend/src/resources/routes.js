@@ -7,7 +7,8 @@ import FishingMapView from '../views/FishingMapView.vue'
 import GuidesView from '../views/GuidesView.vue'
 import GuideDetailsPanel from '../components/guides/GuideDetailsPanel.vue'
 import GuideCreatePanel from '../components/guides/GuideCreatePanel.vue'
-import PostDetailsView from "../views/PostDetailsView.vue";
+import PostDetailsView from '../views/PostDetailsView.vue'
+import AdminPanelView from '../views/AdminPanelView.vue'
 
 export const routes = [
     { path: '/', redirect: '/login' },
@@ -20,5 +21,6 @@ export const routes = [
     { path: '/guides', name: 'guides', component: GuidesView },
     { path: '/guides/:id', name: 'guides.details', component: GuideDetailsPanel },
     { path: '/guides/create', name: 'guides.create', component: GuideCreatePanel },
-    { path: '/posts/:id', name: 'postDetails', component: PostDetailsView, meta: { requiresAuth: true }, props: true,},
+    { path: '/posts/:id', name: 'postDetails', component: PostDetailsView, meta: { requiresAuth: true }, props: true },
+    { path: '/admin', name: 'admin', component: AdminPanelView, meta: { requiresAuth: true, requiresAdmin: true } },
 ]
