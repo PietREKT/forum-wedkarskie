@@ -6,6 +6,7 @@ import { useAuthStore } from '../stores/auth'
 
 // metody z enuma backendu (bez FEEDER i LIVE_BAIT)
 const fishingMethods = [
+  { value: '', label: 'Dowolna metoda' },
   { value: 'FLOAT', label: 'Spławik' },
   { value: 'SPINNING', label: 'Spinning' },
   { value: 'FLY', label: 'Muchówka' },
@@ -56,14 +57,9 @@ function nextPage() {
   if (currentPage.value < totalPages.value) currentPage.value += 1
 }
 
-// auth – przycisk tylko dla admina
+// auth – isAdmin masz już w store
 const auth = useAuthStore()
-const isAdmin = computed(() => {
-  const user = auth.user
-  if (!user) return false
-  if (Array.isArray(user.roles)) return user.roles.includes('ADMIN')
-  return user.role === 'ADMIN'
-})
+const isAdmin = computed(() => auth.isAdmin)
 
 const router = useRouter()
 
@@ -130,20 +126,19 @@ async function loadTutorials() {
 
   try {
     if (selectedFishIds.value.length > 0) {
+      // jeżeli wybrano rybę – filtrujemy po rybie, metoda jest ignorowana
       const fishId = selectedFishIds.value[0]
       const resp = await apiClient.get('/tutorials/fish', {
         params: { fishId },
       })
       tutorials.value = mapResponseToList(resp.data)
     } else {
-      if (!selectedMethod.value) {
-        tutorials.value = []
-      } else {
-        const resp = await apiClient.get('/tutorials/method', {
-          params: { method: selectedMethod.value },
-        })
-        tutorials.value = mapResponseToList(resp.data)
-      }
+      // bez ryby – filtr po metodzie
+      const method = selectedMethod.value || 'SPINNING'
+      const resp = await apiClient.get('/tutorials/method', {
+        params: { method },
+      })
+      tutorials.value = mapResponseToList(resp.data)
     }
 
     currentPage.value = 1
@@ -185,7 +180,7 @@ onMounted(() => {
             >
               <option
                   v-for="m in fishingMethods"
-                  :key="m.value"
+                  :key="m.value || 'ANY'"
                   :value="m.value"
               >
                 {{ m.label }}
