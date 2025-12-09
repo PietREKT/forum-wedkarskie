@@ -9,6 +9,7 @@ import org.piet.forumbackend.fishing_spots.exceptions.FishingSpotNotFoundExcepti
 import org.piet.forumbackend.fishing_spots.exceptions.LocationDtoIncompleteException;
 import org.piet.forumbackend.fishing_spots.exceptions.LocationNotFoundException;
 import org.piet.forumbackend.globals.exceptions.BadRequestException;
+import org.piet.forumbackend.globals.exceptions.NotFoundException;
 import org.piet.forumbackend.globals.exceptions.UnauthorizedAccessException;
 import org.piet.forumbackend.globals.pagination.PaginationDto;
 import org.piet.forumbackend.users.core.entities.User;
@@ -72,6 +73,12 @@ public interface FishingSpotService {
     }
 
     boolean isOwner(UUID userId, Long fishingSpotId);
+
+    Page<FishingSpotListDto> getUserFavourites(UUID userId, PaginationDto pagination) throws UserNotLoggedInException;
+    Page<FishingSpotListDto> getUserCurrentFavourites(PaginationDto pagination) throws UserNotLoggedInException;
+
+    void addFishingSpotToFavourites(Long spotId) throws NotFoundException, UserNotLoggedInException;
+    void removeFishingSpotFromFavourites(Long spotId) throws NotFoundException, UserNotLoggedInException;
 }
 
 

@@ -155,4 +155,11 @@ public class User implements UserDetails {
     public boolean isMuted(Instant now) {
         return mutedUntil != null && mutedUntil.isAfter(now);
     }
+
+    public void addFavouriteFishingSpot(FishingSpot spot){
+        favourites.add(spot);
+    }
+    public void removeFavouriteFishingSpot(FishingSpot spot){
+        favourites.remove(spot);
+    }
 }

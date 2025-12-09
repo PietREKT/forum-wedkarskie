@@ -4,6 +4,8 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.piet.forumbackend.events.dtos.responses.EventDto;
 import org.piet.forumbackend.events.services.EventsService;
+import org.piet.forumbackend.fishing_spots.dtos.FishingSpotListDto;
+import org.piet.forumbackend.fishing_spots.services.FishingSpotService;
 import org.piet.forumbackend.globals.exceptions.NotFoundException;
 import org.piet.forumbackend.globals.pagination.PageDto;
 import org.piet.forumbackend.globals.pagination.PaginationDto;
@@ -28,6 +30,7 @@ public class UserController {
     private final UserServiceImpl userService;
     private final EventsService eventsService;
     private final UserGroupService userGroupService;
+    private final FishingSpotService fishingSpotService;
 
     @GetMapping("/search")
     public ResponseEntity<List<ListUserDto>> getUsersByUsername(@RequestParam("q") String query){
@@ -55,5 +58,12 @@ public class UserController {
     @GetMapping("/{userId}/events/upcoming")
     public ResponseEntity<PageDto<EventDto>> getUpcomingEventsForUser(@PathVariable UUID userId, PaginationDto pagination){
         return ResponseEntity.ok(eventsService.getUpcomingEventsForUser(userId, pagination));
+    }
+
+    @GetMapping("/{userId}/spots/favourites")
+    public ResponseEntity<PageDto<FishingSpotListDto>> getUserFavouriteSpots(@PathVariable UUID userId, PaginationDto pagination) throws UserNotLoggedInException {
+        var dtos = fishingSpotService.getUserFavourites(userId, pagination);
+
+        return ResponseEntity.ok(PageDto.of(dtos));
     }
 }
