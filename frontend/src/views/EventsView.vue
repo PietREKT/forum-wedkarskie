@@ -32,15 +32,18 @@
         />
       </section>
 
-      <!-- PRAWA KOLUMNA – GRUPY + POWIADOMIENIA -->
+      <!-- PRAWA KOLUMNA – GRUPY + POWIADOMIENIA + ZARZĄDZANIE GRUPĄ -->
       <GroupsPanel
           :groups="groups"
           :invitations="invitations"
+          :group-details="groupDetails"
           :is-loading-groups="store.isLoadingGroups"
+          :is-loading-group-details="store.isLoadingGroupDetails"
+          :is-kicking-member="store.isKickingMember"
           @create-group="handleCreateGroup"
           @request-join="handleRequestJoinGroup"
-          @accept-invitation="handleAcceptInvitation"
-          @reject-invitation="handleRejectInvitation"
+          @select-group-manage="handleSelectGroupForManage"
+          @kick-member="handleKickMember"
       />
     </div>
   </div>
@@ -63,8 +66,7 @@ const spots = computed(() => store.spots)
 const invitations = computed(() => store.invitations)
 const currentEvent = computed(() => store.currentEvent)
 const selectedEventId = computed(() => store.selectedEventId)
-
-// HANDLERY ZDARZEŃ Z KOMPONENTÓW
+const groupDetails = computed(() => store.groupDetails)
 
 async function handleSaveEvent(payload) {
   await store.createEvent({
@@ -89,7 +91,6 @@ async function handleLeaveEvent() {
 
 function handleEditEvent() {
   if (!currentEvent.value) return
-  // w przyszłości można tu otworzyć modal edycji
   console.log('edit event', currentEvent.value.id)
 }
 
@@ -98,20 +99,23 @@ async function handleDeleteEvent() {
   await store.deleteEvent(currentEvent.value.id)
 }
 
+// grupy
+
+async function handleCreateGroup(name) {
+  await store.createGroup(name)
+  await store.fetchGroups()
+}
+
 async function handleRequestJoinGroup(groupId) {
   await store.requestJoinGroup(groupId)
 }
 
-async function handleCreateGroup() {
-  await store.createGroup()
+async function handleSelectGroupForManage(groupId) {
+  await store.loadGroupDetails(groupId)
 }
 
-async function handleAcceptInvitation(groupId) {
-  await store.acceptInvitation(groupId)
-}
-
-async function handleRejectInvitation(groupId) {
-  await store.rejectInvitation(groupId)
+async function handleKickMember(payload) {
+  await store.kickMember(payload.groupId, payload.userId)
 }
 
 onMounted(async () => {

@@ -21,7 +21,7 @@
         <span
             class="text-[10px] px-2 py-0.5 rounded-full border theme-border text-[var(--color-muted)]"
         >
-          Prywatna
+          {{ event.groupName || 'Bez grupy' }}
         </span>
       </div>
 
@@ -46,17 +46,21 @@
 
         <div class="flex items-center gap-2">
           <button
+              v-if="!event.isParticipating"
               class="px-3 py-1.5 rounded-lg text-xs font-medium border theme-border"
-              @click="$emit('join')"
               :disabled="isJoining"
+              @click="$emit('join')"
           >
             {{ isJoining ? 'Dołączanie...' : 'Dołącz' }}
           </button>
+
           <button
+              v-else
               class="px-3 py-1.5 rounded-lg text-xs font-medium border theme-border"
+              :disabled="isJoining"
               @click="$emit('leave')"
           >
-            Opuść
+            {{ isJoining ? 'Opuszczanie...' : 'Opuść wydarzenie' }}
           </button>
         </div>
       </div>

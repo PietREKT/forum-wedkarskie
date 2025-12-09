@@ -7,12 +7,8 @@ import { useAuthStore } from '../../stores/auth'
 const router = useRouter()
 const auth = useAuthStore()
 
-const isAdmin = computed(() => {
-  const user = auth.user
-  if (!user) return false
-  if (Array.isArray(user.roles)) return user.roles.includes('ADMIN')
-  return user.role === 'ADMIN'
-})
+// w store masz computed isAdmin (ADMIN + ROOT)
+const isAdmin = computed(() => auth.isAdmin)
 
 const form = ref({
   content: '',
@@ -56,23 +52,29 @@ function toggleFish(id) {
 async function submitForm() {
   if (!isAdmin.value) return
 
+  if (!form.value.content.trim()) {
+    error.value = 'Treść poradnika nie może być pusta.'
+    return
+  }
+
   saving.value = true
   error.value = null
 
   try {
-    // dopasujesz jak backend wymaga innego DTO
+    // BACKEND: TutorialCreateDto prawdopodobnie: { content, methods, fishIds }
     const payload = {
+      content: form.value.content,
       methods: form.value.methods,
       fishIds: form.value.fishIds,
-      content: {
-        content: form.value.content,
-      },
     }
+
+    console.log('Tutorial create payload:', payload)
 
     await apiClient.post('/tutorials/create', payload)
     router.push('/guides')
   } catch (e) {
     console.error('Błąd tworzenia poradnika', e)
+    // tu w razie czego można podejrzeć e.response?.data w konsoli
     error.value = 'Nie udało się utworzyć poradnika.'
   } finally {
     saving.value = false

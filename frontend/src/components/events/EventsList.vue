@@ -28,7 +28,8 @@
         </div>
 
         <p class="text-[11px] text-[var(--color-muted)]">
-          Prywatna grupa · organizator: {{ event.organizer }}
+          {{ event.groupName ? ('Grupa: ' + event.groupName) : 'Bez grupy' }} ·
+          organizator: {{ event.organizer }}
         </p>
       </li>
     </ul>

@@ -1,12 +1,12 @@
 <script setup>
 import { ref, onMounted } from 'vue'
-import { apiClient } from '../../utils/axios.js'
+import { apiClient } from '../../utils/axios'
 import { useAuthStore } from '../../stores/auth'
 
 const auth = useAuthStore()
 
-// lista gatunków z backendu
-const fishOptions = ref([]) // FishDto: { name, avgLength, ... }
+// lista gatunków z backendu – obiekty z id i name
+const fishOptions = ref([])
 
 // stan formularza
 const newSpotForm = ref({
@@ -23,7 +23,8 @@ const newSpotForm = ref({
   regulationText: '',
 })
 
-const selectedSpecies = ref([]) // lista nazw ryb (stringów)
+// zaznaczone ryby – LISTA ID (Long) zgodnie z CreateFishingSpotDto.fishIds
+const selectedFishIds = ref([])
 
 const regulationInput = ref(null)
 const photosInput = ref(null)
@@ -33,15 +34,12 @@ const photos = ref([])
 const submitted = ref(false)
 const errors = ref({})
 
-// pobieranie gatunków z /api/fish
+// pobieranie gatunków z /api/fish (jak w poradnikach)
 async function loadFish() {
   try {
-    const { data } = await apiClient.get('/fish', {
-      params: {
-        size: 200,
-      },
-    })
-    fishOptions.value = Array.isArray(data) ? data : []
+    const resp = await apiClient.get('/fish')
+    const list = Array.isArray(resp.data) ? resp.data : (resp.data?.content || [])
+    fishOptions.value = list
   } catch (e) {
     console.error('Błąd pobierania listy ryb', e)
   }
@@ -103,25 +101,17 @@ function resetForm() {
     boatAccess: false,
     regulationText: '',
   }
-  selectedSpecies.value = []
+  selectedFishIds.value = []
   regulationFile.value = null
   photos.value = []
   errors.value = {}
 }
 
-// wysłanie zgłoszenia do backendu
+// wysłanie zgłoszenia do backendu (CreateFishingSpotDto)
 async function submit() {
   if (!validate()) return
 
-  // budowa listy ryb: GetFishDto – korzystamy z trybu "po nazwie"
-  const fishPayload = selectedSpecies.value.map((name) => ({
-    id: null,
-    name,
-    methods: null,
-    waterType: null,
-  }))
-
-  // typ łowiska: enum FishingSpot.FISHING_SPOT_TYPE (PUBLIC / PRIVATE)
+  // typ łowiska: enum FISHING_SPOT_TYPE { PRIVATE, PUBLIC }
   const typeEnum =
       newSpotForm.value.ownerType === 'PZW'
           ? 'PUBLIC'
@@ -131,12 +121,8 @@ async function submit() {
     name: newSpotForm.value.name.trim(),
     description: newSpotForm.value.regulationText.trim() || null,
     type: typeEnum,
-    managers: [
-      {
-        id: auth.user.id, // UUID zalogowanego użytkownika
-      },
-    ],
-    fish: fishPayload,
+    managerIds: auth.user ? [auth.user.id] : [],     // List<UUID>
+    fishIds: selectedFishIds.value,                  // List<Long>
     locationDto: {
       longitude: newSpotForm.value.longitude
           ? parseFloat(newSpotForm.value.longitude)
@@ -349,13 +335,13 @@ async function submit() {
         <div class="grid grid-cols-2 sm:grid-cols-3 gap-1">
           <label
               v-for="f in fishOptions"
-              :key="f.name"
+              :key="f.id ?? f.name"
               class="inline-flex items-center gap-1 cursor-pointer"
           >
             <input
                 type="checkbox"
-                :value="f.name"
-                v-model="selectedSpecies"
+                :value="f.id"
+                v-model="selectedFishIds"
                 class="accent-white"
             />
             <span>{{ f.name }}</span>

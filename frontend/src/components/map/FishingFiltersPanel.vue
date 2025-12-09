@@ -10,8 +10,12 @@ const props = defineProps({
 
 const emit = defineEmits(['hide', 'update:filters', 'apply'])
 
+// spotType:
+//  - 'ALL'     → Dowolne
+//  - 'PUBLIC'  → PZW / koło (lub inne „publiczne”)
+//  - 'PRIVATE' → Prywatne / komercyjne
 const localFilters = ref({
-  spotType: props.filters.spotType ?? 'Dowolne',
+  spotType: props.filters.spotType ?? 'ALL',
   mode: props.filters.mode ?? 'ALL', // ALL | RADIUS
   radiusKm: props.filters.radiusKm ?? 50,
 })
@@ -20,7 +24,7 @@ watch(
     () => props.filters,
     (val) => {
       localFilters.value = {
-        spotType: val.spotType ?? 'Dowolne',
+        spotType: val.spotType ?? 'ALL',
         mode: val.mode ?? 'ALL',
         radiusKm: val.radiusKm ?? 50,
       }
@@ -59,7 +63,7 @@ function applyFilters() {
       </button>
     </header>
 
-    <!-- Rodzaj łowiska (to możemy filtrować na podstawie pola type w DTO) -->
+    <!-- Rodzaj łowiska (filtrowanie po polu type w DTO – PUBLIC/PRIVATE) -->
     <div class="flex flex-col gap-1 text-xs">
       <label class="font-medium">Rodzaj łowiska</label>
       <select
@@ -67,9 +71,9 @@ function applyFilters() {
           :value="localFilters.spotType"
           @change="updateField('spotType', $event.target.value)"
       >
-        <option>Dowolne</option>
-        <option>PZW / koło</option>
-        <option>Prywatne / komercyjne</option>
+        <option value="ALL">Dowolne</option>
+        <option value="PUBLIC">PZW / koło</option>
+        <option value="PRIVATE">Prywatne / komercyjne</option>
       </select>
     </div>
 

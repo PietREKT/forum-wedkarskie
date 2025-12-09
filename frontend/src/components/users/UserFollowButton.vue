@@ -8,7 +8,7 @@
         @click="onClick"
         :disabled="loading"
     >
-    <span v-if="loading">...</span>
+      <span v-if="loading">...</span>
       <span v-else>
         {{ isFollowing ? 'Obserwujesz' : 'Obserwuj' }}
       </span>
@@ -56,7 +56,6 @@ const isFollowing = computed(() =>
     friends.value.some(f => f.username === props.username),
 )
 
-
 const buttonClass = computed(() => {
   if (isFollowing.value) {
     return 'bg-[var(--color-primary)] border-[var(--color-primary)] text-white'
@@ -86,10 +85,8 @@ async function onClick() {
       await removeFriend(friend.id)
       await userStore.fetchMe(true)
     } catch (err) {
-      error.value =
-          err?.response?.data?.message ||
-          err?.message ||
-          'Nie udało się usunąć z obserwowanych.'
+      console.error('removeFriend error', err)
+      error.value = 'Nie udało się usunąć z obserwowanych (błąd serwera).'
     } finally {
       loading.value = false
     }
@@ -110,13 +107,10 @@ async function onClick() {
     await sendFriendInvite(target.id)
     await userStore.fetchMe(true)
   } catch (err) {
-    error.value =
-        err?.response?.data?.message ||
-        err?.message ||
-        'Nie udało się wysłać zaproszenia.'
+    console.error('sendFriendInvite/search error', err)
+    error.value = 'Nie udało się wysłać zaproszenia (błąd serwera).'
   } finally {
     loading.value = false
   }
 }
 </script>
-

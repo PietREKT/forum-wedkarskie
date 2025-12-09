@@ -9,7 +9,7 @@ export const useUserStore = defineStore('userStore', () => {
 
     // lista zaakceptowanych obserwowanych
     const friends = computed(() =>
-        me.value && Array.isArray(me.value.friends) ? me.value.friends : []
+        me.value && Array.isArray(me.value.friends) ? me.value.friends : [],
     )
 
     async function fetchMe(force = false) {
