@@ -5,6 +5,7 @@ import L from 'leaflet'
 import FishingFiltersPanel from '../components/map/FishingFiltersPanel.vue'
 import FishingSearchPanel from '../components/map/FishingSearchPanel.vue'
 import FishingDetailsPanel from '../components/map/FishingDetailsPanel.vue'
+import { apiClient } from '../utils/axios.js'
 
 const map = ref(null)
 const markersLayer = ref(null)
@@ -16,20 +17,37 @@ const error = ref(null)
 
 const selectedSpot = ref(null)
 
+// dane dodatkowe
+const opinions = ref([])
+const opinionsLoading = ref(false)
+
+const events = ref([])
+const eventsLoading = ref(false)
+
+const ownerInfo = ref({ is_owner: false })
+const ownerLoading = ref(false)
+
 const filters = ref({
-  spotType: 'Dowolne', // 'Dowolne' | 'PZW / koło' | 'Prywatne / komercyjne'
-  mode: 'ALL',         // ALL | RADIUS
+  spotType: 'ALL', // ALL | PUBLIC | PRIVATE
+  mode: 'ALL',     // ALL | RADIUS
   radiusKm: 50,
+})
+
+const averageRating = computed(() => {
+  if (!opinions.value.length) return null
+  const sum = opinions.value.reduce(
+      (acc, op) => acc + (typeof op.rating === 'number' ? op.rating : 0),
+      0,
+  )
+  return opinions.value.length ? sum / opinions.value.length : null
 })
 
 // filtrowanie po typie łowiska (PUBLIC/PRIVATE)
 const visibleSpots = computed(() =>
     spots.value.filter((spot) => {
       const f = filters.value
-      if (f.spotType === 'PZW / koło' && spot.type !== 'PUBLIC') return false
-      if (f.spotType === 'Prywatne / komercyjne' && spot.type !== 'PRIVATE') {
-        return false
-      }
+      if (f.spotType === 'PUBLIC' && spot.type !== 'PUBLIC') return false
+      if (f.spotType === 'PRIVATE' && spot.type !== 'PRIVATE') return false
       return true
     }),
 )
@@ -38,13 +56,23 @@ function togglePanels() {
   panelsVisible.value = !panelsVisible.value
 }
 
-function selectSpot(spot) {
+async function selectSpot(spot) {
+  if (!spot) {
+    selectedSpot.value = null
+    opinions.value = []
+    events.value = []
+    ownerInfo.value = { is_owner: false }
+    return
+  }
+
   selectedSpot.value = spot
 
   const { lat, lng } = getSpotLatLng(spot)
   if (lat != null && lng != null && map.value) {
     map.value.setView([lat, lng], 11)
   }
+
+  await loadSpotExtras(spot.id)
 }
 
 function onApplyFilters(snapshot) {
@@ -83,7 +111,6 @@ function clearMarkers() {
 }
 
 function getSpotLatLng(spot) {
-  // DTO listy ma locationX (lon) / locationY (lat)
   if (spot.locationY != null && spot.locationX != null) {
     return { lat: spot.locationY, lng: spot.locationX }
   }
@@ -108,20 +135,28 @@ function renderMarkers() {
   }
 }
 
-// ---------------- POBIERANIE DANYCH ----------------
+// ---------------- POBIERANIE ŁOWISK (ŚCIEŻKI BEZ /api!) ----------------
 
 async function loadAllSpots() {
   loading.value = true
   error.value = null
   try {
-    const res = await fetch('/spots?page=0&size=200')
-    if (!res.ok) throw new Error(`HTTP ${res.status}`)
-    const body = await res.json()
-    const content = Array.isArray(body) ? body : body.content ?? []
+    const { data } = await apiClient.get('/spots', {
+      baseURL: '',          // ważne: bez /api
+      params: { page: 0, size: 200 },
+    })
+    const content = Array.isArray(data) ? data : data.content ?? []
     spots.value = content
-    if (!selectedSpot.value && spots.value.length > 0) {
-      selectedSpot.value = spots.value[0]
+
+    if (!spots.value.length) {
+      await selectSpot(null)
+    } else {
+      const currentId = selectedSpot.value?.id
+      const next =
+          spots.value.find((s) => s.id === currentId) ?? spots.value[0]
+      await selectSpot(next)
     }
+
     renderMarkers()
   } catch (e) {
     console.error('Błąd pobierania łowisk', e)
@@ -144,20 +179,29 @@ async function loadSpotsInRadius() {
     const y = center.lat
     const radiusKm = filters.value.radiusKm || 50
 
-    const url =
-        `/spots/radius?x=${encodeURIComponent(x)}` +
-        `&y=${encodeURIComponent(y)}` +
-        `&radiusKm=${encodeURIComponent(radiusKm)}` +
-        `&page=0&size=200`
+    const { data } = await apiClient.get('/spots/radius', {
+      baseURL: '',          // bez /api
+      params: {
+        x,
+        y,
+        radiusKm,
+        page: 0,
+        size: 200,
+      },
+    })
 
-    const res = await fetch(url)
-    if (!res.ok) throw new Error(`HTTP ${res.status}`)
-    const body = await res.json()
-    const content = Array.isArray(body) ? body : body.content ?? []
+    const content = Array.isArray(data) ? data : data.content ?? []
     spots.value = content
-    if (!selectedSpot.value && spots.value.length > 0) {
-      selectedSpot.value = spots.value[0]
+
+    if (!spots.value.length) {
+      await selectSpot(null)
+    } else {
+      const currentId = selectedSpot.value?.id
+      const next =
+          spots.value.find((s) => s.id === currentId) ?? spots.value[0]
+      await selectSpot(next)
     }
+
     renderMarkers()
   } catch (e) {
     console.error('Błąd pobierania łowisk w promieniu', e)
@@ -172,6 +216,107 @@ async function reloadSpots() {
     await loadSpotsInRadius()
   } else {
     await loadAllSpots()
+  }
+}
+
+// ---------------- DODATKOWE DANE O ŁOWISKU ----------------
+
+async function loadSpotDetails(id) {
+  try {
+    const { data } = await apiClient.get(`/spots/${id}`, {
+      baseURL: '',          // bez /api
+    })
+    if (selectedSpot.value && selectedSpot.value.id === id) {
+      selectedSpot.value = data
+    }
+  } catch (e) {
+    console.error('Błąd pobierania szczegółów łowiska', e)
+  }
+}
+
+async function loadSpotOpinions(id) {
+  opinionsLoading.value = true
+  try {
+    // UWAGA: opinie są pod ${forum.api.prefix}/spots/opinions → tu zostawiamy /api
+    const { data } = await apiClient.get(`/spots/opinions/${id}`, {
+      params: { page: 0, size: 50 },
+    })
+    opinions.value = Array.isArray(data) ? data : data.content ?? []
+  } catch (e) {
+    console.error('Błąd pobierania opinii o łowisku', e)
+    opinions.value = []
+  } finally {
+    opinionsLoading.value = false
+  }
+}
+
+async function loadSpotEvents(id) {
+  eventsLoading.value = true
+  try {
+    const { data } = await apiClient.get(`/spots/${id}/events`, {
+      baseURL: '',          // bez /api
+      params: { page: 0, size: 50 },
+    })
+    events.value = Array.isArray(data) ? data : data.content ?? []
+  } catch (e) {
+    console.error('Błąd pobierania wydarzeń dla łowiska', e)
+    events.value = []
+  } finally {
+    eventsLoading.value = false
+  }
+}
+
+async function loadSpotOwnerInfo(id) {
+  ownerLoading.value = true
+  try {
+    const { data } = await apiClient.get(`/spots/${id}/owner`, {
+      baseURL: '',          // bez /api
+    })
+    ownerInfo.value = data || { is_owner: false }
+  } catch (e) {
+    console.error('Błąd pobierania informacji o właścicielu', e)
+    ownerInfo.value = { is_owner: false }
+  } finally {
+    ownerLoading.value = false
+  }
+}
+
+async function loadSpotExtras(id) {
+  if (!id) return
+  await Promise.all([
+    loadSpotDetails(id),
+    loadSpotOpinions(id),
+    loadSpotEvents(id),
+    loadSpotOwnerInfo(id),
+  ])
+}
+
+async function onRateSpot({ spotId, rating }) {
+  if (!spotId || !rating) return
+  try {
+    // POST /api/spots/opinions – tu ma zostać prefix /api
+    await apiClient.post('/spots/opinions', {
+      spotId,
+      rating,
+      comment: null,
+    })
+    await loadSpotOpinions(spotId)
+  } catch (e) {
+    console.error('Błąd wysyłania oceny łowiska', e)
+  }
+}
+
+async function onDeleteSpot() {
+  if (!selectedSpot.value?.id) return
+  const ok = window.confirm('Czy na pewno chcesz usunąć to łowisko?')
+  if (!ok) return
+  try {
+    await apiClient.delete(`/spots/${selectedSpot.value.id}/delete`, {
+      baseURL: '',          // bez /api
+    })
+    await reloadSpots()
+  } catch (e) {
+    console.error('Błąd usuwania łowiska', e)
   }
 }
 
@@ -247,6 +392,14 @@ watch(
           <FishingDetailsPanel
               class="flex-1"
               :spot="selectedSpot"
+              :opinions="opinions"
+              :opinions-loading="opinionsLoading"
+              :average-rating="averageRating"
+              :events="events"
+              :events-loading="eventsLoading"
+              :owner-info="ownerInfo"
+              @rate-spot="onRateSpot"
+              @delete-spot="onDeleteSpot"
           />
         </div>
       </Transition>

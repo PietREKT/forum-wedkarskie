@@ -16,11 +16,16 @@ const emit = defineEmits(['select'])
 
 const search = ref('')
 
-const filteredSpots = computed(() =>
-    props.spots.filter((spot) =>
-        spot.name.toLowerCase().includes(search.value.toLowerCase()),
-    ),
-)
+const filteredSpots = computed(() => {
+  const term = search.value.trim().toLowerCase()
+  if (!term) return props.spots
+
+  return props.spots.filter((spot) => {
+    const name = String(spot.name || '').toLowerCase()
+    const voivodeship = String(spot.voivodeship || '').toLowerCase()
+    return name.includes(term) || voivodeship.includes(term)
+  })
+})
 </script>
 
 <template>
@@ -55,8 +60,25 @@ const filteredSpots = computed(() =>
             {{ spot.ownerType || spot.type || '—' }}
           </span>
         </header>
+
         <p class="opacity-90 mt-1">
-          {{ (spot.fish || []).join(', ') || 'Brak danych' }}
+          {{
+            (spot.fish || [])
+                .map(f => (typeof f === 'string' ? f : f.name))
+                .join(', ') || 'Brak danych'
+          }}
+        </p>
+
+        <p class="opacity-80 mt-0.5 text-[10px]">
+          <span v-if="spot.avgRating != null">
+            Śr. ocena: {{ spot.avgRating.toFixed(1) }} / 5
+            <span class="opacity-70">
+              ({{ spot.ratingCount || 0 }} głosów)
+            </span>
+          </span>
+          <span v-else>
+            Brak ocen
+          </span>
         </p>
       </article>
     </div>

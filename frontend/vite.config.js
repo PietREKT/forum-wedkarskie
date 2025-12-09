@@ -6,8 +6,21 @@ export default defineConfig({
   plugins: [vue(), tailwindcss()],
   server: {
     proxy: {
-      '/api': { target: 'http://localhost:8080', changeOrigin: true, secure: false },
-      '/uploads': { target: 'http://localhost:8080', changeOrigin: true },
-    }
-  }
+      '/api': {
+        target: 'http://localhost:8080',
+        changeOrigin: true,
+        secure: false,
+      },
+      '/uploads': {
+        target: 'http://localhost:8080',
+        changeOrigin: true,
+      },
+      // DODANE – tylko to:
+      '/spots': {
+        target: 'http://localhost:8080',
+        changeOrigin: true,
+        secure: false,
+      },
+    },
+  },
 })
