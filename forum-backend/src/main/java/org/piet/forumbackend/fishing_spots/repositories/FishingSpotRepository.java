@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -26,4 +27,6 @@ public interface FishingSpotRepository extends JpaRepository<FishingSpot, Long> 
     Page<FishingSpot> findByVerificationStatus(VerificationStatus verificationStatus, Pageable pageable);
 
     boolean existsByIdAndOwner_Id(Long id, UUID ownerId);
+
+    List<FishingSpot> findTop10ByNameStartingWithIgnoreCaseOrderByNameAsc(String query);
 }

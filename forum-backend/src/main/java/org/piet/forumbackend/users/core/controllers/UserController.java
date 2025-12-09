@@ -8,17 +8,16 @@ import org.piet.forumbackend.globals.exceptions.NotFoundException;
 import org.piet.forumbackend.globals.pagination.PageDto;
 import org.piet.forumbackend.globals.pagination.PaginationDto;
 import org.piet.forumbackend.users.core.dtos.UsersDtoMapper;
+import org.piet.forumbackend.users.core.dtos.responses.ListUserDto;
 import org.piet.forumbackend.users.core.dtos.responses.UserDto;
 import org.piet.forumbackend.users.core.exceptions.UserNotLoggedInException;
 import org.piet.forumbackend.users.core.services.UserServiceImpl;
 import org.piet.forumbackend.users.groups.dtos.responses.ListUserGroupDto;
 import org.piet.forumbackend.users.groups.services.UserGroupService;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -29,6 +28,12 @@ public class UserController {
     private final UserServiceImpl userService;
     private final EventsService eventsService;
     private final UserGroupService userGroupService;
+
+    @GetMapping("/search")
+    public ResponseEntity<List<ListUserDto>> getUsersByUsername(@RequestParam("q") String query){
+        var suggestions = userService.searchByUsernamePrefix(query);
+        return ResponseEntity.ok(suggestions);
+    }
 
     @GetMapping("/{userId}")
     public ResponseEntity<UserDto> getUserInfoById(@PathVariable UUID userId) throws NotFoundException {

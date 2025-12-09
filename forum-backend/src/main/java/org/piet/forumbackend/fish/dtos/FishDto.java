@@ -13,6 +13,7 @@ import java.util.List;
  */
 @Value
 public class FishDto implements Serializable {
+    Long id;
     String name;
     Float avgLength;
     Float avgMass;
@@ -24,6 +25,7 @@ public class FishDto implements Serializable {
 
     public static FishDto create(Fish fish){
         return new FishDto(
+                fish.getId(),
                 fish.getName(),
                 fish.getAvgLength(),
                 fish.getAvgMass(),

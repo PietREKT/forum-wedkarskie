@@ -6,6 +6,7 @@ import org.piet.forumbackend.events.dtos.EventDtoMapper;
 import org.piet.forumbackend.events.dtos.requests.CreateEventDto;
 import org.piet.forumbackend.events.dtos.requests.EditEventDto;
 import org.piet.forumbackend.events.dtos.responses.EventDto;
+import org.piet.forumbackend.events.dtos.responses.ListEventDto;
 import org.piet.forumbackend.events.dtos.responses.UserEventDto;
 import org.piet.forumbackend.events.entites.AttendanceStatus;
 import org.piet.forumbackend.events.entites.Event;
@@ -15,6 +16,7 @@ import org.piet.forumbackend.events.repositories.UserEventRepository;
 import org.piet.forumbackend.fishing_spots.entities.FishingSpot;
 import org.piet.forumbackend.fishing_spots.exceptions.FishingSpotNotFoundException;
 import org.piet.forumbackend.fishing_spots.services.FishingSpotService;
+import org.piet.forumbackend.globals.exceptions.BadRequestException;
 import org.piet.forumbackend.globals.exceptions.NotFoundException;
 import org.piet.forumbackend.globals.pagination.PageDto;
 import org.piet.forumbackend.globals.pagination.PaginationDto;
@@ -30,7 +32,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
-import java.util.Optional;
+import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -67,8 +70,10 @@ public class EventsServiceImpl implements EventsService {
     public Event createEvent(CreateEventDto eventDto) throws UserNotLoggedInException, FishingSpotNotFoundException {
         UserGroup group = userGroupService.getByIdOpt(eventDto.getGroupId()).orElse(null);
         FishingSpot spot = fishingSpotService.getFishingSpotById(eventDto.getLocationId());
+        User currentUser = userService.getCurrentUser();
+        Set<UUID> invitedUserIds = eventDto.getInvitedUsersIds();
         Event event = new Event();
-        event.setCreator(userService.getCurrentUser());
+        event.setCreator(currentUser);
         event.setName(eventDto.getName());
         event.setDescription(eventDto.getDescription());
         event.setGroup(group);
@@ -76,20 +81,23 @@ public class EventsServiceImpl implements EventsService {
         event.setStartsAt(eventDto.getStartsAt());
         event.setEndsAt(eventDto.getEndsAt());
 
+        invitedUserIds.add(currentUser.getId());
+
         event.setUserEvents(
-                eventDto.getInvitedUsersIds()
+                invitedUserIds
                         .stream()
-                        .map(userService::getUserByIdOpt)
-                        .filter(Optional::isPresent)
-                        .map(Optional::get)
+                        .map(userService::getUserById)
                         .map(u -> {
                             UserEvent userEvent = new UserEvent();
                             userEvent.setEvent(event);
-                            userEvent.setStatus(AttendanceStatus.INVITED);
+                            userEvent.setStatus(u.equalsUser(currentUser) ?
+                                    AttendanceStatus.CONFIRMED :
+                                    AttendanceStatus.INVITED);
                             userEvent.setUser(u);
                             return userEvent;
                         })
                         .collect(Collectors.toSet())
+
         );
 
         return eventRepository.save(event);
@@ -142,6 +150,19 @@ public class EventsServiceImpl implements EventsService {
         return EventDtoMapper.toEventDto(getEventById(eventId));
     }
 
+    @Override
+    public List<ListEventDto> getEventsByName(String query) {
+        if(query == null) return List.of();
+
+        String q = query.trim();
+
+        if(q.length() < 2){
+            return List.of();
+        }
+
+        return eventRepository.findTop10ByNameStartingWithIgnoreCaseOrderByNameAsc(q)
+                .stream().map(EventDtoMapper::toListEventDto).toList();
+    }
 
     @Override
     public PageDto<EventDto> getEventsAtSpot(Long spotId, PaginationDto pagination) {
@@ -172,9 +193,20 @@ public class EventsServiceImpl implements EventsService {
 
     @Override
     public PageDto<EventDto> getUpcomingEventsForUser(UUID userId, PaginationDto pagination) {
-        var page = eventRepository.findAllByUserParticipating(userId,
+        var page = eventRepository.findAllByUserParticipatingAndStatus(userId,
                 Instant.now(),
+                List.of(AttendanceStatus.CONFIRMED, AttendanceStatus.MAYBE),
                 pagination.toPageable())
+                .map(e -> EventDtoMapper.toEventDto(e, userService.getCurrentUserOrNull()));
+        return PageDto.of(page);
+    }
+
+    @Override
+    public PageDto<EventDto> getUserInvites(UUID userId, PaginationDto pagination) {
+        var page = eventRepository.findAllByUserParticipatingAndStatus(userId,
+                        Instant.now(),
+                        List.of(AttendanceStatus.INVITED),
+                        pagination.toPageable())
                 .map(e -> EventDtoMapper.toEventDto(e, userService.getCurrentUserOrNull()));
         return PageDto.of(page);
     }
@@ -195,6 +227,13 @@ public class EventsServiceImpl implements EventsService {
     public void respondToInvite(Long eventId, AttendanceStatus status) throws UserNotLoggedInException, NotFoundException {
         User user = userService.getCurrentUser();
         Event event = getEventById(eventId);
+        if (status == AttendanceStatus.INVITED){
+            throw new BadRequestException("You can't reinvite yourself!");
+        }
+        if (status == AttendanceStatus.REJECTED){
+            event.getUserEvents().removeIf(ue -> ue.getUser().equalsUser(user));
+            return;
+        }
         event.getUserEvents().stream()
                 .filter(ue -> ue.getUser().equalsUser(user))
                 .findFirst()
@@ -225,22 +264,5 @@ public class EventsServiceImpl implements EventsService {
         var userEvents = userEventRepository.findAllByEvent_Id(eventId, pagination.toPageable())
                 .map(EventDtoMapper::toUserEventDto);
         return PageDto.of(userEvents);
-    }
-
-    @Override
-    @Transactional
-    public PageDto<UserEventDto> getUserEvents(UUID userId, PaginationDto pagination) {
-        var page = userEventRepository.findAllByUser_IdFuture(userId,
-                Instant.now(),
-                pagination.toPageable())
-                .map(EventDtoMapper::toUserEventDto);
-
-        return PageDto.of(page);
-    }
-
-    @Override
-    @Transactional
-    public PageDto<UserEventDto> getUserEvents(PaginationDto pagination) throws UserNotLoggedInException {
-        return getUserEvents(userService.getCurrentUser().getId(), pagination);
     }
 }

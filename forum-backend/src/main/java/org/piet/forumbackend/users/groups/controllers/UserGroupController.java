@@ -14,6 +14,7 @@ import org.piet.forumbackend.users.core.exceptions.UserNotLoggedInException;
 import org.piet.forumbackend.users.core.services.UserService;
 import org.piet.forumbackend.users.groups.dtos.requests.CreateUserGroupDto;
 import org.piet.forumbackend.users.groups.dtos.requests.ModifyMemberUserGroupDto;
+import org.piet.forumbackend.users.groups.dtos.responses.ListUserGroupDto;
 import org.piet.forumbackend.users.groups.dtos.responses.UserGroupDto;
 import org.piet.forumbackend.users.groups.entities.UserGroup;
 import org.piet.forumbackend.users.groups.services.UserGroupService;
@@ -22,6 +23,7 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -46,6 +48,13 @@ public class UserGroupController {
         UserGroup group = userGroupService.createUserGroup(currentUser, members, dto.getName());
 
         return ResponseEntity.ok(UserGroupDto.create(group));
+    }
+
+    @GetMapping("/search")
+    public ResponseEntity<List<ListUserGroupDto>> searchGroupsByName(@RequestParam("q") String query){
+        var dtos = userGroupService.getByName(query);
+
+        return ResponseEntity.ok(dtos);
     }
 
     @PatchMapping("/{groupId}/invite")

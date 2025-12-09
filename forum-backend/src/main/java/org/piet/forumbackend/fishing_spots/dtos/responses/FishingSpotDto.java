@@ -1,7 +1,7 @@
 package org.piet.forumbackend.fishing_spots.dtos.responses;
 
 import lombok.Value;
-import org.piet.forumbackend.fish.dtos.FishDto;
+import org.piet.forumbackend.fish.dtos.FishListDto;
 import org.piet.forumbackend.fishing_spots.entities.FishingSpot;
 
 import java.io.Serializable;
@@ -18,7 +18,7 @@ public class FishingSpotDto implements Serializable {
     double locationX, locationY;
     FishingSpot.FISHING_SPOT_TYPE type;
     String statuteUrl;
-    List<FishDto> fish;
+    List<FishListDto> fish;
 
     public static FishingSpotDto create(FishingSpot fishingSpot){
         return new FishingSpotDto(
@@ -29,7 +29,7 @@ public class FishingSpotDto implements Serializable {
                 fishingSpot.getLocation().getY(),
                 fishingSpot.getType(),
                 fishingSpot.getStatuteUrl(),
-                fishingSpot.getFish().stream().map(FishDto::create).toList()
+                fishingSpot.getFish().stream().map(FishListDto::create).toList()
         );
     }
 }

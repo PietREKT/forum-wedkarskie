@@ -1,6 +1,7 @@
 package org.piet.forumbackend.fishing_spots.services;
 
 import org.piet.forumbackend.content.entities.enums.VerificationStatus;
+import org.piet.forumbackend.fishing_spots.dtos.FishingSpotListDto;
 import org.piet.forumbackend.fishing_spots.dtos.requests.CreateFishingSpotDto;
 import org.piet.forumbackend.fishing_spots.dtos.responses.FishingSpotDto;
 import org.piet.forumbackend.fishing_spots.entities.FishingSpot;
@@ -30,7 +31,7 @@ public interface FishingSpotService {
 
     FishingSpot getFishingSpotById(Long id) throws FishingSpotNotFoundException;
 
-    FishingSpot getFishingSpotByName(String name) throws FishingSpotNotFoundException;
+    List<FishingSpotListDto> getFishingSpotByName(String name);
 
     FishingSpot createFishingSpot(CreateFishingSpotDto dto)
             throws LocationDtoIncompleteException,

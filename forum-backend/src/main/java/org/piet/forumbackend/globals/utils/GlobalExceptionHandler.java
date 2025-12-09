@@ -1,6 +1,7 @@
 package org.piet.forumbackend.globals.utils;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.piet.forumbackend.globals.exceptions.BadRequestException;
 import org.piet.forumbackend.globals.exceptions.NotFoundException;
 import org.piet.forumbackend.users.core.exceptions.UserNotLoggedInException;
@@ -20,6 +21,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 
+@Slf4j
 @RestControllerAdvice
 @RequiredArgsConstructor
 public class GlobalExceptionHandler {
@@ -51,6 +53,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<Map<String, String>> handleIllegalArgument(IllegalArgumentException e) {
         Map<String, String> m = new HashMap<>();
         m.put("message", e.getMessage());
+        log.error("IllegalArgumentError", e);
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(m);
     }
 

@@ -19,6 +19,8 @@ public interface UserGroupService {
 
     Optional<UserGroup> getByIdOpt(UUID id);
 
+    List<ListUserGroupDto> getByName(String query);
+
     default Page<ListUserGroupDto> getGroupsByMember(UUID userId, PaginationDto pagination) {
         return getGroupsByMember(userId, pagination.toPageable());
     }

@@ -66,6 +66,19 @@ public class UserGroupServiceImpl implements UserGroupService {
     }
 
     @Override
+    public List<ListUserGroupDto> getByName(String query) {
+        if (query == null) return List.of();
+        String q = query.trim();
+
+        if (q.length() < 2){
+            return List.of();
+        }
+
+        return userGroupRepository.findTop10ByNameStartingWithIgnoreCaseOrderByNameAsc(q)
+                .stream().map(UserGroupDtoMapper::toListUserGroupDto).toList();
+    }
+
+    @Override
     public UserGroup createUserGroup(User creator, List<User> members, String name) {
         UserGroup group = new UserGroup();
         group.setOwner(creator);

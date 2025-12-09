@@ -15,6 +15,8 @@ import java.util.Optional;
 public interface FishRepository extends JpaRepository<Fish, Long> {
     Optional<Fish> findByName(String name);
 
+    List<Fish> findTop10ByNameStartingWithIgnoreCaseOrderByNameAsc(String name);
+
     void deleteByName(String name);
 
     Page<Fish> findByWaterType(WaterType waterType, Pageable pageable);

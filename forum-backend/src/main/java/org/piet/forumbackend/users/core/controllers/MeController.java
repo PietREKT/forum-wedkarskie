@@ -57,4 +57,10 @@ public class MeController {
         UUID userId = userService.getCurrentUser().getId();
         return ResponseEntity.ok(eventsService.getUpcomingEventsForUser(userId, pagination));
     }
+
+    @GetMapping("/events/invites")
+    public ResponseEntity<PageDto<EventDto>> getEventsWithUserInvited(PaginationDto pagination) throws UserNotLoggedInException {
+        UUID userId = userService.getCurrentUser().getId();
+        return ResponseEntity.ok(eventsService.getUserInvites(userId, pagination));
+    }
 }

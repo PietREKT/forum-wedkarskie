@@ -6,6 +6,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -15,4 +16,6 @@ public interface UserRepository extends JpaRepository<User, UUID> {
     Page<User> findByBannedUntilAfter(Instant bannedUntilAfter, Pageable pageable);
 
     Page<User> findByMutedUntilAfter(Instant mutedUntilAfter, Pageable pageable);
+
+    List<User> findTop10ByUsernameStartingWithIgnoreCaseOrderByUsernameAsc(String prefix);
 }

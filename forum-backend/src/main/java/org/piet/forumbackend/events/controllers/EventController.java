@@ -9,6 +9,7 @@ import org.piet.forumbackend.events.dtos.requests.EditEventDto;
 import org.piet.forumbackend.events.dtos.requests.EventInviteResponseDto;
 import org.piet.forumbackend.events.dtos.requests.InviteUsersDto;
 import org.piet.forumbackend.events.dtos.responses.EventDto;
+import org.piet.forumbackend.events.dtos.responses.ListEventDto;
 import org.piet.forumbackend.events.dtos.responses.UserEventDto;
 import org.piet.forumbackend.events.services.EventsService;
 import org.piet.forumbackend.fishing_spots.exceptions.FishingSpotNotFoundException;
@@ -21,6 +22,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -41,6 +43,13 @@ public class EventController {
     @GetMapping("/{eventId}")
     public ResponseEntity<EventDto> getEventById(@PathVariable Long eventId) throws NotFoundException {
         return ResponseEntity.ok(eventsService.getEventDtoById(eventId));
+    }
+
+    @GetMapping("/search")
+    public ResponseEntity<List<ListEventDto>> getEventsByName(@RequestParam("q") String query){
+        var dtos = eventsService.getEventsByName(query);
+
+        return ResponseEntity.ok(dtos);
     }
 
     @PatchMapping("/{eventId}")
@@ -81,6 +90,4 @@ public class EventController {
     public ResponseEntity<PageDto<UserEventDto>> getParticipants(@PathVariable Long eventId, PaginationDto pagination) throws NotFoundException {
         return ResponseEntity.ok(eventsService.getParticipants(eventId, pagination));
     }
-
-
 }

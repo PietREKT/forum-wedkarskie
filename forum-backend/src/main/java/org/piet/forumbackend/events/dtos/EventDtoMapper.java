@@ -6,10 +6,11 @@ import org.piet.forumbackend.events.dtos.responses.ListEventDto;
 import org.piet.forumbackend.events.dtos.responses.UserEventDto;
 import org.piet.forumbackend.events.entites.Event;
 import org.piet.forumbackend.events.entites.UserEvent;
+import org.piet.forumbackend.fishing_spots.dtos.FishingSpotListDto;
 import org.piet.forumbackend.fishing_spots.dtos.responses.FishingSpotDto;
 import org.piet.forumbackend.users.core.dtos.UsersDtoMapper;
 import org.piet.forumbackend.users.core.entities.User;
-import org.piet.forumbackend.users.groups.dtos.responses.UserGroupDto;
+import org.piet.forumbackend.users.groups.dtos.UserGroupDtoMapper;
 
 import java.util.stream.Collectors;
 
@@ -20,8 +21,8 @@ public class EventDtoMapper {
                 event.getName(),
                 event.getStartsAt(),
                 event.getEndsAt(),
-                FishingSpotDto.create(event.getLocation()),
-                UserGroupDto.create(event.getGroup())
+                FishingSpotListDto.create(event.getLocation()),
+                UserGroupDtoMapper.toListUserGroupDto(event.getGroup())
         );
     }
 
@@ -45,8 +46,8 @@ public class EventDtoMapper {
                 event.getStartsAt(),
                 event.getEndsAt(),
                 FishingSpotDto.create(event.getLocation()),
-                UsersDtoMapper.toUserDto(event.getCreator()),
-                UserGroupDto.create(event.getGroup()),
+                UsersDtoMapper.toListUserDto(event.getCreator()),
+                UserGroupDtoMapper.toListUserGroupDto(event.getGroup()),
                 event.getUserEvents().stream().map(EventDtoMapper::toEventParticipantDto).collect(Collectors.toSet()),
                 false
         );
@@ -62,8 +63,8 @@ public class EventDtoMapper {
                 event.getStartsAt(),
                 event.getEndsAt(),
                 FishingSpotDto.create(event.getLocation()),
-                UsersDtoMapper.toUserDto(event.getCreator()),
-                UserGroupDto.create(event.getGroup()),
+                UsersDtoMapper.toListUserDto(event.getCreator()),
+                UserGroupDtoMapper.toListUserGroupDto(event.getGroup()),
                 event.getUserEvents().stream().map(EventDtoMapper::toEventParticipantDto).collect(Collectors.toSet()),
                 event.getCreator().equalsUser(currentUser)
                         || event.getUserEvents()

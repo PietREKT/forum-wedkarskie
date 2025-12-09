@@ -2,6 +2,9 @@ package org.piet.forumbackend.fish.services;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
+import org.piet.forumbackend.fish.dtos.FishDto;
+import org.piet.forumbackend.fish.dtos.FishDtoMapper;
+import org.piet.forumbackend.fish.dtos.FishListDto;
 import org.piet.forumbackend.fish.entities.Fish;
 import org.piet.forumbackend.fish.entities.enums.FishingMethod;
 import org.piet.forumbackend.fish.entities.enums.WaterType;
@@ -9,12 +12,14 @@ import org.piet.forumbackend.fish.repositories.FishRepository;
 import org.piet.forumbackend.fishing_spots.exceptions.FishNotFoundException;
 import org.piet.forumbackend.globals.exceptions.NotFoundException;
 import org.piet.forumbackend.globals.exceptions.UnauthorizedAccessException;
+import org.piet.forumbackend.globals.pagination.PageDto;
 import org.piet.forumbackend.globals.properties.FileProperties;
 import org.piet.forumbackend.users.core.entities.Role;
 import org.piet.forumbackend.users.core.entities.User;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.MessageSource;
 import org.springframework.context.i18n.LocaleContextHolder;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -42,12 +47,15 @@ public class FishService {
         return fishRepository.existsByName(name);
     }
 
-    public Fish getFishByName(String name) throws FishNotFoundException {
-        return fishRepository.findByName(name.trim().toLowerCase()).orElseThrow(() -> new FishNotFoundException(
-                messageSource.getMessage("error.fish.name_not_found",
-                        new Object[]{name},
-                        LocaleContextHolder.getLocale())
-        ));
+    public List<FishListDto> getFishByName(String query) {
+        if (query == null) return List.of();
+
+        String q = query.trim();
+
+        if (q.length() < 2) return List.of();
+
+        return fishRepository.findTop10ByNameStartingWithIgnoreCaseOrderByNameAsc(q)
+                .stream().map(FishDtoMapper::toFishListDto).toList();
     }
 
     public Optional<Fish> getFishByIdOptional(Long id){
@@ -61,9 +69,18 @@ public class FishService {
                         LocaleContextHolder.getLocale())
         ));
     }
+    public FishDto getFishDtoById(Long id) throws FishNotFoundException {
+        Fish fish = fishRepository.findById(id).orElseThrow(() -> new FishNotFoundException(
+                messageSource.getMessage("error.fish.id_not_found",
+                        new Object[]{id},
+                        LocaleContextHolder.getLocale())
+        ));
 
-    public List<Fish> getFishByWaterType(WaterType waterType, Pageable pageable) throws NotFoundException {
-        List<Fish> fish = fishRepository.findByWaterType(waterType, pageable).getContent();
+        return FishDtoMapper.toFishDto(fish);
+    }
+
+    public PageDto<FishListDto> getFishByWaterType(WaterType waterType, Pageable pageable) throws NotFoundException {
+        Page<Fish> fish = fishRepository.findByWaterType(waterType, pageable);
 
         if (fish.isEmpty()) throw new NotFoundException(
                 messageSource.getMessage("error.fish.water_type_not_found",
@@ -71,11 +88,11 @@ public class FishService {
                         LocaleContextHolder.getLocale())
         );
 
-        return fish;
+        return PageDto.of(fish.map(FishListDto::create));
     }
 
-    public List<Fish> getFishByFishingMethods(List<FishingMethod> methods, Pageable pageable) throws NotFoundException {
-        List<Fish> fish = fishRepository.findByMethods(methods, pageable).getContent();
+    public PageDto<FishListDto> getFishByFishingMethods(List<FishingMethod> methods, Pageable pageable) throws NotFoundException {
+        Page<Fish> fish = fishRepository.findByMethods(methods, pageable);
 
         if (fish.isEmpty()) throw new NotFoundException(
                 messageSource.getMessage("error.fish.methods_not_found",
@@ -83,7 +100,7 @@ public class FishService {
                         LocaleContextHolder.getLocale())
         );
 
-        return fish;
+        return PageDto.of(fish.map(FishListDto::create));
     }
 
     public void deleteFishByName(String name, User user) throws UnauthorizedAccessException {

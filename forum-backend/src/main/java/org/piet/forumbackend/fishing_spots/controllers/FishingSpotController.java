@@ -57,6 +57,13 @@ public class FishingSpotController {
         return ResponseEntity.ok(dtos);
     }
 
+    @GetMapping("/search")
+    public ResponseEntity<List<FishingSpotListDto>> searchByName(@RequestParam("q") String query){
+        var dtos = fishingSpotService.getFishingSpotByName(query);
+
+        return ResponseEntity.ok(dtos);
+    }
+
     @PostMapping("/create")
     public ResponseEntity<FishingSpotDto> createSpot(@Valid @RequestBody CreateFishingSpotDto dto, Authentication auth) throws UserNotLoggedInException, NotFoundException, UnauthorizedAccessException, LocationDtoIncompleteException, BadRequestException, IOException, LocationNotFoundException {
         var spot = fishingSpotService.createFishingSpot(dto);

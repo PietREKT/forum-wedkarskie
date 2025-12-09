@@ -3,22 +3,17 @@ package org.piet.forumbackend.fish.controllers;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.piet.forumbackend.fish.dtos.FishDto;
-import org.piet.forumbackend.fish.dtos.FishDtoMapper;
-import org.piet.forumbackend.fish.dtos.GetFishDto;
+import org.piet.forumbackend.fish.dtos.FishListDto;
 import org.piet.forumbackend.fish.entities.enums.FishingMethod;
 import org.piet.forumbackend.fish.entities.enums.WaterType;
 import org.piet.forumbackend.fish.services.FishService;
-import org.piet.forumbackend.globals.exceptions.BadRequestException;
+import org.piet.forumbackend.fishing_spots.exceptions.FishNotFoundException;
 import org.piet.forumbackend.globals.exceptions.NotFoundException;
+import org.piet.forumbackend.globals.pagination.PageDto;
 import org.piet.forumbackend.globals.pagination.PaginationDto;
-import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.context.MessageSource;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -30,46 +25,39 @@ public class FishController {
     private final FishService fishService;
     private final MessageSource messageSource;
 
-    @GetMapping
-    public ResponseEntity<List<FishDto>> getFish(@ParameterObject GetFishDto fishDto, @ParameterObject PaginationDto paginationDto) throws NotFoundException, BadRequestException {
-        Pageable pageable = PageRequest.of(paginationDto.getPage(), paginationDto.getSize());
-        if (fishDto.getId() != null) {
-            return ResponseEntity.ok(List.of(
-                    FishDto.create(fishService.getFishById(fishDto.getId()))
-            ));
-        } else if (fishDto.getName() != null) {
-            return ResponseEntity.ok(List.of(
-                    FishDtoMapper.toFishDto(fishService.getFishByName(fishDto.getName()))
-            ));
-        } else if (fishDto.getWaterType() != null) {
-            return ResponseEntity.ok(
-                    fishService.getFishByWaterType(fishDto.getWaterType(), pageable)
-                            .stream()
-                            .map(FishDto::create)
-                            .toList()
-            );
-        } else if (fishDto.getMethods() != null && !fishDto.getMethods().isEmpty()) {
-            return ResponseEntity.ok(
-                    fishService.getFishByFishingMethods(fishDto.getMethods(), pageable)
-                            .stream()
-                            .map(FishDto::create)
-                            .toList()
-            );
-        } else {
-            return ResponseEntity.ok(fishService.getFish(pageable)
-                    .stream()
-                    .map(FishDto::create)
-                    .toList()
-            );
-        }
+    @GetMapping("/search")
+    public ResponseEntity<List<FishListDto>> getFishByName(@RequestParam(name = "name") String query){
+        var dtos = fishService.getFishByName(query);
+        return ResponseEntity.ok(dtos);
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<FishDto> getFishById(@PathVariable Long id) throws FishNotFoundException {
+        var dto = fishService.getFishDtoById(id);
+
+        return ResponseEntity.ok(dto);
     }
 
     @GetMapping("/methods")
+    public ResponseEntity<PageDto<FishListDto>> getFishByMethods(@RequestParam(name = "method") List<FishingMethod> methods, PaginationDto pagination) throws NotFoundException {
+        var dtos = fishService.getFishByFishingMethods(methods, pagination.toPageable());
+
+        return ResponseEntity.ok(dtos);
+    }
+
+    @GetMapping("/water-type")
+    public ResponseEntity<PageDto<FishListDto>> getFishByWaterTypes(@RequestParam(name = "type") WaterType type, PaginationDto pagination) throws NotFoundException {
+        var dtos = fishService.getFishByWaterType(type, pagination.toPageable());
+
+        return ResponseEntity.ok(dtos);
+    }
+
+    @GetMapping("/enums/methods")
     public ResponseEntity<List<FishingMethod>> getFishingMethods(){
         return ResponseEntity.ok(fishService.getMethods());
     }
 
-    @GetMapping("/water-types")
+    @GetMapping("/enums/water-types")
     public ResponseEntity<List<WaterType>> getWaterTypes(){
         return ResponseEntity.ok(fishService.getWaterTypes());
     }

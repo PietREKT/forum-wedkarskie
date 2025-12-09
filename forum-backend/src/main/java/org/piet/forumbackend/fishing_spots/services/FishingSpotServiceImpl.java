@@ -10,6 +10,7 @@ import org.locationtech.jts.util.GeometricShapeFactory;
 import org.piet.forumbackend.content.entities.enums.VerificationStatus;
 import org.piet.forumbackend.fish.entities.Fish;
 import org.piet.forumbackend.fish.services.FishService;
+import org.piet.forumbackend.fishing_spots.dtos.FishingSpotListDto;
 import org.piet.forumbackend.fishing_spots.dtos.requests.AddressDto;
 import org.piet.forumbackend.fishing_spots.dtos.requests.CreateFishingSpotDto;
 import org.piet.forumbackend.fishing_spots.dtos.requests.LocationDto;
@@ -106,12 +107,14 @@ public class FishingSpotServiceImpl implements FishingSpotService {
     }
 
     @Override
-    public FishingSpot getFishingSpotByName(String name) throws FishingSpotNotFoundException {
-        return fishingSpotRepository.findByNameIgnoreCase(name.trim()).orElseThrow(() -> new FishingSpotNotFoundException(
-                messageSource.getMessage("errors.spots.name_not_found",
-                        new Object[]{name},
-                        LocaleContextHolder.getLocale())
-        ));
+    public List<FishingSpotListDto> getFishingSpotByName(String name) {
+        if (name == null) return List.of();
+
+        String q = name.trim();
+        if (q.length() < 2 ) return List.of();
+
+        return fishingSpotRepository.findTop10ByNameStartingWithIgnoreCaseOrderByNameAsc(q)
+                .stream().map(FishingSpotListDto::create).toList();
     }
 
     @Override

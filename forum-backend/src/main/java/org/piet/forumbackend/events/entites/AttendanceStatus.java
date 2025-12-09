@@ -1,6 +1,7 @@
 package org.piet.forumbackend.events.entites;
 
 public enum AttendanceStatus {
+        REJECTED(-1),
         INVITED(0),
         MAYBE(1),
         CONFIRMED(2);

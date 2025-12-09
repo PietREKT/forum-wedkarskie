@@ -12,6 +12,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.Authentication;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -56,4 +57,6 @@ public interface UserService {
     Page<ListUserDto> getAllUsers(PaginationDto pagination);
 
     void changeUserRole(UUID userToChange, Role newRole) throws NotFoundException, UserNotLoggedInException;
+
+    List<ListUserDto> searchByUsernamePrefix(String prefix);
 }

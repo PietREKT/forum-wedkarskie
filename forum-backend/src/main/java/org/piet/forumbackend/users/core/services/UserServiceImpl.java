@@ -23,6 +23,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -198,5 +199,20 @@ public class UserServiceImpl implements UserService {
 
         user.setRole(newRole);
         userRepository.save(user);
+    }
+
+    @Override
+    public List<ListUserDto> searchByUsernamePrefix(String prefix) {
+        if (prefix == null) return List.of();
+        String query = prefix.trim();
+
+        if (query.length() < 2){
+            return List.of();
+        }
+
+        return userRepository.findTop10ByUsernameStartingWithIgnoreCaseOrderByUsernameAsc(query)
+                .stream()
+                .map(UsersDtoMapper::toListUserDto)
+                .toList();
     }
 }
