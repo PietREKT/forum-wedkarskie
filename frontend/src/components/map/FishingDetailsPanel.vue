@@ -1,13 +1,15 @@
 <script setup>
 import { computed, ref } from 'vue'
 import NewFishingSpotForm from './NewFishingSpotForm.vue'
+import { useAuthStore } from '../../stores/auth'
+
+const auth = useAuthStore()
 
 const props = defineProps({
   spot: {
     type: Object,
     default: null,
   },
-  // nowe: dane z backendu
   opinions: {
     type: Array,
     default: () => [],
@@ -32,44 +34,53 @@ const props = defineProps({
     type: Object,
     default: () => ({ is_owner: false }),
   },
+  userOpinion: {
+    type: Object,
+    default: null,
+  },
 })
 
 const emit = defineEmits([
-  'rate-spot',     // { spotId, rating }
-  'delete-spot',   // bez payloadu
+  'rate-spot',
+  'delete-spot',
+  'spot-created',
 ])
 
-// lokalna pamięć oceny – żeby od razu wizualnie podbić gwiazdki
-const userRatings = ref({})
-
 const currentRating = computed(() => {
-  if (!props.spot) return 0
-  return userRatings.value[props.spot.id] || 0
+  if (props.userOpinion && typeof props.userOpinion.rating === 'number') {
+    return props.userOpinion.rating
+  }
+  return 0
 })
 
-// średnia ocena: najpierw z props.averageRating (z backendu),
-// jeśli brak – fallback do spot.avgRating (stary front)
 const displayAverageRating = computed(() => {
   if (props.averageRating != null) return props.averageRating
   if (!props.spot || props.spot.avgRating == null) return null
   return props.spot.avgRating
 })
 
+// NOWE – liczba głosów liczona z opinii
+const ratingCount = computed(() => {
+  if (props.opinions && props.opinions.length) return props.opinions.length
+  if (props.spot && typeof props.spot.ratingCount === 'number') {
+    return props.spot.ratingCount
+  }
+  return 0
+})
+
 function setRating(star) {
   if (!props.spot) return
-  userRatings.value[props.spot.id] = star
   emit('rate-spot', {
     spotId: props.spot.id,
     rating: star,
+    opinionId: props.userOpinion?.id ?? null,
   })
 }
 
-// trasa – Google Maps
 const userAddress = ref('')
 
 function showRoute() {
   if (!props.spot) return
-  // nowe: obsługa pól z backendu (locationY/locationX) + fallback do lat/lng
   const lat = props.spot.lat ?? props.spot.locationY
   const lng = props.spot.lng ?? props.spot.locationX
   if (lat == null || lng == null) return
@@ -83,10 +94,8 @@ function showRoute() {
   window.open(url, '_blank')
 }
 
-// formularz zgłoszenia
 const showNewSpotForm = ref(false)
 
-// posortowane opinie (najnowsze na górze)
 const sortedOpinions = computed(() => {
   const list = props.opinions || []
   return [...list].sort(
@@ -96,12 +105,14 @@ const sortedOpinions = computed(() => {
   )
 })
 
-const isOwner = computed(() => !!props.ownerInfo?.is_owner)
+const isOwnerOrAdmin = computed(
+    () => !!props.ownerInfo?.is_owner || !!auth.isAdmin,
+)
 </script>
 
 <template>
   <section
-      class="bg-black/65 backdrop-blur p-4 flex flex-col gap-4 overflow-y-auto min-h-0"
+      class="bg-black/80 text-white backdrop-blur-lg p-4 md:p-5 flex flex-col gap-4 overflow-y-auto min-h-0 border-l border-white/40"
   >
     <!-- GŁÓWNE INFO ŁOWISKA -->
     <header class="flex items-start justify-between gap-4" v-if="spot">
@@ -119,7 +130,7 @@ const isOwner = computed(() => !!props.ownerInfo?.is_owner)
           <span v-if="displayAverageRating != null">
             {{ displayAverageRating.toFixed(1) }} / 5
             <span class="opacity-75">
-              ({{ spot.ratingCount || 0 }} głosów)
+              ({{ ratingCount }} głosów)
             </span>
           </span>
           <span v-else>
@@ -135,9 +146,9 @@ const isOwner = computed(() => !!props.ownerInfo?.is_owner)
           ☆ Ulubione
         </button>
         <button
-            v-if="isOwner"
+            v-if="isOwnerOrAdmin"
             type="button"
-            class="text-[10px] border border-red-500 text-red-500 rounded-full px-3 py-0.5 hover:bg-red-600 hover:text-white"
+            class="text-[10px] border border-red-500 text-red-400 rounded-full px-3 py-0.5 hover:bg-red-600 hover:text-white"
             @click="emit('delete-spot')"
         >
           Usuń łowisko
@@ -149,15 +160,13 @@ const isOwner = computed(() => !!props.ownerInfo?.is_owner)
       Wybierz łowisko z listy, aby zobaczyć szczegóły.
     </div>
 
-    <!-- ZDJĘCIA -->
     <div
         v-if="spot"
-        class="aspect-video max-h-[40vh] w-full rounded-xl bg-black/50 border border-white/40 grid place-items-center text-xs opacity-80"
+        class="aspect-video max-h-[40vh] w-full rounded-xl bg-black/60 border border-white/40 grid place-items-center text-xs opacity-90"
     >
       Tu będą zdjęcia łowiska
     </div>
 
-    <!-- DANE SZCZEGÓŁOWE -->
     <div v-if="spot" class="text-xs grid grid-cols-1 sm:grid-cols-2 gap-3">
       <div>
         <h3 class="font-semibold mb-1">Gatunki ryb</h3>
@@ -201,7 +210,7 @@ const isOwner = computed(() => !!props.ownerInfo?.is_owner)
       </div>
     </div>
 
-    <!-- NOWE: OPINIE Z BACKENDU -->
+    <!-- OPINIE -->
     <div v-if="spot" class="text-xs">
       <h3 class="font-semibold mb-1">Opinie innych wędkarzy</h3>
 
@@ -220,7 +229,7 @@ const isOwner = computed(() => !!props.ownerInfo?.is_owner)
         <li
             v-for="op in sortedOpinions"
             :key="op.id"
-            class="border border-white/40 rounded px-2 py-1"
+            class="border border.white/40 rounded px-2 py-1 bg-black/40"
         >
           <div class="flex items-center justify-between gap-2">
             <div>
@@ -228,7 +237,11 @@ const isOwner = computed(() => !!props.ownerInfo?.is_owner)
                 {{ op.author?.username || 'Użytkownik' }}
               </span>
               <span class="opacity-60 text-[10px] ml-1">
-                {{ op.createdAt ? new Date(op.createdAt).toLocaleDateString() : '' }}
+                {{
+                  op.createdAt
+                      ? new Date(op.createdAt).toLocaleDateString()
+                      : ''
+                }}
               </span>
             </div>
             <span class="font-semibold text-xs">
@@ -242,7 +255,7 @@ const isOwner = computed(() => !!props.ownerInfo?.is_owner)
       </ul>
     </div>
 
-    <!-- NOWE: WYDARZENIA NA ŁOWISKU -->
+    <!-- WYDARZENIA -->
     <div v-if="spot" class="text-xs">
       <h3 class="font-semibold mb-1">Wydarzenia na tym łowisku</h3>
 
@@ -279,7 +292,7 @@ const isOwner = computed(() => !!props.ownerInfo?.is_owner)
             :key="star"
             type="button"
             class="w-6 h-6 text-sm border border-white/60 rounded-full grid place-items-center hover:bg-white/20"
-            :class="currentRating >= star ? 'bg-white/40' : 'bg-black/30'"
+            :class="currentRating >= star ? 'bg-white/40 text-black' : 'bg-black/40'"
             @click="setRating(star)"
         >
           {{ star }}
@@ -302,7 +315,7 @@ const isOwner = computed(() => !!props.ownerInfo?.is_owner)
             v-model="userAddress"
             type="text"
             placeholder="Twój adres (opcjonalnie)"
-            class="flex-1 bg-white/15 text-white placeholder:text-white/80 border border-white/60 rounded px-2 py-1 text-xs outline-none"
+            class="flex-1 bg-white/10 text-white placeholder:text-white/70 border border-white/60 rounded px-2 py-1 text-xs outline-none"
         />
         <button
             type="button"
@@ -314,21 +327,21 @@ const isOwner = computed(() => !!props.ownerInfo?.is_owner)
       </div>
     </div>
 
-    <!-- PRZYCISK FORMULARZA -->
+    <!-- FORMULARZ ZGŁOSZENIA -->
     <div class="mt-2">
       <button
           type="button"
           class="px-3 py-1 rounded-full border border-white/60 hover:bg-white/10 text-xs"
           @click="showNewSpotForm = !showNewSpotForm"
       >
-        {{ showNewSpotForm ? 'Ukryj formularz zgłoszenia' : 'Zgłoś nowe łowisko' }}
+        {{ showNewSpotForm ? 'Ukryj formularz zgłoszenia' : 'Zgłoś / dodaj łowisko' }}
       </button>
     </div>
 
-    <!-- FORMULARZ W OSOBNYM KOMPONENCIE -->
     <NewFishingSpotForm
         v-if="showNewSpotForm"
         class="mt-3 border-t border-white/40 pt-3"
+        @created="emit('spot-created', $event)"
     />
   </section>
 </template>

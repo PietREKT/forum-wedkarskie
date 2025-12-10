@@ -3,12 +3,12 @@ import { ref, computed } from 'vue'
 import { apiClient } from '../utils/axios.js'
 
 export const useFishingSpotsStore = defineStore('fishingSpots', () => {
-    // Lista wszystkich zaakceptowanych łowisk (GET /api/spots)
+    // Lista wszystkich zaakceptowanych łowisk (GET /spots)
     const spots = ref([])
     const spotsLoading = ref(false)
     const spotsError = ref(null)
 
-    // Szczegóły wybranego łowiska (GET /api/spots/{id})
+    // Szczegóły wybranego łowiska (GET /spots/{id})
     const selectedSpot = ref(null)
     const selectedSpotLoading = ref(false)
     const selectedSpotError = ref(null)
@@ -20,14 +20,14 @@ export const useFishingSpotsStore = defineStore('fishingSpots', () => {
     const opinionsLoading = ref(false)
     const opinionsError = ref(null)
 
-    // Wydarzenia powiązane z łowiskiem (GET /api/spots/{spotId}/events)
+    // Wydarzenia powiązane z łowiskiem (GET /spots/{spotId}/events)
     const events = ref([])
     const eventsLast = ref(true)
     const eventsTotalElements = ref(0)
     const eventsLoading = ref(false)
     const eventsError = ref(null)
 
-    // Informacja o właścicielu (GET /api/spots/{spotId}/owner)
+    // Informacja o właścicielu (GET /spots/{spotId}/owner)
     const ownerInfo = ref({ is_owner: false })
     const ownerLoading = ref(false)
     const ownerError = ref(null)
@@ -47,6 +47,7 @@ export const useFishingSpotsStore = defineStore('fishingSpots', () => {
         spotsError.value = null
         try {
             const { data } = await apiClient.get('/spots', {
+                baseURL: '',
                 params: { page, size },
             })
             if (Array.isArray(data)) {
@@ -69,7 +70,9 @@ export const useFishingSpotsStore = defineStore('fishingSpots', () => {
         selectedSpotLoading.value = true
         selectedSpotError.value = null
         try {
-            const { data } = await apiClient.get(`/spots/${id}`)
+            const { data } = await apiClient.get(`/spots/${id}`, {
+                baseURL: '',
+            })
             selectedSpot.value = data
         } catch (e) {
             selectedSpotError.value = 'Nie udało się załadować szczegółów łowiska.'
@@ -84,7 +87,6 @@ export const useFishingSpotsStore = defineStore('fishingSpots', () => {
             selectedSpot.value = null
             return
         }
-        // Ustawiamy minimalne dane, a resztę dociągamy z backendu
         selectedSpot.value = {
             id: spot.id,
             name: spot.name,
@@ -97,8 +99,10 @@ export const useFishingSpotsStore = defineStore('fishingSpots', () => {
     async function deleteSpot(id) {
         if (!id) return
         try {
-            await apiClient.delete(`/spots/${id}/delete`)
-            // po usunięciu odświeżamy listę i czyścimy szczegóły
+            // backend ma DELETE /spots/{id}/delete (bez /api)
+            await apiClient.delete(`/spots/${id}/delete`, {
+                baseURL: '',
+            })
             await loadAllSpots()
             if (selectedSpot.value?.id === id) {
                 selectedSpot.value = null
@@ -115,6 +119,7 @@ export const useFishingSpotsStore = defineStore('fishingSpots', () => {
         opinionsError.value = null
         try {
             const { data } = await apiClient.get(`/spots/opinions/${spotId}`, {
+                // tu zostaje /api, bo kontroler ma @RequestMapping("${forum.api.prefix}/spots/opinions")
                 params: { page, size },
             })
             if (Array.isArray(data)) {
@@ -184,6 +189,7 @@ export const useFishingSpotsStore = defineStore('fishingSpots', () => {
         eventsError.value = null
         try {
             const { data } = await apiClient.get(`/spots/${spotId}/events`, {
+                baseURL: '',
                 params: { page, size },
             })
             if (Array.isArray(data)) {
@@ -208,8 +214,9 @@ export const useFishingSpotsStore = defineStore('fishingSpots', () => {
         ownerLoading.value = true
         ownerError.value = null
         try {
-            const { data } = await apiClient.get(`/spots/${spotId}/owner`)
-            // backend zwraca mapę z kluczem "is_owner"
+            const { data } = await apiClient.get(`/spots/${spotId}/owner`, {
+                baseURL: '',
+            })
             ownerInfo.value = data || { is_owner: false }
         } catch (e) {
             ownerError.value = 'Nie udało się sprawdzić właściciela.'
