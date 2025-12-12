@@ -4,7 +4,7 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 import org.hibernate.validator.constraints.Length;
-import org.piet.forumbackend.fishing_spots.entities.FishingSpot;
+import org.piet.forumbackend.fishing_spots.core.entities.FishingSpot;
 import org.piet.forumbackend.users.core.entities.User;
 import org.piet.forumbackend.users.groups.entities.UserGroup;
 

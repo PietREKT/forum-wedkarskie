@@ -1,5 +1,6 @@
 package org.piet.forumbackend.users.groups.controllers;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.piet.forumbackend.globals.exceptions.NotFoundException;
@@ -21,6 +22,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("${forum.api.prefix}/users/groups/{groupId}/admin")
 @RequiredArgsConstructor
+@Tag(name = "Groups - Admin", description = "Endpoints for user group's admins.")
 public class UserGroupAdminController {
     private final UserService userService;
     private final UserGroupService userGroupService;

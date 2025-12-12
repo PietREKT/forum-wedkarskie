@@ -8,7 +8,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.hibernate.validator.constraints.Length;
 import org.piet.forumbackend.events.entites.UserEvent;
-import org.piet.forumbackend.fishing_spots.entities.FishingSpot;
+import org.piet.forumbackend.fishing_spots.core.entities.FishingSpot;
 import org.piet.forumbackend.globals.utils.RoleConverter;
 import org.piet.forumbackend.users.friends.entities.FriendRequest;
 import org.piet.forumbackend.users.groups.entities.UserGroup;

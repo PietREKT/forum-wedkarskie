@@ -1,5 +1,6 @@
 package org.piet.forumbackend.fish.controllers;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.piet.forumbackend.fish.dtos.CreateFishDto;
 import org.piet.forumbackend.fish.dtos.FishDto;
@@ -19,6 +20,7 @@ import java.io.IOException;
 @RestController
 @RequestMapping("${forum.api.prefix}/admin/fish")
 @RequiredArgsConstructor
+@Tag(name = "Admin - fish", description = "Endpoints for admin to manage fish.")
 public class FishAdminController {
     private final UserService userService;
     private final FishService fishService;

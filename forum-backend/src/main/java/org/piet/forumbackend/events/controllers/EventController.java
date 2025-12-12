@@ -12,7 +12,7 @@ import org.piet.forumbackend.events.dtos.responses.EventDto;
 import org.piet.forumbackend.events.dtos.responses.ListEventDto;
 import org.piet.forumbackend.events.dtos.responses.UserEventDto;
 import org.piet.forumbackend.events.services.EventsService;
-import org.piet.forumbackend.fishing_spots.exceptions.FishingSpotNotFoundException;
+import org.piet.forumbackend.fishing_spots.core.exceptions.FishingSpotNotFoundException;
 import org.piet.forumbackend.globals.exceptions.NotFoundException;
 import org.piet.forumbackend.globals.pagination.PageDto;
 import org.piet.forumbackend.globals.pagination.PaginationDto;

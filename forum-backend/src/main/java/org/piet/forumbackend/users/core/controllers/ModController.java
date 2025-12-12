@@ -1,5 +1,6 @@
 package org.piet.forumbackend.users.core.controllers;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.piet.forumbackend.globals.exceptions.NotFoundException;
@@ -16,6 +17,7 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("${forum.api.prefix}/mod/users")
 @RequiredArgsConstructor
+@Tag(name = "Mod Controller", description = "Endpoints for mod user site management.")
 public class ModController {
 
     private final UserService userService;
