@@ -32,7 +32,7 @@ public class User implements UserDetails {
     UUID id;
 
     @Column(unique = true)
-    @Length(min = 5, max = 20)
+    @Length(min = 4, max = 20)
     String username;
 
     @Length(min = 2, max = 30)
@@ -53,6 +53,8 @@ public class User implements UserDetails {
     Instant bannedUntil;
     Instant mutedUntil;
     String banReason;
+
+    String profilePicUrl;
 
     @Enumerated(EnumType.STRING)
     @Convert(converter = RoleConverter.class)

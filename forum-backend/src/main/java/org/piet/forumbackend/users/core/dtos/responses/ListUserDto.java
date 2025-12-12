@@ -19,4 +19,7 @@ public class ListUserDto implements Serializable {
     String name;
     @Length(min = 2, max = 30)
     String surname;
+
+    String profilePicUrl;
+
 }

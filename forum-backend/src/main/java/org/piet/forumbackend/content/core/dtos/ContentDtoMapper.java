@@ -5,7 +5,7 @@ import org.piet.forumbackend.content.core.dtos.responses.content.ParentContentDt
 import org.piet.forumbackend.content.core.entities.Content;
 import org.piet.forumbackend.content.core.entities.ContentVote;
 import org.piet.forumbackend.content.core.entities.enums.VoteType;
-import org.piet.forumbackend.users.core.dtos.responses.ContentUserDto;
+import org.piet.forumbackend.users.core.dtos.UsersDtoMapper;
 import org.piet.forumbackend.users.core.entities.User;
 
 import java.util.List;
@@ -14,7 +14,7 @@ public class ContentDtoMapper {
     public static ContentDto toContentDto(Content content, List<ContentVote> votes, User currentUser){
         return new ContentDto(
                 content.getId(),
-                new ContentUserDto(content.getAuthor().getUsername(), content.getAuthor().getId()),
+                UsersDtoMapper.toListUserDto(content.getAuthor()),
                 content.getContent(),
                 content.getCreatedAt(),
                 content.getContentType(),
@@ -33,7 +33,7 @@ public class ContentDtoMapper {
     public static ContentDto toContentDto(Content content){
         return new ContentDto(
                 content.getId(),
-                new ContentUserDto(content.getAuthor().getUsername(), content.getAuthor().getId()),
+                UsersDtoMapper.toListUserDto(content.getAuthor()),
                 content.getContent(),
                 content.getCreatedAt(),
                 content.getContentType(),

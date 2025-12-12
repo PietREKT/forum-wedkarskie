@@ -19,6 +19,7 @@ public class UserDto implements Serializable {
     String email;
     String phone;
     RoleDto role;
+    String profilePicUrl;
 
 
     Set<ListUserDto> friends;

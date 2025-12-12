@@ -4,7 +4,7 @@ import lombok.Value;
 import org.piet.forumbackend.content.core.entities.Content;
 import org.piet.forumbackend.content.core.entities.enums.ContentType;
 import org.piet.forumbackend.content.core.entities.enums.VoteType;
-import org.piet.forumbackend.users.core.dtos.responses.ContentUserDto;
+import org.piet.forumbackend.users.core.dtos.responses.ListUserDto;
 
 import java.io.Serializable;
 import java.time.Instant;
@@ -17,7 +17,7 @@ import java.util.Map;
 @Value
 public class ContentDto implements Serializable {
     Long id;
-    ContentUserDto author;
+    ListUserDto author;
     String content;
     Instant createdAt;
     ContentType contentType;

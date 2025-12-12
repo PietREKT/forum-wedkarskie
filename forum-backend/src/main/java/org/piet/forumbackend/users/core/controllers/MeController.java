@@ -13,6 +13,7 @@ import org.piet.forumbackend.globals.exceptions.NotFoundException;
 import org.piet.forumbackend.globals.pagination.PageDto;
 import org.piet.forumbackend.globals.pagination.PaginationDto;
 import org.piet.forumbackend.users.core.dtos.UsersDtoMapper;
+import org.piet.forumbackend.users.core.dtos.requests.ChangeProfilePicDto;
 import org.piet.forumbackend.users.core.dtos.responses.UserDto;
 import org.piet.forumbackend.users.core.exceptions.UserNotLoggedInException;
 import org.piet.forumbackend.users.core.services.UserService;
@@ -22,6 +23,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import java.io.IOException;
 import java.util.UUID;
 @RestController
 @RequestMapping("${forum.api.prefix}/users/me")
@@ -38,6 +40,13 @@ public class MeController {
     public ResponseEntity<UserDto> getUserInfo(Authentication auth) throws UserNotLoggedInException {
         UserDto dto = UsersDtoMapper.toUserDto(userService.getUserFromAuth(auth));
         return ResponseEntity.ok(dto);
+    }
+
+    @PostMapping("/pic")
+    public ResponseEntity<?> setProfilePic(@ModelAttribute ChangeProfilePicDto dto) throws UserNotLoggedInException, IOException {
+        userService.setUserProfilePic(dto.getProfilePic());
+
+        return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/groups")

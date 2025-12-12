@@ -10,7 +10,9 @@ import org.piet.forumbackend.users.core.exceptions.UserNotLoggedInException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.Authentication;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -59,4 +61,6 @@ public interface UserService {
     void changeUserRole(UUID userToChange, Role newRole) throws NotFoundException, UserNotLoggedInException;
 
     List<ListUserDto> searchByUsernamePrefix(String prefix);
+
+    void setUserProfilePic(MultipartFile pic) throws UserNotLoggedInException, IOException;
 }

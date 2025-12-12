@@ -19,6 +19,7 @@ public class UsersDtoMapper {
                 user.getEmail(),
                 user.getPhone(),
                 user.getRole() != null ? UsersDtoMapper.toRoleDto(user.getRole()) : null,
+                user.getProfilePicUrl(),
                 user.getFriends().stream().map(UsersDtoMapper::toListUserDto).collect(Collectors.toSet())
         );
     }
@@ -35,7 +36,8 @@ public class UsersDtoMapper {
                 user.getId(),
                 user.getUsername(),
                 user.getName(),
-                user.getSurname()
+                user.getSurname(),
+                user.getProfilePicUrl()
         );
     }
 

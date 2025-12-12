@@ -3,6 +3,7 @@ package org.piet.forumbackend.users.core.services;
 import lombok.RequiredArgsConstructor;
 import org.piet.forumbackend.globals.exceptions.NotFoundException;
 import org.piet.forumbackend.globals.pagination.PaginationDto;
+import org.piet.forumbackend.globals.properties.FileProperties;
 import org.piet.forumbackend.globals.security.SecurityUserDto;
 import org.piet.forumbackend.users.core.dtos.UsersDtoMapper;
 import org.piet.forumbackend.users.core.dtos.requests.RegisterUserDto;
@@ -22,7 +23,10 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.File;
+import java.io.IOException;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -35,6 +39,7 @@ public class UserServiceImpl implements UserService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final MessageSource messageSource;
+    private final FileProperties fileProperties;
 
     private void checkUserToBeBannedHasHigherPerms(User user, User currentUser) throws AccessDeniedException{
         if (user.getRole().hasPermsAtLeast(currentUser.getRole())){
@@ -222,5 +227,20 @@ public class UserServiceImpl implements UserService {
                 .stream()
                 .map(UsersDtoMapper::toListUserDto)
                 .toList();
+    }
+
+    @Override
+    @Transactional
+    public void setUserProfilePic(MultipartFile pic) throws UserNotLoggedInException, IOException {
+        User user = getCurrentUser();
+
+        File userFiles = fileProperties.getUserFilesFolder();
+        String ext = FileProperties.getFileExtension(pic.getOriginalFilename());
+        File profilePic = new File(userFiles, user.getId() + ext);
+
+        pic.transferTo(profilePic);
+
+        user.setProfilePicUrl("/uploads/" + profilePic.getName());
+        userRepository.save(user);
     }
 }
