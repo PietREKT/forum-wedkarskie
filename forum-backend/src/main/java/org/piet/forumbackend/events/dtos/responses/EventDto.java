@@ -2,7 +2,7 @@ package org.piet.forumbackend.events.dtos.responses;
 
 import lombok.Value;
 import org.hibernate.validator.constraints.Length;
-import org.piet.forumbackend.fishing_spots.dtos.responses.FishingSpotDto;
+import org.piet.forumbackend.fishing_spots.core.dtos.responses.FishingSpotDto;
 import org.piet.forumbackend.users.core.dtos.responses.ListUserDto;
 import org.piet.forumbackend.users.groups.dtos.responses.ListUserGroupDto;
 

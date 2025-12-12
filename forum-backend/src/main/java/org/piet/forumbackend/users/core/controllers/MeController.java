@@ -1,13 +1,15 @@
 package org.piet.forumbackend.users.core.controllers;
 
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.piet.forumbackend.events.dtos.responses.EventDto;
 import org.piet.forumbackend.events.services.EventsService;
-import org.piet.forumbackend.fishing_spots.dtos.FishingSpotListDto;
-import org.piet.forumbackend.fishing_spots.dtos.requests.GetFishingSpotDto;
-import org.piet.forumbackend.fishing_spots.services.FishingSpotService;
+import org.piet.forumbackend.fishing_spots.core.dtos.requests.GetFishingSpotDto;
+import org.piet.forumbackend.fishing_spots.core.dtos.responses.FishingSpotListDto;
+import org.piet.forumbackend.fishing_spots.core.services.FishingSpotService;
+import org.piet.forumbackend.globals.exceptions.NotFoundException;
 import org.piet.forumbackend.globals.pagination.PageDto;
 import org.piet.forumbackend.globals.pagination.PaginationDto;
 import org.piet.forumbackend.users.core.dtos.UsersDtoMapper;
@@ -24,6 +26,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("${forum.api.prefix}/users/me")
 @RequiredArgsConstructor
+@Tag(name = "Me Controller", description = "Endpoints for current user info/management.")
 public class MeController {
     private final UserService userService;
     private final UserGroupService userGroupService;
@@ -68,14 +71,14 @@ public class MeController {
     }
 
     @PostMapping("/spots/favourites/add")
-    public ResponseEntity<?> addFavouriteFishingSpot(@Valid @RequestBody GetFishingSpotDto dto) throws UserNotLoggedInException {
+    public ResponseEntity<?> addFavouriteFishingSpot(@Valid @RequestBody GetFishingSpotDto dto) throws UserNotLoggedInException, NotFoundException {
         fishingSpotService.addFishingSpotToFavourites(dto.getId());
 
         return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/spots/favourites/remove")
-    public ResponseEntity<?> removeFavouriteFishingSpot(@Valid @RequestBody GetFishingSpotDto dto) throws UserNotLoggedInException {
+    public ResponseEntity<?> removeFavouriteFishingSpot(@Valid @RequestBody GetFishingSpotDto dto) throws UserNotLoggedInException, NotFoundException {
         fishingSpotService.removeFishingSpotFromFavourites(dto.getId());
 
         return ResponseEntity.noContent().build();

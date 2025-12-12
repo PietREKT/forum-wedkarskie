@@ -7,7 +7,7 @@ import org.piet.forumbackend.fish.dtos.FishListDto;
 import org.piet.forumbackend.fish.entities.enums.FishingMethod;
 import org.piet.forumbackend.fish.entities.enums.WaterType;
 import org.piet.forumbackend.fish.services.FishService;
-import org.piet.forumbackend.fishing_spots.exceptions.FishNotFoundException;
+import org.piet.forumbackend.fishing_spots.core.exceptions.FishNotFoundException;
 import org.piet.forumbackend.globals.exceptions.NotFoundException;
 import org.piet.forumbackend.globals.pagination.PageDto;
 import org.piet.forumbackend.globals.pagination.PaginationDto;
@@ -36,6 +36,13 @@ public class FishController {
         var dto = fishService.getFishDtoById(id);
 
         return ResponseEntity.ok(dto);
+    }
+
+    @GetMapping
+    public ResponseEntity<PageDto<FishListDto>> getFish(PaginationDto pagination){
+        var dto = fishService.getFish(pagination.toPageable());
+
+        return ResponseEntity.ok(PageDto.of(dto));
     }
 
     @GetMapping("/methods")

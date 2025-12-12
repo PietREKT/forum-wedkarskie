@@ -9,7 +9,7 @@ import org.piet.forumbackend.fish.entities.Fish;
 import org.piet.forumbackend.fish.entities.enums.FishingMethod;
 import org.piet.forumbackend.fish.entities.enums.WaterType;
 import org.piet.forumbackend.fish.repositories.FishRepository;
-import org.piet.forumbackend.fishing_spots.exceptions.FishNotFoundException;
+import org.piet.forumbackend.fishing_spots.core.exceptions.FishNotFoundException;
 import org.piet.forumbackend.globals.exceptions.NotFoundException;
 import org.piet.forumbackend.globals.exceptions.UnauthorizedAccessException;
 import org.piet.forumbackend.globals.pagination.PageDto;
@@ -147,8 +147,8 @@ public class FishService {
         return fishRepository.save(fish);
     }
 
-    public List<Fish> getFish(Pageable pageable) {
-        return fishRepository.findAll(pageable).getContent();
+    public Page<FishListDto> getFish(Pageable pageable) {
+        return fishRepository.findAll(pageable).map(FishListDto::create);
     }
 
     public List<FishingMethod> getMethods() {

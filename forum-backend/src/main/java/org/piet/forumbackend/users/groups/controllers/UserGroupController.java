@@ -1,9 +1,10 @@
 package org.piet.forumbackend.users.groups.controllers;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.piet.forumbackend.content.dtos.responses.content.ContentDto;
-import org.piet.forumbackend.content.services.ContentService;
+import org.piet.forumbackend.content.core.dtos.responses.content.ContentDto;
+import org.piet.forumbackend.content.core.services.ContentService;
 import org.piet.forumbackend.events.dtos.responses.EventDto;
 import org.piet.forumbackend.events.services.EventsService;
 import org.piet.forumbackend.globals.exceptions.NotFoundException;
@@ -32,6 +33,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("${forum.api.prefix}/users/groups")
 @RequiredArgsConstructor
+@Tag(name = "Groups", description = "Endpoints for user groups - normal users only")
 public class UserGroupController {
     private final UserService userService;
     private final UserGroupService userGroupService;

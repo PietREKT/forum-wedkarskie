@@ -262,3 +262,44 @@ INSERT INTO user_events (event_id, user_id, status) VALUES
                                                             ( 1, '33333333-3333-3333-3333-333333333333', 'INVITED');   -- another user invited
 
 
+------------------------------------------------------------
+--  FISHING SPOT OPINIONS (each user can rate a spot once)
+------------------------------------------------------------
+INSERT INTO fishing_spots_opinions (rating, comment, user_id, spot_id, created_at)
+VALUES
+    (5,
+     'Świetne łowisko, dużo miejsca i spokój.',
+     '22222222-2222-2222-2222-222222222222',  -- janek
+     1,
+     '2025-02-10T08:30:00Z'),
+
+    (4,
+     'Fajne miejsce, ale dojazd mógłby być lepszy.',
+     '33333333-3333-3333-3333-333333333333',  -- kasia
+     1,
+     '2025-02-11T09:15:00Z'),
+
+    (3,
+     'Średnio, złowiłem niewiele, ale może to nie był mój dzień.',
+     '44444444-4444-4444-4444-444444444444',  -- marek
+     1,
+     '2025-02-11T15:40:00Z'),
+
+    (5,
+     'Super klimat, idealne miejsce na wieczorne wędkowanie.',
+     '55555555-5555-5555-5555-555555555555',  -- janek2
+     1,
+     '2025-02-12T06:10:00Z'),
+
+    (2,
+     'Dużo zaczepów, trudno się łowi. Raczej nie wrócę.',
+     '66666666-6666-6666-6666-666666666666',  -- janusz
+     1,
+     '2025-02-12T18:05:00Z'),
+
+    (4,
+     'Ładne otoczenie, zadbane brzegi, ryby biorą przyzwoicie.',
+     '77777777-7777-7777-7777-777777777777',  -- janina
+     1,
+     '2025-02-13T10:25:00Z');
+
