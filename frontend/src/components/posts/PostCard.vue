@@ -1,32 +1,26 @@
 <template>
   <article class="rounded-xl shadow-sm p-4 relative border theme-border theme-card theme-text">
     <!-- małe okienko potwierdzenia zgłoszenia -->
-    <div
-        v-if="reportSuccess"
-        class="absolute top-2 right-4 z-40 pointer-events-none"
-    >
+    <div v-if="reportSuccess" class="absolute top-2 right-4 z-40 pointer-events-none">
       <div
           class="rounded-md border border-emerald-500
-           bg-emerald-100 dark:bg-emerald-900
-           px-3 py-1.5 text-xs
-           text-emerald-800 dark:text-emerald-100
-           shadow-lg"
+               bg-emerald-100 dark:bg-emerald-900
+               px-3 py-1.5 text-xs
+               text-emerald-800 dark:text-emerald-100
+               shadow-lg"
       >
         Zgłoszenie zostało wysłane.
       </div>
     </div>
 
     <!-- małe okienko błędu głosowania -->
-    <div
-        v-if="voteError"
-        class="absolute top-2 right-4 z-40 mt-8 pointer-events-none"
-    >
+    <div v-if="voteError" class="absolute top-2 right-4 z-40 mt-8 pointer-events-none">
       <div
           class="rounded-md border border-red-500
-           bg-red-100 dark:bg-red-900
-           px-3 py-1.5 text-xs
-           text-red-800 dark:text-red-100
-           shadow-lg"
+               bg-red-100 dark:bg-red-900
+               px-3 py-1.5 text-xs
+               text-red-800 dark:text-red-100
+               shadow-lg"
       >
         {{ voteError }}
       </div>
@@ -63,7 +57,6 @@
           </div>
         </RouterLink>
 
-        <!-- Obserwuj tylko dla zalogowanych -->
         <UserFollowButton
             v-if="authorUsername && isAuth"
             class="ml-2"
@@ -71,7 +64,7 @@
         />
       </header>
 
-      <!-- Menu Akcje (tylko dla zalogowanych) -->
+      <!-- Menu Akcje -->
       <div v-if="showActions" class="relative">
         <button
             type="button"
@@ -100,6 +93,7 @@
           >
             Edytuj
           </button>
+
           <button
               v-if="canDelete"
               type="button"
@@ -108,6 +102,7 @@
           >
             Usuń
           </button>
+
           <button
               v-if="canReport"
               type="button"
@@ -125,15 +120,15 @@
       <!-- tryb edycji -->
       <div v-if="editing" class="space-y-3">
         <textarea
-            v-model.trim="editContent"
+            v-model="editContent"
             class="w-full rounded-md border theme-border theme-card px-3 py-2 text-sm"
             rows="3"
         />
 
-        <!-- edycja zdjęć -->
         <div class="space-y-2 text-xs">
           <div v-if="existingPhotos.length">
             <p class="font-semibold mb-1">Aktualne zdjęcia:</p>
+
             <div class="flex flex-wrap gap-2">
               <div
                   v-for="name in existingPhotos"
@@ -176,11 +171,7 @@
                   :key="idx"
                   class="relative w-20 h-20 rounded-md overflow-hidden border theme-border"
               >
-                <img
-                    :src="src"
-                    alt="Podgląd"
-                    class="w-full h-full object-cover"
-                />
+                <img :src="src" alt="Podgląd" class="w-full h-full object-cover" />
               </div>
             </div>
           </div>
@@ -204,6 +195,7 @@
             {{ savingEdit ? 'Zapisywanie...' : 'Zapisz' }}
           </button>
         </div>
+
         <p v-if="localError" class="mt-1 text-xs text-red-600">
           {{ localError }}
         </p>
@@ -212,7 +204,7 @@
       <!-- normalny widok -->
       <div v-else class="space-y-3">
         <p class="text-sm whitespace-pre-wrap">
-          {{ post.content }}
+          {{ props.post.content }}
         </p>
 
         <img
@@ -239,7 +231,7 @@
       <button
           type="button"
           class="px-3 py-1.5 text-xs md:text-sm rounded-md border theme-border flex items-center gap-1"
-          :class="post.viewerVote === 1 ? 'bg-emerald-600 text-white' : ''"
+          :class="props.post.viewerVote === 1 ? 'bg-emerald-600 text-white' : ''"
           @click="voteUp"
       >
         Podoba mi się
@@ -247,13 +239,13 @@
       <button
           type="button"
           class="px-3 py-1.5 text-xs md:text-sm rounded-md border theme-border flex items-center gap-1"
-          :class="post.viewerVote === -1 ? 'bg-red-600 text-white' : ''"
+          :class="props.post.viewerVote === -1 ? 'bg-red-600 text-white' : ''"
           @click="voteDown"
       >
         Nie podoba mi się
       </button>
       <span class="ml-2 text-xs md:text-sm theme-muted">
-        Ocena: {{ post.rating ?? 0 }}
+        Ocena: {{ props.post.rating ?? 0 }}
       </span>
     </footer>
 
@@ -262,7 +254,7 @@
       <CommentsSection :post-id="postId" />
     </section>
 
-    <!-- Potwierdzenie usunięcia (autor lub admin/root) -->
+    <!-- Potwierdzenie usunięcia -->
     <section v-if="showDeleteConfirm" class="mt-4">
       <div
           class="rounded-lg border theme-border bg-red-50 dark:bg-red-900/20 px-3 py-2 text-xs flex items-start justify-between gap-3"
@@ -275,6 +267,7 @@
             Tej operacji nie można cofnąć.
           </p>
         </div>
+
         <div class="flex items-center gap-2">
           <button
               type="button"
@@ -322,8 +315,9 @@ const savingEdit = ref(false)
 const localError = ref('')
 
 const existingPhotos = ref(
-    props.post?.attachedPhotos ? [...props.post.attachedPhotos] : [],
+    Array.isArray(props.post?.attachedPhotos) ? [...props.post.attachedPhotos] : [],
 )
+
 const newFiles = ref([])
 const newPreviews = ref([])
 
@@ -337,9 +331,11 @@ const reportSuccess = ref(false)
 
 const voteError = ref('')
 let voteErrorTimer = null
+let reportSuccessTimer = null
 
 onBeforeUnmount(() => {
   if (voteErrorTimer) clearTimeout(voteErrorTimer)
+  if (reportSuccessTimer) clearTimeout(reportSuccessTimer)
   newPreviews.value.forEach(u => URL.revokeObjectURL(u))
 })
 
@@ -354,15 +350,15 @@ const postId = computed(() => posts.getId(props.post))
 
 const currentUser = computed(() => auth.user)
 const isAuth = computed(() => !!auth.user)
-const isAdmin = computed(() => !!auth.isAdmin)
-
 const currentUsername = computed(() => currentUser.value?.username || '')
 
 const authorUsername = computed(() => props.post?.author?.username || '')
+
 const avatarSrc = computed(() => {
   const url = props.post?.author?.avatarUrl || props.post?.author?.avatar
   return url ? mediaUrl(url) : ''
 })
+
 const authorInitials = computed(() => {
   const u = authorUsername.value
   return u ? u.slice(0, 2).toUpperCase() : '??'
@@ -385,10 +381,9 @@ const firstPhoto = computed(() => {
 
 const canSaveEdit = computed(() => editContent.value.trim().length > 0)
 
-// autor LUB admin/root
+// edycja/usuwanie: tylko autor
 const canEdit = computed(() => {
   if (!isAuth.value) return false
-  if (isAdmin.value) return true
   return currentUsername.value && currentUsername.value === authorUsername.value
 })
 
@@ -400,7 +395,6 @@ const canReport = computed(() => {
   return currentUsername.value !== authorUsername.value
 })
 
-// menu akcji widoczne tylko gdy zalogowany i ma cokolwiek do zrobienia
 const showActions = computed(() => {
   if (!isAuth.value) return false
   return canEdit.value || canDelete.value || canReport.value
@@ -411,9 +405,10 @@ function toggleMenu() {
 }
 
 function resetEditPhotos() {
-  existingPhotos.value = props.post?.attachedPhotos
+  existingPhotos.value = Array.isArray(props.post?.attachedPhotos)
       ? [...props.post.attachedPhotos]
       : []
+
   newFiles.value = []
   newPreviews.value.forEach(u => URL.revokeObjectURL(u))
   newPreviews.value = []
@@ -506,7 +501,8 @@ async function sendReport(reasonKey) {
     await posts.reportPost({ postId: postId.value, reason: reasonKey })
     reporting.value = false
     reportSuccess.value = true
-    setTimeout(() => (reportSuccess.value = false), 3000)
+    if (reportSuccessTimer) clearTimeout(reportSuccessTimer)
+    reportSuccessTimer = setTimeout(() => (reportSuccess.value = false), 3000)
   } catch {
     reportError.value = 'Nie udało się wysłać zgłoszenia.'
   } finally {

@@ -1,3 +1,4 @@
+// src/stores/posts.js
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { apiClient } from '../utils/axios.js'
@@ -10,9 +11,9 @@ export const usePostsStore = defineStore('posts', () => {
     const total = ref(0)
     const error = ref(null)
 
-    // filtry
-    const userFilterId = ref(null)   // /posts/user/{userId}
-    const groupFilterId = ref(null)  // /users/groups/{groupId}/posts
+    // null = globalny feed (/posts/recent)
+    // nie-null = posty użytkownika (/posts/user/{userId})
+    const userFilterId = ref(null)
 
     function clearError() {
         error.value = null
@@ -42,13 +43,24 @@ export const usePostsStore = defineStore('posts', () => {
         items.value.splice(idx, 1, updated)
     }
 
-    function reset({ userId = null, groupId = null } = {}) {
+    // reset może przyjąć:
+    // - reset("uuid")
+    // - reset(null)
+    // - reset({ userId: "uuid" })
+    function reset(arg = null) {
+        let userId = null
+
+        if (arg && typeof arg === 'object') {
+            userId = arg.userId ?? null
+        } else {
+            userId = arg ?? null
+        }
+
         items.value = []
         page.value = 0
         total.value = 0
         error.value = null
         userFilterId.value = userId
-        groupFilterId.value = groupId
     }
 
     function mapVoteToNumber(v) {
@@ -68,17 +80,11 @@ export const usePostsStore = defineStore('posts', () => {
         const viewerVote = mapVoteToNumber(voteSource)
         const rating = typeof raw.rating === 'number' ? raw.rating : 0
 
-        return { ...raw, viewerVote, rating }
-    }
-
-    function resolveBasePath() {
-        if (groupFilterId.value) {
-            return `/users/groups/${encodeURIComponent(groupFilterId.value)}/posts`
+        return {
+            ...raw,
+            viewerVote,
+            rating,
         }
-        if (userFilterId.value) {
-            return `/posts/user/${encodeURIComponent(userFilterId.value)}`
-        }
-        return '/posts/recent'
     }
 
     async function fetchNext() {
@@ -87,7 +93,11 @@ export const usePostsStore = defineStore('posts', () => {
         loading.value = true
 
         try {
-            const resp = await apiClient.get(resolveBasePath(), {
+            const basePath = userFilterId.value
+                ? `/posts/user/${encodeURIComponent(String(userFilterId.value))}`
+                : '/posts/recent'
+
+            const resp = await apiClient.get(basePath, {
                 params: { page: page.value, size: size.value },
             })
 
@@ -122,7 +132,9 @@ export const usePostsStore = defineStore('posts', () => {
             const post = normalizePost(resp.data)
 
             const existingIdx = findIndexById(getId(post))
-            if (existingIdx !== -1) items.value.splice(existingIdx, 1, post)
+            if (existingIdx !== -1) {
+                items.value.splice(existingIdx, 1, post)
+            }
 
             return post
         } catch (e) {
@@ -138,13 +150,15 @@ export const usePostsStore = defineStore('posts', () => {
         clearError()
 
         const text = (content || '').trim()
-        if (!text) {
-            error.value = 'Treść posta jest wymagana.'
-            throw new Error('Missing content')
+        const hasFiles = Array.isArray(files) && files.length > 0
+
+        if (!text && !hasFiles) {
+            error.value = 'Post musi mieć treść lub załącznik.'
+            throw new Error('Missing content/files')
         }
 
         const fd = new FormData()
-        fd.append('content', text)
+        fd.append('content', text) // może być pusty string jeśli są zdjęcia
         files.forEach(f => fd.append('photos', f))
 
         try {
@@ -155,16 +169,21 @@ export const usePostsStore = defineStore('posts', () => {
 
             items.value = [created, ...items.value]
             total.value += 1
+
             return created
         } catch (e) {
             console.error('createPost error', e)
             const status = e?.response?.status
-            if (status === 401) error.value = 'Musisz być zalogowany, aby dodać post.'
-            else setErrorFromAxios(e, 'Nie udało się utworzyć posta.')
+            if (status === 401) {
+                error.value = 'Musisz być zalogowany, aby dodać post.'
+            } else {
+                setErrorFromAxios(e, 'Nie udało się utworzyć posta.')
+            }
             throw e
         }
     }
 
+    // edycja posta (tekst + zdjęcia) – z obejściem "__EMPTY__"
     async function editPost({ id, content, newPhotos = [], attachedPhotos = [] }) {
         clearError()
 
@@ -181,6 +200,8 @@ export const usePostsStore = defineStore('posts', () => {
 
             if (Array.isArray(attachedPhotos) && attachedPhotos.length) {
                 attachedPhotos.forEach(name => fd.append('attachedPhotos', name))
+            } else {
+                fd.append('attachedPhotos', '__EMPTY__')
             }
 
             newPhotos.forEach(file => fd.append('newPhotos', file))
@@ -190,15 +211,17 @@ export const usePostsStore = defineStore('posts', () => {
             })
 
             const updated = normalizePost(resp.data)
-            const pid = getId(updated)
-            setPostLocal(pid, () => updated)
+            setPostLocal(getId(updated), () => updated)
 
             return updated
         } catch (e) {
             console.error('editPost error', e)
             const status = e?.response?.status
-            if (status === 401) error.value = 'Musisz być zalogowany, aby edytować post.'
-            else setErrorFromAxios(e, 'Nie udało się zaktualizować posta.')
+            if (status === 401) {
+                error.value = 'Musisz być zalogowany, aby edytować post.'
+            } else {
+                setErrorFromAxios(e, 'Nie udało się zaktualizować posta.')
+            }
             throw e
         }
     }
@@ -212,12 +235,16 @@ export const usePostsStore = defineStore('posts', () => {
         } catch (e) {
             console.error('deletePost error', e)
             const status = e?.response?.status
-            if (status === 401) error.value = 'Musisz być zalogowany, aby usuwać posty.'
-            else setErrorFromAxios(e, 'Nie udało się usunąć posta.')
+            if (status === 401) {
+                error.value = 'Musisz być zalogowany, aby usuwać posty.'
+            } else {
+                setErrorFromAxios(e, 'Nie udało się usunąć posta.')
+            }
             throw e
         }
     }
 
+    // optymistyczna aktualizacja głosu
     function applyLocalVote(id, direction) {
         const idx = findIndexById(id)
         if (idx === -1) return null
@@ -257,7 +284,11 @@ export const usePostsStore = defineStore('posts', () => {
                 const idx = findIndexById(id)
                 if (idx !== -1) {
                     const post = items.value[idx]
-                    items.value.splice(idx, 1, { ...post, viewerVote: backup.prevVote, rating: backup.prevRating })
+                    items.value.splice(idx, 1, {
+                        ...post,
+                        viewerVote: backup.prevVote,
+                        rating: backup.prevRating,
+                    })
                 }
             }
         }
@@ -276,7 +307,11 @@ export const usePostsStore = defineStore('posts', () => {
                 const idx = findIndexById(id)
                 if (idx !== -1) {
                     const post = items.value[idx]
-                    items.value.splice(idx, 1, { ...post, viewerVote: backup.prevVote, rating: backup.prevRating })
+                    items.value.splice(idx, 1, {
+                        ...post,
+                        viewerVote: backup.prevVote,
+                        rating: backup.prevRating,
+                    })
                 }
             }
         }
@@ -284,18 +319,25 @@ export const usePostsStore = defineStore('posts', () => {
 
     async function reportPost({ postId, reason = 'SPAM' }) {
         clearError()
+
         if (!postId) {
             error.value = 'Brak identyfikatora zgłaszanego posta.'
             throw new Error('Missing postId')
         }
 
         try {
-            await apiClient.post('/reports/posts/report', { contentId: postId, reason })
+            await apiClient.post('/reports/posts/report', {
+                contentId: postId,
+                reason,
+            })
         } catch (e) {
             console.error('reportPost error', e)
             const status = e?.response?.status
-            if (status === 401) error.value = 'Musisz być zalogowany, aby zgłaszać posty.'
-            else setErrorFromAxios(e, 'Nie udało się zgłosić posta.')
+            if (status === 401) {
+                error.value = 'Musisz być zalogowany, aby zgłaszać posty.'
+            } else {
+                setErrorFromAxios(e, 'Nie udało się zgłosić posta.')
+            }
             throw e
         }
     }
@@ -307,9 +349,7 @@ export const usePostsStore = defineStore('posts', () => {
         size,
         total,
         error,
-
         userFilterId,
-        groupFilterId,
 
         clearError,
         getId,
@@ -321,6 +361,7 @@ export const usePostsStore = defineStore('posts', () => {
         createPost,
         editPost,
         deletePost,
+
         voteUp,
         voteDown,
 

@@ -43,7 +43,6 @@ const isAdmin = computed(() => !!auth.isAdmin)
 const sectionOpen = ref(true)
 
 /* status nad listą */
-
 const statusMessage = ref('')
 const statusType = ref('info') // 'info' | 'success' | 'error'
 let statusTimer = null
@@ -65,7 +64,6 @@ function showStatus(msg, type = 'info') {
 }
 
 /* powody zgłoszeń */
-
 const REPORT_REASONS = [
   { code: 'SPAM', label: 'Spam lub treści bezwartościowe' },
   { code: 'UNPAID_AD', label: 'Ukryta / nieoznaczona reklama' },
@@ -92,7 +90,6 @@ function date(d) {
 }
 
 /* dodawanie komentarza */
-
 async function submit() {
   const text = (content.value || '').trim()
   if (!text) return
@@ -140,10 +137,14 @@ async function sendReply() {
   }
 }
 
-/* dzieci / drzewo */
+/* dzieci / drzewo
+   UWAGA: nie odpalamy fetchChildren w renderze (bo robi spam requestów).
+*/
+function ensureChildrenLoaded(parentId) {
+  comments.fetchChildren(props.postId, parentId)
+}
 
 function childrenOf(id) {
-  comments.fetchChildren(props.postId, id)
   return (state.value.list || []).filter(c => c.parentId === id)
 }
 
@@ -160,6 +161,10 @@ function toggleReplies(id) {
     ...showAllReplies.value,
     [id]: !showAllReplies.value[id],
   }
+  // przy pierwszym rozwinięciu dopiero dociągnij dzieci
+  if (showAllReplies.value[id]) {
+    ensureChildrenLoaded(id)
+  }
 }
 
 const topLevelComments = computed(() => {
@@ -171,7 +176,6 @@ const topLevelComments = computed(() => {
 const totalCount = computed(() => state.value.list.length)
 
 /* menu / uprawnienia */
-
 function toggleMenu(id) {
   menuFor.value = menuFor.value === id ? null : id
 }
@@ -190,7 +194,6 @@ function canReport(c) {
 }
 
 /* edycja */
-
 function startEdit(c) {
   editingId.value = c.id
   editContent.value = c.content || ''
@@ -216,7 +219,6 @@ async function applyEdit(c) {
 }
 
 /* usuwanie */
-
 function confirmRemove(c) {
   deleteConfirmComment.value = c
   menuFor.value = null
@@ -240,13 +242,11 @@ async function doRemove() {
 }
 
 /* ładowanie kolejnych stron */
-
 function loadMore() {
   if (!state.value.loading) comments.fetchNext(props.postId)
 }
 
 /* zgłoszenia */
-
 function openReportPanel(c) {
   if (!canReport(c)) return
   reportForComment.value = c
@@ -277,7 +277,6 @@ async function sendReport(reason) {
 
 <template>
   <div class="mt-2">
-    <!-- nagłówek sekcji -->
     <div class="flex items-center justify-between">
       <button
           class="text-sm theme-text font-medium"
@@ -292,7 +291,6 @@ async function sendReport(reason) {
     </div>
 
     <div v-if="sectionOpen" class="mt-3 space-y-3">
-      <!-- formularz dodawania komentarza -->
       <form v-if="isAuth" class="space-y-2" @submit.prevent="submit">
         <textarea
             v-model="content"
@@ -315,7 +313,6 @@ async function sendReport(reason) {
         Zaloguj się, aby dodać komentarz.
       </p>
 
-      <!-- status -->
       <div
           v-if="statusMessage"
           class="text-xs border rounded-md px-3 py-2"
@@ -324,14 +321,12 @@ async function sendReport(reason) {
         {{ statusMessage }}
       </div>
 
-      <!-- lista komentarzy -->
       <ul>
         <li
             v-for="c in topLevelComments"
             :key="c.id ?? c.createdAt"
             class="border rounded-md p-3 theme-border theme-card mb-2"
         >
-          <!-- komentarz główny -->
           <div class="flex items-start justify-between gap-3">
             <div class="flex-1">
               <div class="flex items-center gap-2 mb-1">
@@ -366,12 +361,12 @@ async function sendReport(reason) {
                   </button>
                 </div>
               </div>
+
               <p v-else class="text-xs whitespace-pre-wrap theme-text">
                 {{ c.content }}
               </p>
             </div>
 
-            <!-- menu akcji – tylko dla zalogowanych -->
             <div v-if="isAuth" class="relative">
               <button
                   type="button"
@@ -395,6 +390,7 @@ async function sendReport(reason) {
                       Odpowiedz
                     </button>
                   </li>
+
                   <li v-if="canEditOrDelete(c)">
                     <button
                         type="button"
@@ -404,6 +400,7 @@ async function sendReport(reason) {
                       Edytuj
                     </button>
                   </li>
+
                   <li v-if="canEditOrDelete(c)">
                     <button
                         type="button"
@@ -413,6 +410,7 @@ async function sendReport(reason) {
                       Usuń
                     </button>
                   </li>
+
                   <li v-if="canReport(c)">
                     <button
                         type="button"
@@ -427,7 +425,6 @@ async function sendReport(reason) {
             </div>
           </div>
 
-          <!-- odpowiedzi -->
           <div class="mt-2 border-l pl-3 space-y-2">
             <div
                 v-for="r in visibleChildrenOf(c.id)"
@@ -449,7 +446,6 @@ async function sendReport(reason) {
                   </p>
                 </div>
 
-                <!-- menu akcji dla odpowiedzi – tylko zalogowani -->
                 <div v-if="isAuth" class="relative">
                   <button
                       type="button"
@@ -473,6 +469,7 @@ async function sendReport(reason) {
                           Odpowiedz
                         </button>
                       </li>
+
                       <li v-if="canEditOrDelete(r)">
                         <button
                             type="button"
@@ -482,6 +479,7 @@ async function sendReport(reason) {
                           Edytuj
                         </button>
                       </li>
+
                       <li v-if="canEditOrDelete(r)">
                         <button
                             type="button"
@@ -491,6 +489,7 @@ async function sendReport(reason) {
                           Usuń
                         </button>
                       </li>
+
                       <li v-if="canReport(r)">
                         <button
                             type="button"
@@ -506,7 +505,6 @@ async function sendReport(reason) {
               </div>
             </div>
 
-            <!-- przycisk „pokaż więcej odpowiedzi” -->
             <button
                 v-if="childrenOf(c.id).length > 2"
                 type="button"
@@ -519,7 +517,6 @@ async function sendReport(reason) {
               </span>
             </button>
 
-            <!-- formularz odpowiedzi  -->
             <form
                 v-if="replyToId === c.id"
                 class="mt-2 space-y-2"
@@ -552,7 +549,6 @@ async function sendReport(reason) {
         </li>
       </ul>
 
-      <!-- „załaduj więcej” -->
       <div v-if="state.hasMore" class="flex justify-center mt-2">
         <button
             type="button"
@@ -565,7 +561,6 @@ async function sendReport(reason) {
       </div>
     </div>
 
-    <!-- Overlay zgłoszeń -->
     <CommentReportModal
         v-if="reportForComment"
         :comment="reportForComment"
@@ -575,7 +570,6 @@ async function sendReport(reason) {
         @submit="sendReport"
     />
 
-    <!-- Overlay usuwania komentarza -->
     <CommentDeleteModal
         v-if="deleteConfirmComment"
         :comment="deleteConfirmComment"
