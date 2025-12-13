@@ -21,12 +21,8 @@
               class="w-full px-3 py-2 rounded-lg border theme-border bg-[var(--color-bg)] text-xs"
           >
             <option value="">Wybierz grupę…</option>
-            <option
-                v-for="group in groups"
-                :key="group.id"
-                :value="group.id"
-            >
-              {{ group.name }} (admin: {{ group.admin }})
+            <option v-for="group in groups" :key="group.id" :value="group.id">
+              {{ group.name }}
             </option>
           </select>
         </div>
@@ -38,11 +34,7 @@
               class="w-full px-3 py-2 rounded-lg border theme-border bg-[var(--color-bg)] text-xs"
           >
             <option value="">Wybierz łowisko…</option>
-            <option
-                v-for="spot in spots"
-                :key="spot.id"
-                :value="spot.id"
-            >
+            <option v-for="spot in spots" :key="spot.id" :value="spot.id">
               {{ spot.name }}
             </option>
           </select>
@@ -69,31 +61,11 @@
         ></textarea>
       </div>
 
-      <div class="flex items-center gap-3 text-xs">
-        <span class="font-medium">Typ:</span>
-        <button
-            type="button"
-            class="px-2 py-1 rounded-full border theme-border"
-            :class="form.type === 'TRIP' ? 'bg-[var(--color-primary)] text-white' : ''"
-            @click="form.type = 'TRIP'"
-        >
-          Wyjazd
-        </button>
-        <button
-            type="button"
-            class="px-2 py-1 rounded-full border theme-border"
-            :class="form.type === 'COMPETITION' ? 'bg-[var(--color-primary)] text-white' : ''"
-            @click="form.type = 'COMPETITION'"
-        >
-          Zawody
-        </button>
-      </div>
-
       <button
           type="submit"
           class="px-4 py-2 rounded-lg text-xs font-medium bg-[var(--color-primary)]
                text-white shadow"
-          :disabled="isSaving"
+          :disabled="isSaving || !canSubmit"
       >
         {{ isSaving ? 'Zapisywanie...' : 'Zapisz wydarzenie' }}
       </button>
@@ -102,7 +74,7 @@
 </template>
 
 <script setup>
-import { reactive, watch } from 'vue'
+import { reactive, watch, computed } from 'vue'
 
 const props = defineProps({
   groups: { type: Array, required: true },
@@ -118,17 +90,18 @@ const empty = {
   spotId: '',
   dateTime: '',
   description: '',
-  type: 'TRIP',
 }
 
 const form = reactive({ ...empty })
 
+const canSubmit = computed(() => {
+  return String(form.name || '').trim().length >= 1 && String(form.dateTime || '').trim().length >= 1
+})
+
 watch(
     () => props.isSaving,
     (saving, prev) => {
-      if (prev && !saving) {
-        Object.assign(form, empty)
-      }
+      if (prev && !saving) Object.assign(form, empty)
     },
 )
 

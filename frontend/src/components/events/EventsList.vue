@@ -14,11 +14,11 @@
       <li
           v-for="event in events"
           :key="event.id"
-          @click="$emit('select', event.id)"
           class="rounded-lg px-3 py-2 border flex flex-col gap-0.5 cursor-pointer"
-          :class="event.id === selectedId
+          :class="String(event.id) === String(selectedId)
           ? 'border-[var(--color-primary)] bg-[var(--color-surface)]'
           : 'theme-border bg-[var(--color-surface)] opacity-90 hover:opacity-100'"
+          @click="$emit('select', event.id)"
       >
         <div class="flex items-center justify-between">
           <span class="font-medium">{{ event.name }}</span>

@@ -1,9 +1,20 @@
 --
-insert into app_users(id, username, name, surname, password, role)
-values ('00000000-0000-0000-0000-000000000001', 'test', 'tName', 'tSurname',
-        '$2a$10$pVf8bDRJzqBQ75LrR7dhEO00av69.V6ZIVy4Zj.nxW.vUcdVE/z0.', 'ROOT');
---  password evaluates to 'test'
+-- ROOT (password = test)
 --
+INSERT INTO app_users (id, username, name, surname, email, password, phone, created_at, role)
+VALUES (
+           '00000000-0000-0000-0000-000000000001',
+           'test',
+           'tName',
+           'tSurname',
+           'root@example.com',
+           '$2a$10$pVf8bDRJzqBQ75LrR7dhEO00av69.V6ZIVy4Zj.nxW.vUcdVE/z0.',
+           '+48000000001',
+           '2025-01-01T00:00:00Z',
+           'ROOT'
+       );
+-- password evaluates to 'test'
+
 -----------------------------------------
 -- REGULAR USERS (ROLE = USER)
 -----------------------------------------
@@ -139,7 +150,6 @@ VALUES ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', '33333333-3333-3333-3333-3333333
 -----------------------------------------
 INSERT INTO user_group_candidates (group_id, user_id)
 VALUES ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', '44444444-4444-4444-4444-444444444444');
-
 
 ------------------------------------------------------------
 --  POSTS / COMMENTS (CONTENT)
@@ -300,6 +310,8 @@ INSERT INTO fishing_methods (fish_id, method) VALUES
 ------------------------------------------------------------
 --  FISHING SPOTS (MULTIPLE TEST SPOTS FOR MAP)
 --  assumes PostGIS + SRID 4326, ST_MakePoint(lng, lat)
+--
+-- UWAGA: owner_id NIE MOŻE BYĆ NULL -> każdy spot ma roota jako właściciela
 ------------------------------------------------------------
 INSERT INTO fishing_spot (
     name,
@@ -326,7 +338,7 @@ INSERT INTO fishing_spot (
        'PUBLIC',
        'ACCEPTED',
        NULL,
-       NULL),
+       '00000000-0000-0000-0000-000000000001'),
 
       -- Spot 3: Staw Rybny Pod Dębem
       ('Staw Rybny Pod Dębem',
@@ -335,7 +347,7 @@ INSERT INTO fishing_spot (
        'PRIVATE',
        'ACCEPTED',
        NULL,
-       '22222222-2222-2222-2222-222222222222'),
+       '00000000-0000-0000-0000-000000000001'),
 
       -- Spot 4: Rzeka Bystra
       ('Rzeka Bystra',
@@ -344,7 +356,7 @@ INSERT INTO fishing_spot (
        'PUBLIC',
        'ACCEPTED',
        NULL,
-       NULL),
+       '00000000-0000-0000-0000-000000000001'),
 
       -- Spot 5: Zbiornik Wodny Młyńskie Oko
       ('Zbiornik Wodny Młyńskie Oko',
@@ -353,7 +365,7 @@ INSERT INTO fishing_spot (
        'PUBLIC',
        'ACCEPTED',
        NULL,
-       '33333333-3333-3333-3333-333333333333');
+       '00000000-0000-0000-0000-000000000001');
 
 ------------------------------------------------------------
 --  LINK FISH TO SPOTS (ManyToMany -> fishing_spots_fish)
@@ -411,3 +423,8 @@ INSERT INTO event (
 INSERT INTO user_events (event_id, user_id, status) VALUES
                                                         (1, '22222222-2222-2222-2222-222222222222', 'CONFIRMED'),
                                                         (1, '33333333-3333-3333-3333-333333333333', 'INVITED');
+
+------------------------------------------------------------
+-- (opcjonalnie) ustawienie sekwencji, jeśli fish.id ma serial/identity
+------------------------------------------------------------
+SELECT setval(pg_get_serial_sequence('fish', 'id'), (SELECT COALESCE(MAX(id), 1) FROM fish));

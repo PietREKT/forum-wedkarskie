@@ -7,7 +7,9 @@ function formatDateTime(isoString) {
     const d = new Date(isoString)
     if (Number.isNaN(d.getTime())) return ''
     const pad = n => String(n).padStart(2, '0')
-    return `${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${d.getFullYear()}, ${pad(d.getHours())}:${pad(d.getMinutes())}`
+    return `${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${d.getFullYear()}, ${pad(d.getHours())}:${pad(
+        d.getMinutes(),
+    )}`
 }
 
 function makeInitials(user) {
@@ -18,8 +20,8 @@ function makeInitials(user) {
         return u.toUpperCase()
     }
     const parts = []
-    if (user.name) parts.push(user.name[0])
-    if (user.surname) parts.push(user.surname[0])
+    if (user.name) parts.push(String(user.name)[0])
+    if (user.surname) parts.push(String(user.surname)[0])
     return parts.join('').toUpperCase()
 }
 
@@ -30,8 +32,18 @@ function pageContent(data) {
     return []
 }
 
-// mapowanie eventu z backendu
-function mapEventDto(dto) {
+function mapUserDto(dto) {
+    if (!dto) return null
+    return {
+        id: dto.id,
+        username: dto.username,
+        name: dto.name,
+        surname: dto.surname,
+        initials: makeInitials(dto),
+    }
+}
+
+function mapEventDto(dto, meId) {
     if (!dto) return null
 
     const spot = dto.location || {}
@@ -47,58 +59,34 @@ function mapEventDto(dto) {
         }
     })
 
+    const creatorId = creator.id ?? null
+    const isOwner = !!(meId && creatorId && String(meId) === String(creatorId))
+
+    // backend potrafi zwracać "participating" zamiast "isParticipating"
+    const isParticipating = dto.isParticipating != null ? !!dto.isParticipating : !!dto.participating
+
     return {
         id: dto.id,
         name: dto.name,
         description: dto.description,
-        type: 'TRIP',
         dateTime: dto.startsAt,
         dateLabel: formatDateTime(dto.startsAt),
+
         spotId: spot.id ?? null,
         spotName: spot.name || 'Brak łowiska',
-        organizerId: creator.id,
-        organizer:
-            creator.username ||
-            [creator.name, creator.surname].filter(Boolean).join(' ') ||
-            'Organizator',
+
+        organizerId: creatorId,
+        organizer: creator.username || [creator.name, creator.surname].filter(Boolean).join(' ') || 'Organizator',
+
         participants,
+
         isPrivate: !!dto.group,
-        isParticipating: !!dto.isParticipating,
+        isParticipating,
+
+        groupId: group.id ?? null,
         groupName: group.name || null,
-    }
-}
 
-function mapGroupListDto(dto) {
-    if (!dto) return null
-    return {
-        id: dto.id,
-        name: dto.name,
-        members: dto.memberCount ?? 0,
-        // /users/me/groups zwraca ZAWSZE „moje” grupy
-        isMine: true,
-    }
-}
-
-function mapGroupDetailsDto(dto) {
-    if (!dto) return null
-
-    const admins = Array.isArray(dto.admins) ? dto.admins : []
-    const adminsIds = new Set(admins.map(a => a.id))
-
-    const membersRaw = Array.isArray(dto.members) ? dto.members : []
-    const members = membersRaw.map(m => ({
-        id: m.id,
-        username: m.username,
-        name: m.name,
-        surname: m.surname,
-        initials: makeInitials(m),
-        isAdmin: adminsIds.has(m.id),
-    }))
-
-    return {
-        id: dto.id,
-        name: dto.name,
-        members,
+        isOwner,
     }
 }
 
@@ -112,6 +100,73 @@ function mapInviteDto(dto) {
     }
 }
 
+function mapSpotListDto(dto) {
+    if (!dto) return null
+    return {
+        id: dto.id,
+        name: dto.name,
+        locationX: dto.locationX,
+        locationY: dto.locationY,
+        type: dto.type,
+        avgRating: dto.avgRating,
+    }
+}
+
+function mapGroupDetailsDto(dto) {
+    if (!dto) return null
+
+    const admins = Array.isArray(dto.admins) ? dto.admins : []
+    const adminsIds = new Set(admins.map(a => String(a.id)))
+
+    const ownerId = dto.owner?.id ?? null
+
+    const membersRaw = Array.isArray(dto.members) ? dto.members : []
+    const members = membersRaw.map(m => ({
+        id: m.id,
+        username: m.username,
+        name: m.name,
+        surname: m.surname,
+        initials: makeInitials(m),
+        isAdmin: adminsIds.has(String(m.id)),
+        isOwner: ownerId != null && String(ownerId) === String(m.id),
+    }))
+
+    return {
+        id: dto.id,
+        name: dto.name,
+        members,
+        admins: admins.map(a => ({ id: a.id, username: a.username, name: a.name, surname: a.surname })),
+        owner: dto.owner || null,
+    }
+}
+
+function canManageGroup(groupDetails, myId) {
+    if (!groupDetails || !myId) return false
+    const ownerId = groupDetails.owner?.id ?? null
+    if (ownerId && String(ownerId) === String(myId)) return true
+    const admins = Array.isArray(groupDetails.admins) ? groupDetails.admins : []
+    return admins.some(a => String(a.id) === String(myId))
+}
+
+// datetime-local ("2025-12-20T23:50") -> "2025-12-20T22:50:00Z" (ISO instant)
+function localDateTimeToIsoZ(localStr) {
+    const s = String(localStr || '').trim()
+    if (!s) return null
+    const d = new Date(s)
+    if (Number.isNaN(d.getTime())) return null
+    return d.toISOString()
+}
+
+function uniqById(list) {
+    const map = new Map()
+    for (const item of list || []) {
+        if (!item) continue
+        const k = String(item.id)
+        if (!map.has(k)) map.set(k, item)
+    }
+    return Array.from(map.values())
+}
+
 export const useEventsStore = defineStore('events', {
     state: () => ({
         // wydarzenia
@@ -123,27 +178,86 @@ export const useEventsStore = defineStore('events', {
 
         // grupy / łowiska / powiadomienia
         groups: [],
+        groupsMine: [],
+        _myGroupIds: null,
+
         spots: [],
         invitations: [],
+
         isLoadingGroups: false,
+        isSearchingGroups: false,
         isLoadingSpots: false,
         isLoadingInvitations: false,
 
         // panel zarządzania grupą
         groupDetails: null,
+        groupCandidates: [],
+
         isLoadingGroupDetails: false,
+        isLoadingGroupCandidates: false,
+        isCreatingGroup: false,
         isKickingMember: false,
+        isAcceptingCandidate: false,
+        isRejectingCandidate: false,
+
+        // proste komunikaty UI
+        lastGroupAction: null, // { type: 'success'|'error', message: string, ts: number }
     }),
 
     getters: {
         currentEvent(state) {
-            return state.events.find(e => e.id === state.selectedEventId) || null
+            return state.events.find(e => String(e.id) === String(state.selectedEventId)) || null
+        },
+        pendingGroupIds(state) {
+            return new Set((state.invitations || []).map(i => String(i.groupId)))
+        },
+        canManageSelectedGroup(state) {
+            const auth = useAuthStore()
+            const myId = auth.user?.id
+            return canManageGroup(state.groupDetails, myId)
         },
     },
 
     actions: {
+        hardReset() {
+            this.events = []
+            this.selectedEventId = null
+
+            this.groups = []
+            this.groupsMine = []
+            this._myGroupIds = null
+
+            this.spots = []
+            this.invitations = []
+
+            this.groupDetails = null
+            this.groupCandidates = []
+
+            this.isLoadingEvents = false
+            this.isSavingEvent = false
+            this.isJoiningEvent = false
+
+            this.isLoadingGroups = false
+            this.isSearchingGroups = false
+            this.isLoadingSpots = false
+            this.isLoadingInvitations = false
+
+            this.isLoadingGroupDetails = false
+            this.isLoadingGroupCandidates = false
+            this.isCreatingGroup = false
+            this.isKickingMember = false
+            this.isAcceptingCandidate = false
+            this.isRejectingCandidate = false
+
+            this.lastGroupAction = null
+        },
+
         selectEvent(id) {
             this.selectedEventId = id
+        },
+
+        setGroupAction(type, message) {
+            this.lastGroupAction = { type, message, ts: Date.now() }
         },
 
         // ===== WYDARZENIA =====
@@ -151,26 +265,61 @@ export const useEventsStore = defineStore('events', {
         async fetchEvents() {
             this.isLoadingEvents = true
             try {
-                const { data } = await apiClient.get('/users/me/events/upcoming', {
+                const auth = useAuthStore()
+                const meId = auth.user?.id ?? null
+
+                // 1) wydarzenia "moje" (uczestnictwo / zaproszenia etc.) - to już masz
+                const upcomingReq = apiClient.get('/users/me/events/upcoming', {
                     params: { page: 0, size: 50 },
                 })
 
+                // 2) wydarzenia grup, w których jestem członkiem
+                // bierzemy moje grupy i dla każdej pobieramy /api/users/groups/{groupId}/events
+                const groupsReq = apiClient.get('/users/me/groups', {
+                    params: { page: 0, size: 200 },
+                })
+
+                const [upcomingRes, groupsRes] = await Promise.all([upcomingReq, groupsReq])
+
+                const upcoming = pageContent(upcomingRes.data).map(dto => mapEventDto(dto, meId)).filter(Boolean)
+
+                const myGroupsRaw = pageContent(groupsRes.data)
+                const myGroupIds = myGroupsRaw.map(g => g?.id).filter(Boolean)
+                this._myGroupIds = new Set(myGroupIds.map(id => String(id)))
+
+                const groupEventsAll = []
+                // równolegle, ale bez przesady (tu zwykle mało grup)
+                await Promise.all(
+                    myGroupIds.map(async gid => {
+                        try {
+                            const { data } = await apiClient.get(`/users/groups/${gid}/events`, {
+                                params: { page: 0, size: 50 },
+                            })
+                            const list = pageContent(data).map(dto => mapEventDto(dto, meId)).filter(Boolean)
+                            groupEventsAll.push(...list)
+                        } catch (e) {
+                            // pojedyncza grupa może nie mieć endpointu/permów - nie blokujemy całości
+                            console.error('fetch group events error', gid, e)
+                        }
+                    }),
+                )
+
+                // merge + dedupe
+                const merged = uniqById([...upcoming, ...groupEventsAll])
+
+                // filtr przeterminowanych (zostawiamy jak było)
                 const now = Date.now()
-                const list = pageContent(data)
-                    .map(mapEventDto)
-                    .filter(Boolean)
-                    // usuwanie eventu po 24h
-                    .filter(e => {
-                        if (!e.dateTime) return true
-                        const t = Date.parse(e.dateTime)
-                        if (Number.isNaN(t)) return true
-                        const expire = t + 24 * 60 * 60 * 1000
-                        return expire >= now
-                    })
+                const list = merged.filter(e => {
+                    if (!e.dateTime) return true
+                    const t = Date.parse(e.dateTime)
+                    if (Number.isNaN(t)) return true
+                    const expire = t + 24 * 60 * 60 * 1000
+                    return expire >= now
+                })
 
                 this.events = list
 
-                if (!this.events.find(e => e.id === this.selectedEventId)) {
+                if (!this.events.find(e => String(e.id) === String(this.selectedEventId))) {
                     this.selectedEventId = this.events[0]?.id ?? null
                 }
             } catch (err) {
@@ -182,61 +331,32 @@ export const useEventsStore = defineStore('events', {
 
         async createEvent(payload) {
             this.isSavingEvent = true
-            const auth = useAuthStore()
-            const user = auth.user
-
             try {
+                const startsAtIso = localDateTimeToIsoZ(payload.dateTime)
+                const spotId = payload.spotId ? Number(payload.spotId) : null
+
                 const body = {
-                    name: payload.name || '',
-                    description: payload.description || '',
-                    startsAt: payload.dateTime || null,
+                    name: String(payload.name || '').trim(),
+                    description: String(payload.description || '').trim(),
+                    startsAt: startsAtIso,
                     endsAt: null,
-                    locationId: payload.spotId || null,
+                    locationId: Number.isFinite(spotId) ? spotId : null,
                     groupId: payload.groupId || null,
                     invitedUsersIds: [],
                 }
 
                 const { data } = await apiClient.post('/events', body)
-                const event = mapEventDto(data)
+
+                const auth = useAuthStore()
+                const meId = auth.user?.id ?? null
+                const event = mapEventDto(data, meId)
+
                 if (event) {
-                    this.events.push(event)
+                    this.events = uniqById([...(this.events || []), event])
                     this.selectedEventId = event.id
-                    return
                 }
             } catch (err) {
                 console.error('createEvent error', err)
-
-                // fallback lokalny – żeby coś działało nawet przy 500
-                const localId =
-                    (this.events.reduce((max, e) => Math.max(max, Number(e.id) || 0), 0) || 0) + 1
-
-                const spot = this.spots.find(s => s.id === payload.spotId) || null
-                const group = this.groups.find(g => g.id === payload.groupId) || null
-
-                const event = {
-                    id: localId,
-                    name: payload.name || 'Nowe wydarzenie',
-                    description: payload.description || '',
-                    type: payload.type || 'TRIP',
-                    dateTime: payload.dateTime || '',
-                    dateLabel: formatDateTime(payload.dateTime),
-                    spotId: payload.spotId || null,
-                    spotName: spot ? spot.name : 'Brak łowiska',
-                    organizerId: user?.id ?? null,
-                    organizer:
-                        user?.username ||
-                        [user?.name, user?.surname].filter(Boolean).join(' ') ||
-                        'Ty',
-                    participants: user
-                        ? [{ id: user.id, initials: makeInitials(user) }]
-                        : [],
-                    isPrivate: !!payload.groupId,
-                    isParticipating: true,
-                    groupName: group ? group.name : null,
-                }
-
-                this.events.push(event)
-                this.selectedEventId = event.id
             } finally {
                 this.isSavingEvent = false
             }
@@ -245,21 +365,26 @@ export const useEventsStore = defineStore('events', {
         async joinEvent(eventId) {
             if (!eventId) return
             this.isJoiningEvent = true
+
             const auth = useAuthStore()
             const user = auth.user
+            const userId = user?.id
+
+            const ev = this.events.find(e => String(e.id) === String(eventId))
+            const prev = ev ? { ...ev, participants: Array.isArray(ev.participants) ? [...ev.participants] : [] } : null
 
             try {
-                // optymistycznie zaktualizuj UI
-                const ev = this.events.find(e => e.id === eventId)
-                if (ev && user && !ev.participants.some(p => p.id === user.id)) {
-                    ev.participants.push({ id: user.id, initials: makeInitials(user) })
+                if (ev && userId && !ev.participants.some(p => String(p.id) === String(userId))) {
+                    ev.participants.push({ id: userId, initials: makeInitials(user) })
                     ev.isParticipating = true
                 }
 
-                await apiClient.post(`/events/${eventId}/response`, {
-                    status: 'CONFIRMED',
-                })
+                await apiClient.post(`/events/${eventId}/response`, { status: 'CONFIRMED' })
             } catch (err) {
+                if (prev && ev) {
+                    ev.participants = prev.participants
+                    ev.isParticipating = prev.isParticipating
+                }
                 console.error('joinEvent error', err)
             } finally {
                 this.isJoiningEvent = false
@@ -269,14 +394,16 @@ export const useEventsStore = defineStore('events', {
         async leaveEvent(eventId) {
             if (!eventId) return
             this.isJoiningEvent = true
+
             const auth = useAuthStore()
-            const user = auth.user
-            const userId = user?.id
+            const userId = auth.user?.id
+
+            const ev = this.events.find(e => String(e.id) === String(eventId))
+            const prev = ev ? { ...ev, participants: Array.isArray(ev.participants) ? [...ev.participants] : [] } : null
 
             try {
-                const ev = this.events.find(e => e.id === eventId)
                 if (ev && userId) {
-                    ev.participants = ev.participants.filter(p => p.id !== userId)
+                    ev.participants = ev.participants.filter(p => String(p.id) !== String(userId))
                     ev.isParticipating = false
                 }
 
@@ -284,6 +411,10 @@ export const useEventsStore = defineStore('events', {
                     await apiClient.delete(`/events/${eventId}/participants/${userId}`)
                 }
             } catch (err) {
+                if (prev && ev) {
+                    ev.participants = prev.participants
+                    ev.isParticipating = prev.isParticipating
+                }
                 console.error('leaveEvent error', err)
             } finally {
                 this.isJoiningEvent = false
@@ -293,28 +424,31 @@ export const useEventsStore = defineStore('events', {
         async updateEvent(eventId, payload) {
             if (!eventId) return
             try {
+                const startsAtIso = payload.dateTime != null ? localDateTimeToIsoZ(payload.dateTime) : undefined
+                const spotId = payload.spotId != null && payload.spotId !== '' ? Number(payload.spotId) : undefined
+
                 const body = {
                     name: payload.name ?? undefined,
                     description: payload.description ?? undefined,
-                    startsAt: payload.dateTime ?? undefined,
-                    endsAt: undefined,
-                    locationId: payload.spotId ?? undefined,
-                    groupId: payload.groupId ?? undefined,
+                    startsAt: startsAtIso,
+                    endsAt: payload.endsAt ?? undefined,
+                    locationId: Number.isFinite(spotId) ? spotId : undefined,
                 }
 
                 await apiClient.patch(`/events/${eventId}`, body)
 
-                const ev = this.events.find(e => e.id === eventId)
+                const ev = this.events.find(e => String(e.id) === String(eventId))
                 if (!ev) return
+
                 if (payload.name != null) ev.name = payload.name
                 if (payload.description != null) ev.description = payload.description
                 if (payload.dateTime != null) {
-                    ev.dateTime = payload.dateTime
-                    ev.dateLabel = formatDateTime(payload.dateTime)
+                    ev.dateTime = startsAtIso
+                    ev.dateLabel = formatDateTime(startsAtIso)
                 }
                 if (payload.spotId != null) {
-                    ev.spotId = payload.spotId
-                    const spot = this.spots.find(s => s.id === payload.spotId) || null
+                    ev.spotId = Number(payload.spotId) || null
+                    const spot = this.spots.find(s => String(s.id) === String(ev.spotId)) || null
                     ev.spotName = spot ? spot.name : 'Brak łowiska'
                 }
             } catch (err) {
@@ -329,28 +463,14 @@ export const useEventsStore = defineStore('events', {
             } catch (err) {
                 console.error('deleteEvent error', err)
             }
-            this.events = this.events.filter(e => e.id !== eventId)
-            if (this.selectedEventId === eventId) {
+
+            this.events = (this.events || []).filter(e => String(e.id) !== String(eventId))
+            if (String(this.selectedEventId) === String(eventId)) {
                 this.selectedEventId = this.events[0]?.id ?? null
             }
         },
 
         // ===== GRUPY =====
-
-        async fetchGroups() {
-            this.isLoadingGroups = true
-            try {
-                const { data } = await apiClient.get('/users/me/groups', {
-                    params: { page: 0, size: 50 },
-                })
-                const list = pageContent(data).map(mapGroupListDto).filter(Boolean)
-                this.groups = list
-            } catch (err) {
-                console.error('fetchGroups error', err)
-            } finally {
-                this.isLoadingGroups = false
-            }
-        },
 
         async fetchInvitations() {
             this.isLoadingInvitations = true
@@ -358,12 +478,118 @@ export const useEventsStore = defineStore('events', {
                 const { data } = await apiClient.get('/users/me/groups/invites', {
                     params: { page: 0, size: 50 },
                 })
-                const list = pageContent(data).map(mapInviteDto).filter(Boolean)
-                this.invitations = list
+                this.invitations = pageContent(data).map(mapInviteDto).filter(Boolean)
             } catch (err) {
                 console.error('fetchInvitations error', err)
             } finally {
                 this.isLoadingInvitations = false
+            }
+        },
+
+        async fetchGroups() {
+            this.isLoadingGroups = true
+            try {
+                await this.fetchInvitations()
+
+                const { data } = await apiClient.get('/users/me/groups', {
+                    params: { page: 0, size: 200 },
+                })
+
+                const myListRaw = pageContent(data)
+                const myIds = new Set(myListRaw.map(g => String(g.id)))
+                this._myGroupIds = myIds
+
+                const pending = this.pendingGroupIds
+
+                this.groupsMine = myListRaw
+                    .map(dto => ({
+                        id: dto.id,
+                        name: dto.name,
+                        members: dto.memberCount ?? 0,
+                        isMine: true,
+                        isPending: false,
+                    }))
+                    .filter(Boolean)
+
+                const merged = [...this.groupsMine]
+                for (const inv of this.invitations || []) {
+                    const gid = String(inv.groupId)
+                    if (!merged.some(x => String(x.id) === gid)) {
+                        merged.push({
+                            id: inv.groupId,
+                            name: inv.groupName,
+                            members: inv.members ?? 0,
+                            isMine: false,
+                            isPending: true,
+                        })
+                    }
+                }
+
+                this.groups = merged.map(g => ({
+                    ...g,
+                    isPending: g.isMine ? false : pending.has(String(g.id)),
+                }))
+            } catch (err) {
+                console.error('fetchGroups error', err)
+            } finally {
+                this.isLoadingGroups = false
+            }
+        },
+
+        async searchGroups(query) {
+            const q = String(query || '').trim()
+
+            if (!q) {
+                await this.fetchGroups()
+                return
+            }
+
+            this.isSearchingGroups = true
+            try {
+                await this.fetchInvitations()
+
+                const { data } = await apiClient.get('/users/groups/search', { params: { q } })
+                const raw = pageContent(data)
+
+                const myIds = this._myGroupIds || new Set(this.groupsMine.map(g => String(g.id)))
+                const pending = this.pendingGroupIds
+
+                const searched = raw
+                    .map(dto => ({
+                        id: dto.id,
+                        name: dto.name,
+                        members: dto.memberCount ?? 0,
+                        isMine: myIds.has(String(dto.id)),
+                        isPending: pending.has(String(dto.id)),
+                    }))
+                    .filter(Boolean)
+
+                const merged = [...this.groupsMine]
+
+                for (const inv of this.invitations || []) {
+                    const gid = String(inv.groupId)
+                    if (!merged.some(x => String(x.id) === gid)) {
+                        merged.push({
+                            id: inv.groupId,
+                            name: inv.groupName,
+                            members: inv.members ?? 0,
+                            isMine: false,
+                            isPending: true,
+                        })
+                    }
+                }
+
+                for (const g of searched) {
+                    const idx = merged.findIndex(x => String(x.id) === String(g.id))
+                    if (idx === -1) merged.push(g)
+                    else merged[idx] = { ...merged[idx], ...g }
+                }
+
+                this.groups = merged
+            } catch (err) {
+                console.error('searchGroups error', err)
+            } finally {
+                this.isSearchingGroups = false
             }
         },
 
@@ -372,71 +598,53 @@ export const useEventsStore = defineStore('events', {
             if (!trimmed) throw new Error('Nazwa grupy jest wymagana.')
 
             const auth = useAuthStore()
-            const user = auth.user
+            const meId = auth.user?.id
+            if (!meId) throw new Error('Brak użytkownika.')
 
+            this.isCreatingGroup = true
             try {
                 const { data } = await apiClient.post('/users/groups/create', {
                     name: trimmed,
-                    members: [],
+                    members: [{ id: meId }],
                 })
-                const dto = mapGroupDetailsDto(data)
-                const listItem = {
-                    id: dto.id,
-                    name: dto.name,
-                    members: dto.members.length,
-                    isMine: true,
-                }
-                this.groups.push(listItem)
-                this.groupDetails = dto
-                return dto
+
+                this.groupDetails = mapGroupDetailsDto(data)
+                this.setGroupAction('success', 'Utworzono grupę.')
+                await this.fetchGroups()
+                return this.groupDetails
             } catch (err) {
                 console.error('createGroup error', err)
-
-                // fallback lokalny
-                const localId =
-                    (this.groups.reduce((max, g) => Math.max(max, Number(g.id) || 0), 0) || 0) + 1
-
-                const listItem = {
-                    id: localId,
-                    name: trimmed,
-                    members: 1,
-                    isMine: true,
-                }
-                this.groups.push(listItem)
-
-                this.groupDetails = {
-                    id: localId,
-                    name: trimmed,
-                    members: user
-                        ? [
-                            {
-                                id: user.id,
-                                username: user.username,
-                                name: user.name,
-                                surname: user.surname,
-                                initials: makeInitials(user),
-                                isAdmin: true,
-                            },
-                        ]
-                        : [],
-                }
-
-                return this.groupDetails
+                this.setGroupAction('error', 'Nie udało się utworzyć grupy.')
+                throw err
+            } finally {
+                this.isCreatingGroup = false
             }
         },
 
-        async requestJoinGroup(groupId, userIdFromCaller) {
+        async requestJoinGroup(groupId) {
             const auth = useAuthStore()
-            const userId = userIdFromCaller || auth.user?.id
+            const userId = auth.user?.id
             if (!groupId || !userId) return
 
+            const gid = String(groupId)
+            if (this._myGroupIds && this._myGroupIds.has(gid)) return
+            if (this.pendingGroupIds.has(gid)) return
+
             try {
-                await apiClient.patch(`/users/groups/${groupId}/invite`, {
-                    userId,
-                })
+                await apiClient.patch(`/users/groups/${groupId}/invite`, { userId })
+
                 await this.fetchInvitations()
+                const pending = this.pendingGroupIds
+
+                this.groups = (this.groups || []).map(g => ({
+                    ...g,
+                    isPending: g.isMine ? false : pending.has(String(g.id)),
+                }))
+
+                this.setGroupAction('success', 'Wysłano prośbę o dołączenie.')
             } catch (err) {
                 console.error('requestJoinGroup error', err)
+                this.setGroupAction('error', 'Nie udało się wysłać prośby.')
             }
         },
 
@@ -454,22 +662,69 @@ export const useEventsStore = defineStore('events', {
             }
         },
 
+        async loadGroupCandidates(groupId) {
+            if (!groupId) return
+            this.isLoadingGroupCandidates = true
+            try {
+                const { data } = await apiClient.get(`/users/groups/${groupId}/candidates`, {
+                    params: { page: 0, size: 100 },
+                })
+
+                const auth = useAuthStore()
+                const myId = String(auth.user?.id)
+
+                const memberIds = new Set((this.groupDetails?.members || []).map(m => String(m.id)))
+
+                this.groupCandidates = pageContent(data)
+                    .map(mapUserDto)
+                    .filter(Boolean)
+                    .filter(u => !memberIds.has(String(u.id)) && String(u.id) !== myId)
+            } catch (err) {
+                console.error('loadGroupCandidates error', err)
+                this.groupCandidates = []
+            } finally {
+                this.isLoadingGroupCandidates = false
+            }
+        },
+
+        async acceptCandidate(groupId, userId) {
+            if (!groupId || !userId) return
+            this.isAcceptingCandidate = true
+            try {
+                await apiClient.post(`/users/groups/${groupId}/admin/candidates/accept`, { userId })
+                this.setGroupAction('success', 'Zaakceptowano kandydata.')
+            } catch (err) {
+                console.error('acceptCandidate error', err)
+                this.setGroupAction('error', 'Nie udało się zaakceptować kandydata.')
+            } finally {
+                this.isAcceptingCandidate = false
+            }
+        },
+
+        async rejectCandidate(groupId, userId) {
+            if (!groupId || !userId) return
+            this.isRejectingCandidate = true
+            try {
+                await apiClient.post(`/users/groups/${groupId}/admin/candidates/reject`, { userId })
+                this.setGroupAction('success', 'Odrzucono kandydata.')
+            } catch (err) {
+                console.error('rejectCandidate error', err)
+                this.setGroupAction('error', 'Nie udało się odrzucić kandydata.')
+            } finally {
+                this.isRejectingCandidate = false
+            }
+        },
+
         async kickMember(groupId, userId) {
             if (!groupId || !userId) return
             this.isKickingMember = true
             try {
-                await apiClient.post(`/users/groups/${groupId}admin/kick`, {
-                    userId,
-                })
+                await apiClient.post(`/users/groups/${groupId}/admin/kick`, { userId })
+                this.setGroupAction('success', 'Usunięto członka z grupy.')
             } catch (err) {
                 console.error('kickMember error', err)
+                this.setGroupAction('error', 'Nie udało się usunąć członka.')
             } finally {
-                if (this.groupDetails && this.groupDetails.id === groupId) {
-                    this.groupDetails = {
-                        ...this.groupDetails,
-                        members: this.groupDetails.members.filter(m => m.id !== userId),
-                    }
-                }
                 this.isKickingMember = false
             }
         },
@@ -479,7 +734,10 @@ export const useEventsStore = defineStore('events', {
         async fetchSpots() {
             this.isLoadingSpots = true
             try {
-                // backend jeszcze niegotowy – zostawiamy pustą listę
+                const { data } = await apiClient.get('/spots', { params: { page: 0, size: 200 } })
+                this.spots = pageContent(data).map(mapSpotListDto).filter(Boolean)
+            } catch (err) {
+                console.error('fetchSpots error', err)
                 this.spots = []
             } finally {
                 this.isLoadingSpots = false

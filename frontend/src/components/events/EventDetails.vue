@@ -6,10 +6,7 @@
       Wybierz wydarzenie z listy po lewej.
     </div>
 
-    <div
-        v-else
-        class="rounded-lg border theme-border bg-[var(--color-surface)] p-3 space-y-3"
-    >
+    <div v-else class="rounded-lg border theme-border bg-[var(--color-surface)] p-3 space-y-3">
       <div class="flex items-start justify-between">
         <div>
           <p class="text-sm font-medium">{{ event.name }}</p>
@@ -18,9 +15,7 @@
           </p>
         </div>
 
-        <span
-            class="text-[10px] px-2 py-0.5 rounded-full border theme-border text-[var(--color-muted)]"
-        >
+        <span class="text-[10px] px-2 py-0.5 rounded-full border theme-border text-[var(--color-muted)]">
           {{ event.groupName || 'Bez grupy' }}
         </span>
       </div>
@@ -65,17 +60,11 @@
         </div>
       </div>
 
-      <div class="flex justify-end gap-2 pt-2 border-t border-[var(--color-border)] mt-2">
-        <button
-            class="px-2 py-1 rounded-lg text-[11px] border theme-border"
-            @click="$emit('edit')"
-        >
+      <div v-if="event.isOwner" class="flex justify-end gap-2 pt-2 border-t border-[var(--color-border)] mt-2">
+        <button class="px-2 py-1 rounded-lg text-[11px] border theme-border" @click="$emit('edit')">
           Edytuj
         </button>
-        <button
-            class="px-2 py-1 rounded-lg text-[11px] border border-red-500 text-red-500"
-            @click="$emit('delete')"
-        >
+        <button class="px-2 py-1 rounded-lg text-[11px] border border-red-500 text-red-500" @click="$emit('delete')">
           Usuń
         </button>
       </div>
