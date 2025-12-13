@@ -1,14 +1,13 @@
 <script setup>
 import { ref, onMounted } from 'vue'
-import { apiClient } from '../../utils/axios'
+import { apiClient } from '../../utils/axios.js'
 import { useAuthStore } from '../../stores/auth'
 
 const auth = useAuthStore()
+const emit = defineEmits(['created'])
 
-// lista gatunków z backendu – obiekty z id i name
 const fishOptions = ref([])
 
-// stan formularza
 const newSpotForm = ref({
   name: '',
   type: '',
@@ -23,7 +22,6 @@ const newSpotForm = ref({
   regulationText: '',
 })
 
-// zaznaczone ryby – LISTA ID (Long) zgodnie z CreateFishingSpotDto.fishIds
 const selectedFishIds = ref([])
 
 const regulationInput = ref(null)
@@ -34,11 +32,15 @@ const photos = ref([])
 const submitted = ref(false)
 const errors = ref({})
 
-// pobieranie gatunków z /api/fish (jak w poradnikach)
+// dopasowane do backendu: @RequestMapping("${forum.api.prefix}/fish") + @GetMapping("/search")
 async function loadFish() {
   try {
-    const resp = await apiClient.get('/fish')
-    const list = Array.isArray(resp.data) ? resp.data : (resp.data?.content || [])
+    const resp = await apiClient.get('/fish/search', {
+      params: { name: '' },
+    })
+    const list = Array.isArray(resp.data)
+        ? resp.data
+        : (resp.data?.content || [])
     fishOptions.value = list
   } catch (e) {
     console.error('Błąd pobierania listy ryb', e)
@@ -49,7 +51,6 @@ onMounted(() => {
   loadFish()
 })
 
-// obsługa plików – na razie tylko w UI
 function triggerRegulationFile() {
   regulationInput.value?.click()
 }
@@ -68,7 +69,6 @@ function onPhotosChange(e) {
   photos.value = files ? Array.from(files) : []
 }
 
-// walidacja podstawowa
 function validate() {
   const e = {}
 
@@ -86,7 +86,6 @@ function validate() {
   return Object.keys(e).length === 0
 }
 
-// reset formularza po sukcesie
 function resetForm() {
   newSpotForm.value = {
     name: '',
@@ -107,11 +106,9 @@ function resetForm() {
   errors.value = {}
 }
 
-// wysłanie zgłoszenia do backendu (CreateFishingSpotDto)
 async function submit() {
   if (!validate()) return
 
-  // typ łowiska: enum FISHING_SPOT_TYPE { PRIVATE, PUBLIC }
   const typeEnum =
       newSpotForm.value.ownerType === 'PZW'
           ? 'PUBLIC'
@@ -121,8 +118,8 @@ async function submit() {
     name: newSpotForm.value.name.trim(),
     description: newSpotForm.value.regulationText.trim() || null,
     type: typeEnum,
-    managerIds: auth.user ? [auth.user.id] : [],     // List<UUID>
-    fishIds: selectedFishIds.value,                  // List<Long>
+    managerIds: auth.user ? [auth.user.id] : [],
+    fishIds: selectedFishIds.value,
     locationDto: {
       longitude: newSpotForm.value.longitude
           ? parseFloat(newSpotForm.value.longitude)
@@ -144,8 +141,13 @@ async function submit() {
     submitted.value = false
     errors.value = {}
 
-    const { data } = await apiClient.post('/spots/create', payload)
+    // backend ma @RequestMapping("/spots") + @PostMapping("/create")
+    const { data } = await apiClient.post('/spots/create', payload, {
+      baseURL: '',
+    })
     console.log('Utworzone łowisko:', data)
+
+    emit('created', data)
 
     submitted.value = true
     resetForm()
@@ -167,7 +169,6 @@ async function submit() {
   <div class="text-xs">
     <h3 class="font-semibold mb-2">Zgłoś nowe łowisko</h3>
 
-    <!-- komunikat błędu ogólnego -->
     <p v-if="errors.form" class="mb-2 text-red-300">
       {{ errors.form }}
     </p>
@@ -196,7 +197,7 @@ async function submit() {
         </label>
         <select
             v-model="newSpotForm.type"
-            class="bg-white/15 text-white border border-white/60 rounded px-2 py-1 text-xs outline-none"
+            class="bg-white text-black border border-white/60 rounded px-2 py-1 text-xs outline-none"
         >
           <option value="">Wybierz typ</option>
           <option value="Rzeka">Rzeka</option>
@@ -218,7 +219,7 @@ async function submit() {
         </label>
         <select
             v-model="newSpotForm.voivodeship"
-            class="bg-white/15 text-white border border-white/60 rounded px-2 py-1 text-xs outline-none"
+            class="bg-white text-black border border-white/60 rounded px-2 py-1 text-xs outline-none"
         >
           <option value="">Wybierz województwo</option>
           <option value="Dolnośląskie">Dolnośląskie</option>
@@ -250,7 +251,7 @@ async function submit() {
         </label>
         <select
             v-model="newSpotForm.ownerType"
-            class="bg-white/15 text-white border border-white/60 rounded px-2 py-1 text-xs outline-none"
+            class="bg-white text-black border border-white/60 rounded px-2 py-1 text-xs outline-none"
         >
           <option value="">Wybierz rodzaj</option>
           <option value="PZW">PZW / koło</option>
@@ -312,7 +313,7 @@ async function submit() {
         <label>Przystań</label>
         <select
             v-model="newSpotForm.hasPier"
-            class="bg-white/15 text-white border border-white/60 rounded px-2 py-1 text-xs outline-none"
+            class="bg-white text-black border border-white/60 rounded px-2 py-1 text-xs outline-none"
         >
           <option :value="false">Nie</option>
           <option :value="true">Tak</option>
@@ -323,7 +324,7 @@ async function submit() {
         <label>Możliwość wodowania łódki</label>
         <select
             v-model="newSpotForm.boatAccess"
-            class="bg-white/15 text-white border border-white/60 rounded px-2 py-1 text-xs outline-none"
+            class="bg-white text-black border border-white/60 rounded px-2 py-1 text-xs outline-none"
         >
           <option :value="false">Nie</option>
           <option :value="true">Tak</option>

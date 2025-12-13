@@ -16,30 +16,30 @@ const emit = defineEmits(['select'])
 
 const search = ref('')
 
+// wyszukujemy TYLKO po nazwie łowiska
 const filteredSpots = computed(() => {
   const term = search.value.trim().toLowerCase()
   if (!term) return props.spots
 
   return props.spots.filter((spot) => {
     const name = String(spot.name || '').toLowerCase()
-    const voivodeship = String(spot.voivodeship || '').toLowerCase()
-    return name.includes(term) || voivodeship.includes(term)
+    return name.includes(term)
   })
 })
 </script>
 
 <template>
   <section
-      class="bg-black/70 backdrop-blur p-4 flex flex-col gap-4 overflow-y-auto min-h-0"
+      class="bg-black/70 backdrop-blur p-4 flex flex-col gap-4 overflow-y-auto min-h-0 text-white"
   >
     <header class="flex flex-col gap-2">
       <h2 class="font-semibold text-sm uppercase tracking-wide">
-        Wyszukiwarka
+        WYSZUKIWARKA
       </h2>
       <input
           v-model="search"
           type="text"
-          placeholder="Szukaj po nazwie"
+          placeholder="Szukaj po nazwie łowiska"
           class="bg-white/15 text-white placeholder:text-white/80 border border-white/60 rounded px-2 py-1.5 text-xs outline-none"
       />
     </header>
@@ -61,14 +61,12 @@ const filteredSpots = computed(() => {
           </span>
         </header>
 
+        <!-- druga linia: województwo -->
         <p class="opacity-90 mt-1">
-          {{
-            (spot.fish || [])
-                .map(f => (typeof f === 'string' ? f : f.name))
-                .join(', ') || 'Brak danych'
-          }}
+          {{ spot.voivodeship || 'Brak danych' }}
         </p>
 
+        <!-- trzecia linia: rating jeśli jest -->
         <p class="opacity-80 mt-0.5 text-[10px]">
           <span v-if="spot.avgRating != null">
             Śr. ocena: {{ spot.avgRating.toFixed(1) }} / 5
