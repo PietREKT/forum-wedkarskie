@@ -4,7 +4,6 @@
   >
     <h3 class="font-medium mb-2 text-sm md:text-base">Nowy post</h3>
 
-    <!-- lokalny komunikat błędu -->
     <p
         v-if="localError"
         class="mb-2 text-xs text-red-600 dark:text-red-400"
@@ -12,7 +11,6 @@
       {{ localError }}
     </p>
 
-    <!-- Treść posta -->
     <textarea
         v-model.trim="content"
         class="w-full rounded-md px-3 py-2 text-sm
@@ -24,7 +22,6 @@
         placeholder="Napisz coś..."
     />
 
-    <!-- Załączone pliki -->
     <div class="mt-3">
       <label class="inline-flex items-center gap-2 text-xs md:text-sm cursor-pointer">
         <span class="px-2 py-1 border rounded-md">Dodaj zdjęcia</span>
@@ -41,7 +38,6 @@
         >
       </label>
 
-      <!-- podglądy -->
       <div v-if="previews.length" class="mt-2 flex flex-wrap gap-2">
         <div
             v-for="(src, idx) in previews"
@@ -53,7 +49,6 @@
       </div>
     </div>
 
-    <!-- Przyciski -->
     <div class="mt-3 flex justify-end gap-2">
       <button
           type="button"
@@ -72,6 +67,10 @@
         {{ submitting ? 'Zapisywanie...' : 'Dodaj post' }}
       </button>
     </div>
+
+    <p class="mt-2 text-[11px] text-zinc-500">
+      Treść posta jest wymagana (zdjęcia są opcjonalne).
+    </p>
   </div>
 </template>
 
@@ -95,9 +94,8 @@ const summary = computed(() => {
   return `${files.value.length} pliki(ów)`
 })
 
-const canSubmit = computed(() => {
-  return content.value.trim().length > 0 || files.value.length > 0
-})
+// backend wymaga content
+const canSubmit = computed(() => content.value.trim().length > 0)
 
 function onFilesSelected(event) {
   const selected = Array.from(event.target.files || [])
@@ -108,15 +106,17 @@ function onFilesSelected(event) {
 
 async function onSubmit() {
   localError.value = ''
-  if (!canSubmit.value) {
-    localError.value = 'Post musi mieć treść lub załącznik.'
+  const text = content.value.trim()
+
+  if (!text) {
+    localError.value = 'Treść posta jest wymagana.'
     return
   }
 
   submitting.value = true
   try {
     await store.createPost({
-      content: content.value,
+      content: text,
       files: files.value,
     })
     reset()
@@ -126,7 +126,6 @@ async function onSubmit() {
     if (status === 401) {
       localError.value = 'Musisz być zalogowany, aby dodać post.'
     } else {
-      // jeśli store.error ma treść – pokaż ją; w przeciwnym razie domyślny tekst
       localError.value = store.error || 'Nie udało się dodać posta.'
     }
   } finally {

@@ -3,56 +3,85 @@
     <header class="mb-4 flex items-start justify-between gap-4">
       <div class="flex-1">
         <h1 class="text-2xl font-semibold">
-          {{ isUserFeed ? 'Posty użytkownika' : 'Posty' }}
+          {{
+            isGroupFeed
+                ? 'Posty grupy'
+                : isUserFeed
+                    ? 'Posty użytkownika'
+                    : 'Posty'
+          }}
         </h1>
 
         <div class="mt-2 flex flex-wrap items-center gap-2 text-sm">
+          <div class="flex items-center gap-2">
+            <button
+                type="button"
+                class="px-3 py-1.5 border rounded-md text-xs"
+                :class="searchMode === 'user' ? 'bg-zinc-200 dark:bg-zinc-800' : ''"
+                @click="setMode('user')"
+            >
+              Użytkownik
+            </button>
+            <button
+                type="button"
+                class="px-3 py-1.5 border rounded-md text-xs"
+                :class="searchMode === 'group' ? 'bg-zinc-200 dark:bg-zinc-800' : ''"
+                @click="setMode('group')"
+            >
+              Grupa
+            </button>
+          </div>
+
           <input
-              v-model="userSearch"
+              v-model="searchText"
               type="text"
-              class="px-3 py-1.5 border rounded-md text-sm flex-1 min-w-[200px]"
-              placeholder="Wyszukaj użytkownika po nicku"
-              @keyup.enter="onSearchUser"
+              class="px-3 py-1.5 border rounded-md text-sm flex-1 min-w-[220px]"
+              :placeholder="searchMode === 'user'
+                ? 'Wyszukaj użytkownika po nicku'
+                : 'Wyszukaj grupę po nazwie'"
+              @keyup.enter="onSearch"
           />
 
           <button
               class="px-3 py-1.5 border rounded-md text-sm disabled:opacity-50"
-              :disabled="userSearchLoading"
-              @click="onSearchUser"
+              :disabled="searchLoading"
+              @click="onSearch"
           >
-            {{ userSearchLoading ? 'Szukam...' : 'Szukaj' }}
+            {{ searchLoading ? 'Szukam...' : 'Szukaj' }}
           </button>
 
           <button
-              v-if="isUserFeed"
+              v-if="isUserFeed || isGroupFeed"
               class="px-3 py-1.5 border rounded-md text-xs"
-              @click="clearUserFilter"
+              @click="clearFilter"
           >
             Wróć do wszystkich postów
           </button>
         </div>
 
         <p
-            v-if="userSearchError"
+            v-if="searchError"
             class="mt-1 text-xs text-red-600 dark:text-red-400"
         >
-          {{ userSearchError }}
+          {{ searchError }}
         </p>
 
         <div
-            v-if="userResults.length"
+            v-if="results.length"
             class="mt-2 border rounded-md text-sm bg-white/70 dark:bg-zinc-900/80"
         >
           <div
-              v-for="u in userResults"
-              :key="u.id"
+              v-for="r in results"
+              :key="r.id"
               class="px-3 py-1.5 flex items-center justify-between border-b last:border-b-0"
           >
-            <span>{{ u.username }}</span>
+            <span>
+              {{ searchMode === 'user' ? r.username : r.name }}
+            </span>
 
             <button
                 class="px-2 py-1 border rounded-md text-xs"
-                @click="showUserPosts(u)"
+                @click="selectResult(r)"
             >
               Pokaż posty
             </button>
@@ -122,6 +151,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import { usePostsStore } from '../stores/posts'
 import { searchUsersByUsername } from '../utils/usersApi.js'
+import { searchGroupsByName } from '../utils/groupsApi.js'
 import PostComposer from '../components/posts/PostComposer.vue'
 import PostCard from '../components/posts/PostCard.vue'
 
@@ -133,70 +163,92 @@ const router = useRouter()
 const composerOpen = ref(false)
 
 const isAuth = computed(() => auth.isAuthenticated)
+
 const currentUserId = computed(() => route.query.userId || null)
+const currentGroupId = computed(() => route.query.groupId || null)
+
 const isUserFeed = computed(() => !!currentUserId.value)
+const isGroupFeed = computed(() => !!currentGroupId.value)
 
 const hasMore = computed(() => posts.items.length < posts.total)
 
-// wyszukiwanie użytkowników po nicku
-const userSearch = ref('')
-const userResults = ref([])
-const userSearchLoading = ref(false)
-const userSearchError = ref('')
+const searchMode = ref('user') // 'user' | 'group'
+const searchText = ref('')
+const results = ref([])
+const searchLoading = ref(false)
+const searchError = ref('')
 
-async function onSearchUser() {
-  userResults.value = []
-  userSearchError.value = ''
+function setMode(mode) {
+  searchMode.value = mode
+  results.value = []
+  searchError.value = ''
+}
 
-  const q = userSearch.value.trim()
+async function onSearch() {
+  results.value = []
+  searchError.value = ''
+
+  const q = searchText.value.trim()
   if (!q) {
-    userSearchError.value = 'Wpisz nick użytkownika.'
+    searchError.value = searchMode.value === 'user'
+        ? 'Wpisz nick użytkownika.'
+        : 'Wpisz nazwę grupy.'
     return
   }
 
-  userSearchLoading.value = true
+  searchLoading.value = true
   try {
-    const { data } = await searchUsersByUsername(q)
-    userResults.value = Array.isArray(data) ? data : []
-    if (!userResults.value.length) {
-      userSearchError.value = 'Brak użytkowników o takim nicku.'
+    if (searchMode.value === 'user') {
+      const { data } = await searchUsersByUsername(q)
+      results.value = Array.isArray(data) ? data : []
+      if (!results.value.length) searchError.value = 'Brak użytkowników o takim nicku.'
+    } else {
+      const { data } = await searchGroupsByName(q)
+      results.value = Array.isArray(data) ? data : []
+      if (!results.value.length) searchError.value = 'Brak grup o takiej nazwie.'
     }
   } catch (err) {
-    console.error('search user error', err)
-    userSearchError.value =
+    console.error('search error', err)
+    searchError.value =
         err?.response?.data?.message ||
         err?.message ||
-        'Nie udało się wyszukać użytkownika.'
+        'Nie udało się wykonać wyszukiwania.'
   } finally {
-    userSearchLoading.value = false
+    searchLoading.value = false
   }
 }
 
-function showUserPosts(user) {
-  if (!user?.id) return
-  userResults.value = []
-  router.push({ name: 'posts', query: { userId: user.id } })
+function selectResult(item) {
+  if (!item?.id) return
+  results.value = []
+
+  if (searchMode.value === 'user') {
+    router.push({ name: 'posts', query: { userId: item.id } })
+  } else {
+    router.push({ name: 'posts', query: { groupId: item.id } })
+  }
 }
 
-function clearUserFilter() {
+function clearFilter() {
   router.push({ name: 'posts' })
 }
 
-// ładowanie listy postów
 async function loadFirstPage() {
-  posts.reset(currentUserId.value || null)
+  posts.reset({
+    userId: currentUserId.value || null,
+    groupId: currentGroupId.value || null,
+  })
   try {
     await posts.fetchNext()
   } catch (err) {
     console.error('load posts error', err)
-    // błąd już jest ustawiany w store.setErrorFromAxios w fetchNext()
   }
 }
 
 onMounted(loadFirstPage)
 
 watch(
-    () => currentUserId.value,
+    () => [currentUserId.value, currentGroupId.value],
     () => {
       loadFirstPage()
     },
@@ -208,7 +260,6 @@ async function loadMore() {
     await posts.fetchNext()
   } catch (err) {
     console.error('load more posts error', err)
-    // błąd również obsłużony w store
   }
 }
 

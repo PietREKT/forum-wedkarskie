@@ -38,6 +38,7 @@ const deleteConfirmComment = ref(null)
 
 const currentUser = computed(() => auth.user)
 const isAuth = computed(() => !!auth.user)
+const isAdmin = computed(() => !!auth.isAdmin)
 
 const sectionOpen = ref(true)
 
@@ -175,9 +176,10 @@ function toggleMenu(id) {
   menuFor.value = menuFor.value === id ? null : id
 }
 
-// edycja/usuwanie tylko przez autora (nie przez admina)
+// edycja/usuwanie: autor LUB admin/root
 function canEditOrDelete(c) {
   if (!currentUser.value) return false
+  if (isAdmin.value) return true
   return currentUser.value.username === (c?.author?.username || '')
 }
 

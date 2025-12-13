@@ -262,7 +262,7 @@
       <CommentsSection :post-id="postId" />
     </section>
 
-    <!-- Potwierdzenie usunięcia (tylko autor) -->
+    <!-- Potwierdzenie usunięcia (autor lub admin/root) -->
     <section v-if="showDeleteConfirm" class="mt-4">
       <div
           class="rounded-lg border theme-border bg-red-50 dark:bg-red-900/20 px-3 py-2 text-xs flex items-start justify-between gap-3"
@@ -299,7 +299,7 @@
 </template>
 
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, ref, onBeforeUnmount } from 'vue'
 import { RouterLink } from 'vue-router'
 import { usePostsStore } from '../../stores/posts'
 import { useAuthStore } from '../../stores/auth'
@@ -338,6 +338,11 @@ const reportSuccess = ref(false)
 const voteError = ref('')
 let voteErrorTimer = null
 
+onBeforeUnmount(() => {
+  if (voteErrorTimer) clearTimeout(voteErrorTimer)
+  newPreviews.value.forEach(u => URL.revokeObjectURL(u))
+})
+
 const reportReasons = [
   { key: 'SPAM', label: 'Spam' },
   { key: 'UNPAID_AD', label: 'Reklama bez zgody' },
@@ -349,6 +354,8 @@ const postId = computed(() => posts.getId(props.post))
 
 const currentUser = computed(() => auth.user)
 const isAuth = computed(() => !!auth.user)
+const isAdmin = computed(() => !!auth.isAdmin)
+
 const currentUsername = computed(() => currentUser.value?.username || '')
 
 const authorUsername = computed(() => props.post?.author?.username || '')
@@ -378,19 +385,16 @@ const firstPhoto = computed(() => {
 
 const canSaveEdit = computed(() => editContent.value.trim().length > 0)
 
-// edycja/usuwanie tylko dla autora (nie dla admina)
+// autor LUB admin/root
 const canEdit = computed(() => {
-  return (
-      isAuth.value &&
-      currentUsername.value &&
-      currentUsername.value === authorUsername.value
-  )
+  if (!isAuth.value) return false
+  if (isAdmin.value) return true
+  return currentUsername.value && currentUsername.value === authorUsername.value
 })
 
-// usuwanie na widoku listy: tylko autor
 const canDelete = computed(() => canEdit.value)
 
-// zgłaszanie: każdy zalogowany, który nie jest autorem
+// zgłaszanie: zalogowany i nie jest autorem
 const canReport = computed(() => {
   if (!isAuth.value) return false
   return currentUsername.value !== authorUsername.value

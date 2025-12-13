@@ -1,4 +1,3 @@
-// src/stores/posts.js
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { apiClient } from '../utils/axios.js'
@@ -11,9 +10,9 @@ export const usePostsStore = defineStore('posts', () => {
     const total = ref(0)
     const error = ref(null)
 
-    // null = globalny feed (/posts/recent)
-    // nie-null = posty użytkownika (/posts/user/{userId})
-    const userFilterId = ref(null)
+    // filtry
+    const userFilterId = ref(null)   // /posts/user/{userId}
+    const groupFilterId = ref(null)  // /users/groups/{groupId}/posts
 
     function clearError() {
         error.value = null
@@ -43,16 +42,13 @@ export const usePostsStore = defineStore('posts', () => {
         items.value.splice(idx, 1, updated)
     }
 
-    function reset(userId = null) {
+    function reset({ userId = null, groupId = null } = {}) {
         items.value = []
         page.value = 0
         total.value = 0
         error.value = null
         userFilterId.value = userId
-    }
-
-    function setUserFilter(userId) {
-        reset(userId ?? null)
+        groupFilterId.value = groupId
     }
 
     function mapVoteToNumber(v) {
@@ -70,45 +66,37 @@ export const usePostsStore = defineStore('posts', () => {
             raw.viewerVote ?? raw.loggedUserVote ?? raw.userVote ?? raw.vote
 
         const viewerVote = mapVoteToNumber(voteSource)
+        const rating = typeof raw.rating === 'number' ? raw.rating : 0
 
-        const rating =
-            typeof raw.rating === 'number'
-                ? raw.rating
-                : 0
+        return { ...raw, viewerVote, rating }
+    }
 
-        return {
-            ...raw,
-            viewerVote,
-            rating,
+    function resolveBasePath() {
+        if (groupFilterId.value) {
+            return `/users/groups/${encodeURIComponent(groupFilterId.value)}/posts`
         }
+        if (userFilterId.value) {
+            return `/posts/user/${encodeURIComponent(userFilterId.value)}`
+        }
+        return '/posts/recent'
     }
 
     async function fetchNext() {
         if (loading.value) return
         clearError()
         loading.value = true
-        try {
-            const basePath = userFilterId.value
-                ? `/posts/user/${encodeURIComponent(userFilterId.value)}`
-                : '/posts/recent'
 
-            const resp = await apiClient.get(basePath, {
-                params: {
-                    page: page.value,
-                    size: size.value,
-                },
+        try {
+            const resp = await apiClient.get(resolveBasePath(), {
+                params: { page: page.value, size: size.value },
             })
 
             const data = resp.data
             const list = Array.isArray(data?.content) ? data.content : data
-
             const normalized = (list || []).map(normalizePost)
 
-            if (page.value === 0) {
-                items.value = normalized
-            } else {
-                items.value = [...items.value, ...normalized]
-            }
+            if (page.value === 0) items.value = normalized
+            else items.value = [...items.value, ...normalized]
 
             if (!Array.isArray(data) && typeof data?.totalElements === 'number') {
                 total.value = data.totalElements
@@ -126,7 +114,6 @@ export const usePostsStore = defineStore('posts', () => {
         }
     }
 
-    // pobranie pojedynczego posta – np. dla widoku szczegółów / panelu admina
     async function fetchById(id) {
         clearError()
         loading.value = true
@@ -135,9 +122,7 @@ export const usePostsStore = defineStore('posts', () => {
             const post = normalizePost(resp.data)
 
             const existingIdx = findIndexById(getId(post))
-            if (existingIdx !== -1) {
-                items.value.splice(existingIdx, 1, post)
-            }
+            if (existingIdx !== -1) items.value.splice(existingIdx, 1, post)
 
             return post
         } catch (e) {
@@ -151,8 +136,15 @@ export const usePostsStore = defineStore('posts', () => {
 
     async function createPost({ content, files = [] }) {
         clearError()
+
+        const text = (content || '').trim()
+        if (!text) {
+            error.value = 'Treść posta jest wymagana.'
+            throw new Error('Missing content')
+        }
+
         const fd = new FormData()
-        fd.append('content', content)
+        fd.append('content', text)
         files.forEach(f => fd.append('photos', f))
 
         try {
@@ -163,57 +155,50 @@ export const usePostsStore = defineStore('posts', () => {
 
             items.value = [created, ...items.value]
             total.value += 1
-
             return created
         } catch (e) {
             console.error('createPost error', e)
             const status = e?.response?.status
-            if (status === 401) {
-                error.value = 'Musisz być zalogowany, aby dodać post.'
-            } else {
-                setErrorFromAxios(e, 'Nie udało się utworzyć posta.')
-            }
+            if (status === 401) error.value = 'Musisz być zalogowany, aby dodać post.'
+            else setErrorFromAxios(e, 'Nie udało się utworzyć posta.')
             throw e
         }
     }
 
-    // edycja posta (tekst + zdjęcia) – z obejściem "__EMPTY__"
     async function editPost({ id, content, newPhotos = [], attachedPhotos = [] }) {
         clearError()
+
+        const text = (content || '').trim()
+        if (!text) {
+            error.value = 'Treść posta nie może być pusta.'
+            throw new Error('Missing content')
+        }
+
         try {
             const fd = new FormData()
             fd.append('id', id)
-            fd.append('content', content || '')
+            fd.append('content', text)
 
-            if (attachedPhotos && attachedPhotos.length) {
-                attachedPhotos.forEach(name => {
-                    fd.append('attachedPhotos', name)
-                })
-            } else {
-                fd.append('attachedPhotos', '__EMPTY__')
+            if (Array.isArray(attachedPhotos) && attachedPhotos.length) {
+                attachedPhotos.forEach(name => fd.append('attachedPhotos', name))
             }
 
-            newPhotos.forEach(file => {
-                fd.append('newPhotos', file)
-            })
+            newPhotos.forEach(file => fd.append('newPhotos', file))
 
             const resp = await apiClient.patch('/posts/edit', fd, {
                 headers: { 'Content-Type': 'multipart/form-data' },
             })
+
             const updated = normalizePost(resp.data)
             const pid = getId(updated)
-
             setPostLocal(pid, () => updated)
 
             return updated
         } catch (e) {
             console.error('editPost error', e)
             const status = e?.response?.status
-            if (status === 401) {
-                error.value = 'Musisz być zalogowany, aby edytować post.'
-            } else {
-                setErrorFromAxios(e, 'Nie udało się zaktualizować posta.')
-            }
+            if (status === 401) error.value = 'Musisz być zalogowany, aby edytować post.'
+            else setErrorFromAxios(e, 'Nie udało się zaktualizować posta.')
             throw e
         }
     }
@@ -227,24 +212,19 @@ export const usePostsStore = defineStore('posts', () => {
         } catch (e) {
             console.error('deletePost error', e)
             const status = e?.response?.status
-            if (status === 401) {
-                error.value = 'Musisz być zalogowany, aby usuwać posty.'
-            } else {
-                setErrorFromAxios(e, 'Nie udało się usunąć posta.')
-            }
+            if (status === 401) error.value = 'Musisz być zalogowany, aby usuwać posty.'
+            else setErrorFromAxios(e, 'Nie udało się usunąć posta.')
             throw e
         }
     }
 
-    // optymistyczna aktualizacja głosu
     function applyLocalVote(id, direction) {
         const idx = findIndexById(id)
         if (idx === -1) return null
 
         const post = items.value[idx]
         const prevVote = mapVoteToNumber(post.viewerVote)
-        const prevRating =
-            typeof post.rating === 'number' ? post.rating : 0
+        const prevRating = typeof post.rating === 'number' ? post.rating : 0
 
         let newVote = prevVote
         let newRating = prevRating
@@ -260,63 +240,43 @@ export const usePostsStore = defineStore('posts', () => {
             newRating = prevRating + 2 * direction
         }
 
-        const optimistic = {
-            ...post,
-            viewerVote: newVote,
-            rating: newRating,
-        }
-
-        items.value.splice(idx, 1, optimistic)
-
+        items.value.splice(idx, 1, { ...post, viewerVote: newVote, rating: newRating })
         return { prevVote, prevRating }
     }
 
     async function voteUp(id) {
         clearError()
         const backup = applyLocalVote(id, 1)
-
         try {
             const resp = await apiClient.patch(`/posts/${id}/upvote`)
             const updated = normalizePost(resp.data)
-            const pid = getId(updated)
-            setPostLocal(pid, () => updated)
+            setPostLocal(getId(updated), () => updated)
         } catch (e) {
             console.error('voteUp error', e)
             if (backup) {
                 const idx = findIndexById(id)
                 if (idx !== -1) {
                     const post = items.value[idx]
-                    items.value.splice(idx, 1, {
-                        ...post,
-                        viewerVote: backup.prevVote,
-                        rating: backup.prevRating,
-                    })
+                    items.value.splice(idx, 1, { ...post, viewerVote: backup.prevVote, rating: backup.prevRating })
                 }
             }
-            // brak globalnego komunikatu – głosowanie nie jest krytyczne
         }
     }
 
     async function voteDown(id) {
         clearError()
         const backup = applyLocalVote(id, -1)
-
         try {
             const resp = await apiClient.patch(`/posts/${id}/downvote`)
             const updated = normalizePost(resp.data)
-            const pid = getId(updated)
-            setPostLocal(pid, () => updated)
+            setPostLocal(getId(updated), () => updated)
         } catch (e) {
             console.error('voteDown error', e)
             if (backup) {
                 const idx = findIndexById(id)
                 if (idx !== -1) {
                     const post = items.value[idx]
-                    items.value.splice(idx, 1, {
-                        ...post,
-                        viewerVote: backup.prevVote,
-                        rating: backup.prevRating,
-                    })
+                    items.value.splice(idx, 1, { ...post, viewerVote: backup.prevVote, rating: backup.prevRating })
                 }
             }
         }
@@ -324,25 +284,18 @@ export const usePostsStore = defineStore('posts', () => {
 
     async function reportPost({ postId, reason = 'SPAM' }) {
         clearError()
-
         if (!postId) {
             error.value = 'Brak identyfikatora zgłaszanego posta.'
             throw new Error('Missing postId')
         }
 
         try {
-            await apiClient.post('/reports/posts/report', {
-                contentId: postId,
-                reason,
-            })
+            await apiClient.post('/reports/posts/report', { contentId: postId, reason })
         } catch (e) {
             console.error('reportPost error', e)
             const status = e?.response?.status
-            if (status === 401) {
-                error.value = 'Musisz być zalogowany, aby zgłaszać posty.'
-            } else {
-                setErrorFromAxios(e, 'Nie udało się zgłosić posta.')
-            }
+            if (status === 401) error.value = 'Musisz być zalogowany, aby zgłaszać posty.'
+            else setErrorFromAxios(e, 'Nie udało się zgłosić posta.')
             throw e
         }
     }
@@ -354,19 +307,23 @@ export const usePostsStore = defineStore('posts', () => {
         size,
         total,
         error,
+
         userFilterId,
+        groupFilterId,
 
         clearError,
         getId,
         reset,
-        setUserFilter,
+
         fetchNext,
         fetchById,
+
         createPost,
         editPost,
         deletePost,
         voteUp,
         voteDown,
+
         reportPost,
     }
 })
