@@ -17,6 +17,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -27,6 +28,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
+@Transactional(readOnly = true)
 public class ContentReportServiceImpl implements ContentReportService {
     private final ContentReportRepository contentReportRepository;
     private final ContentRepository contentRepository;
@@ -47,6 +49,7 @@ public class ContentReportServiceImpl implements ContentReportService {
     }
 
     @Override
+    @Transactional
     public ContentReport create(Content reportedContent, User reportedBy, ReportReason reason) throws BadRequestException {
         if (reportedContent == null)
             throw new BadRequestException("Invalid content ID provided");
@@ -59,11 +62,13 @@ public class ContentReportServiceImpl implements ContentReportService {
     }
 
     @Override
+    @Transactional
     public void dismissReportsByReason(Content content, ReportReason reason) {
         contentReportRepository.deleteByReportedAndReason(content, reason);
     }
 
     @Override
+    @Transactional
     public void dismissReports(Long contentId) {
         contentReportRepository.deleteContentReportsByReported_Id(contentId);
     }
