@@ -37,6 +37,19 @@ export const useFishingSpotsStore = defineStore('fishingSpots', () => {
         return Array.isArray(data) ? data : data?.content ?? []
     }
 
+    function clearSelection() {
+        selectedSpot.value = null
+        opinions.value = []
+        events.value = []
+        ownerInfo.value = { is_owner: false }
+    }
+
+    function closeModeration() {
+        moderationOpen.value = false
+        pendingSpots.value = []
+        pendingError.value = null
+    }
+
     async function loadAll() {
         loading.value = true
         error.value = null
@@ -67,19 +80,14 @@ export const useFishingSpotsStore = defineStore('fishingSpots', () => {
 
     async function selectSpot(spot, { isLoggedIn = false } = {}) {
         if (!spot) {
-            selectedSpot.value = null
-            opinions.value = []
-            events.value = []
-            ownerInfo.value = { is_owner: false }
+            clearSelection()
             return
         }
 
         selectedSpot.value = spot
 
-        // publiczne zawsze
         const tasks = [loadDetails(spot.id), loadOpinions(spot.id), loadEvents(spot.id)]
 
-        // prywatne tylko po zalogowaniu (żeby nie było 401 w konsoli)
         if (isLoggedIn) tasks.push(loadOwnerInfo(spot.id))
         else ownerInfo.value = { is_owner: false }
 
@@ -137,7 +145,7 @@ export const useFishingSpotsStore = defineStore('fishingSpots', () => {
         try {
             const { data } = await apiClient.get('/users/me/spots/favourites')
             const list = normalize(data)
-            favouritesIds.value = new Set(list.map((s) => s.id).filter(Boolean))
+            favouritesIds.value = new Set(list.map((s) => s?.id).filter(Boolean))
         } catch {
             favouritesIds.value = new Set()
         } finally {
@@ -188,10 +196,9 @@ export const useFishingSpotsStore = defineStore('fishingSpots', () => {
 
             await Promise.all([loadOpinions(spotId), loadDetails(spotId)])
 
-            // odśwież listę (avgRating itp.)
             try {
                 const { data } = await apiClient.get(`/spots/${spotId}`)
-                const idx = spots.value.findIndex((s) => s.id === spotId)
+                const idx = spots.value.findIndex((s) => s?.id === spotId)
                 if (idx !== -1) spots.value[idx] = { ...spots.value[idx], ...data }
             } catch {}
         } catch {
@@ -201,17 +208,10 @@ export const useFishingSpotsStore = defineStore('fishingSpots', () => {
 
     async function deleteSpot(id) {
         if (!id) return
-        // retry: jak backend ma bez /api (różnie bywało u Ciebie wcześniej)
         try {
             await apiClient.delete(`/spots/${id}/delete`)
-            return
-        } catch (e1) {
-            try {
-                await apiClient.delete(`/spots/${id}/delete`, { baseURL: '' })
-                return
-            } catch {
-                throw new Error('Nie udało się usunąć łowiska.')
-            }
+        } catch {
+            throw new Error('Nie udało się usunąć łowiska.')
         }
     }
 
@@ -242,7 +242,7 @@ export const useFishingSpotsStore = defineStore('fishingSpots', () => {
         moderationBusy.value = true
         try {
             await apiClient.post(MODERATION_API.accept(id))
-            pendingSpots.value = pendingSpots.value.filter((s) => s.id !== id)
+            pendingSpots.value = pendingSpots.value.filter((s) => s?.id !== id)
         } catch {
             throw new Error('Nie udało się zaakceptować łowiska.')
         } finally {
@@ -255,7 +255,7 @@ export const useFishingSpotsStore = defineStore('fishingSpots', () => {
         moderationBusy.value = true
         try {
             await apiClient.post(MODERATION_API.reject(id))
-            pendingSpots.value = pendingSpots.value.filter((s) => s.id !== id)
+            pendingSpots.value = pendingSpots.value.filter((s) => s?.id !== id)
         } catch {
             throw new Error('Nie udało się odrzucić łowiska.')
         } finally {
@@ -286,6 +286,9 @@ export const useFishingSpotsStore = defineStore('fishingSpots', () => {
         pendingLoading,
         pendingError,
         moderationBusy,
+
+        clearSelection,
+        closeModeration,
 
         loadAll,
         loadByRadius,

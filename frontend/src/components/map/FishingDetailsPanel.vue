@@ -1,3 +1,4 @@
+<!-- src/components/map/FishingDetailsPanel.vue -->
 <script setup>
 import { computed, ref, watch } from 'vue'
 import NewFishingSpotForm from './NewFishingSpotForm.vue'
@@ -23,19 +24,17 @@ const props = defineProps({
   isLoggedIn: { type: Boolean, default: false },
 })
 
-const emit = defineEmits([
-  'rate-spot',
-  'delete-spot',
-  'toggle-favourite',
-  'approve-spot',
-  'reject-spot',
-])
+const emit = defineEmits(['rate-spot', 'delete-spot', 'toggle-favourite', 'approve-spot', 'reject-spot'])
 
 const isOwnerOrAdmin = computed(() => !!props.ownerInfo?.is_owner || !!auth.isAdmin)
 
 const confirmDeleteOpen = ref(false)
-function requestDelete() { confirmDeleteOpen.value = true }
-function cancelDelete() { confirmDeleteOpen.value = false }
+function requestDelete() {
+  confirmDeleteOpen.value = true
+}
+function cancelDelete() {
+  confirmDeleteOpen.value = false
+}
 function confirmDelete() {
   confirmDeleteOpen.value = false
   emit('delete-spot')
@@ -73,7 +72,6 @@ const draftComment = ref('')
 watch(
     () => props.spot?.id,
     () => {
-      // reset na zmianę łowiska
       draftRating.value = currentRating.value || 0
       draftComment.value = myOpinion.value?.comment || ''
     },
@@ -101,6 +99,21 @@ function publishOpinion() {
     comment: draftComment.value?.trim() ? draftComment.value.trim() : null,
   })
 }
+
+const spotPhotoUrl = computed(() => {
+  const u = props.spot?.photoUrl
+  if (!u) return null
+  return String(u)
+})
+
+const spotStatuteUrl = computed(() => {
+  const u = props.spot?.statuteUrl
+  if (!u) return null
+  return String(u)
+})
+
+const addOrReportLabel = computed(() => (auth.isAdmin ? 'Dodaj łowisko' : 'Zgłoś łowisko'))
+const toggleFormLabel = computed(() => (showNewSpotForm.value ? 'Ukryj formularz' : addOrReportLabel.value))
 </script>
 
 <template>
@@ -140,9 +153,7 @@ function publishOpinion() {
       </div>
     </header>
 
-    <div v-else class="text-xs opacity-90">
-      Wybierz łowisko z listy, aby zobaczyć szczegóły.
-    </div>
+    <div v-else class="text-xs opacity-90">Wybierz łowisko z listy, aby zobaczyć szczegóły.</div>
 
     <div v-if="spot && confirmDeleteOpen" class="text-xs border border-red-400/60 rounded-lg p-3 bg-red-600/10">
       <p class="font-semibold mb-2">Czy na pewno chcesz usunąć to łowisko?</p>
@@ -186,14 +197,24 @@ function publishOpinion() {
       </div>
     </div>
 
+    <div v-if="spot && (spotPhotoUrl || spotStatuteUrl)" class="text-xs">
+      <h3 class="font-semibold mb-2">Materiały</h3>
+
+      <div v-if="spotPhotoUrl" class="mb-2">
+        <img :src="spotPhotoUrl" alt="Zdjęcie łowiska" class="w-full max-h-40 object-cover rounded border border-white/40" />
+      </div>
+
+      <div v-if="spotStatuteUrl" class="opacity-90">
+        <a :href="spotStatuteUrl" target="_blank" rel="noreferrer" class="underline hover:opacity-80">
+          Otwórz regulamin (plik)
+        </a>
+      </div>
+    </div>
+
     <div v-if="spot" class="text-xs">
       <h3 class="font-semibold mb-1">Gatunki ryb</h3>
       <p class="opacity-90">
-        {{
-          (spot.fish || [])
-              .map((f) => (typeof f === 'string' ? f : f.name))
-              .join(', ') || 'Brak danych'
-        }}
+        {{ (spot.fish || []).map((f) => (typeof f === 'string' ? f : f.name)).join(', ') || 'Brak danych' }}
       </p>
     </div>
 
@@ -241,9 +262,7 @@ function publishOpinion() {
     <div v-if="spot" class="text-xs">
       <h3 class="font-semibold mb-1">Twoja opinia</h3>
 
-      <div v-if="!isLoggedIn" class="opacity-80">
-        Zaloguj się, aby dodać opinię.
-      </div>
+      <div v-if="!isLoggedIn" class="opacity-80">Zaloguj się, aby dodać opinię.</div>
 
       <div v-else class="space-y-2">
         <div class="flex items-center gap-1">
@@ -280,23 +299,21 @@ function publishOpinion() {
             Opublikuj
           </button>
 
-          <span class="opacity-80" v-if="myOpinionId">
-            Edytujesz swoją opinię.
-          </span>
+          <span class="opacity-80" v-if="myOpinionId">Edytujesz swoją opinię.</span>
         </div>
       </div>
     </div>
 
-    <div class="mt-2">
+    <div class="mt-2" v-if="isLoggedIn">
       <button
           type="button"
           class="px-3 py-1 rounded-full border border-white/60 hover:bg-white/10 text-xs"
           @click="showNewSpotForm = !showNewSpotForm"
       >
-        {{ showNewSpotForm ? 'Ukryj formularz zgłoszenia' : 'Zgłoś / dodaj łowisko' }}
+        {{ toggleFormLabel }}
       </button>
     </div>
 
-    <NewFishingSpotForm v-if="showNewSpotForm" class="mt-3 border-t border-white/40 pt-3" />
+    <NewFishingSpotForm v-if="showNewSpotForm && isLoggedIn" class="mt-3 border-t border-white/40 pt-3" />
   </section>
 </template>

@@ -130,6 +130,11 @@ function toggleDetails() {
   detailsVisible.value = !detailsVisible.value
 }
 
+function closeModerationIfNoAdmin() {
+  if (isAdmin.value) return
+  spotsStore.closeModeration()
+}
+
 let offViewport = null
 
 onMounted(async () => {
@@ -137,8 +142,6 @@ onMounted(async () => {
   offViewport = mapStore.onViewportChanged(reloadByMap, 350)
 
   await reloadByMap()
-
-  // bez 401 gdy niezalogowany
   await spotsStore.loadFavourites(isLoggedIn.value)
 
   if (spotsStore.spots.length) {
@@ -147,7 +150,9 @@ onMounted(async () => {
 })
 
 onBeforeUnmount(() => {
-  try { offViewport?.() } catch {}
+  try {
+    offViewport?.()
+  } catch {}
   if (uiTimer) clearTimeout(uiTimer)
   mapStore.destroy()
 })
@@ -160,12 +165,7 @@ watch(
     () => auth.user,
     async () => {
       await spotsStore.loadFavourites(isLoggedIn.value)
-
-      if (!isAdmin.value) {
-        spotsStore.moderationOpen = false
-        spotsStore.pendingSpots = []
-        spotsStore.pendingError = null
-      }
+      closeModerationIfNoAdmin()
 
       if (spotsStore.selectedSpot?.id) {
         await spotsStore.selectSpot(spotsStore.selectedSpot, { isLoggedIn: isLoggedIn.value })
@@ -184,11 +184,13 @@ watch(
       <div
           v-if="uiMessage"
           class="absolute left-4 top-4 z-30 px-3 py-2 rounded-lg text-xs border backdrop-blur"
-          :class="uiMessage.type === 'success'
-          ? 'bg-emerald-600/20 border-emerald-300/60 text-white'
-          : uiMessage.type === 'info'
-            ? 'bg-sky-600/20 border-sky-300/60 text-white'
-            : 'bg-red-700/20 border-red-300/60 text-white'"
+          :class="
+          uiMessage.type === 'success'
+            ? 'bg-emerald-600/20 border-emerald-300/60 text-white'
+            : uiMessage.type === 'info'
+              ? 'bg-sky-600/20 border-sky-300/60 text-white'
+              : 'bg-red-700/20 border-red-300/60 text-white'
+        "
       >
         {{ uiMessage.text }}
       </div>
@@ -231,7 +233,7 @@ watch(
               :show-moderation-button="isAdmin"
               :moderation-open="spotsStore.moderationOpen"
               :pending-count="spotsStore.pendingSpots.length"
-              @toggle-moderation="spotsStore.toggleModeration(isAdmin)"
+              @toggle-moderation="() => spotsStore.toggleModeration(isAdmin.value)"
               @hide="toggleSidePanels"
           />
 
@@ -252,7 +254,7 @@ watch(
               <button
                   type="button"
                   class="text-xs border border-white/60 rounded px-2 py-0.5 hover:bg-white/10 disabled:opacity-60"
-                  @click="spotsStore.loadPending(isAdmin)"
+                  @click="spotsStore.loadPending(isAdmin.value)"
                   :disabled="spotsStore.pendingLoading"
               >
                 Odśwież

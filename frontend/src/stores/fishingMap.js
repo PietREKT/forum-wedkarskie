@@ -23,8 +23,10 @@ export const useFishingMapStore = () => {
 
     function destroy() {
         if (!map.value) return
-        map.value.off()
-        map.value.remove()
+        try {
+            map.value.off()
+            map.value.remove()
+        } catch {}
         map.value = null
         markersLayer.value = null
     }
@@ -53,6 +55,7 @@ export const useFishingMapStore = () => {
         map.value.setView([lat, lng], Math.max(map.value.getZoom(), minZoom))
     }
 
+    // dla /spots/radius: x=lng, y=lat
     function getCenter() {
         if (!map.value) return null
         const c = map.value.getCenter()
@@ -67,6 +70,7 @@ export const useFishingMapStore = () => {
         return Math.max(1, Math.round(c.distanceTo(ne) / 1000))
     }
 
+    // zwraca off(), który odpina listenery
     function onViewportChanged(cb, debounceMs = 350) {
         if (!map.value) return () => {}
 
@@ -81,6 +85,11 @@ export const useFishingMapStore = () => {
 
         return () => {
             if (t) clearTimeout(t)
+            if (!map.value) return
+            try {
+                map.value.off('moveend', handler)
+                map.value.off('zoomend', handler)
+            } catch {}
         }
     }
 

@@ -7,6 +7,24 @@ values ('00000000-0000-0000-0000-000000000001', 'test', 'tName', 'tSurname',
 -----------------------------------------
 -- REGULAR USERS (ROLE = USER)
 -----------------------------------------
+INSERT INTO fishing_spot (
+    name,
+    description,
+    location,
+    type,
+    verification_status,
+    photo_url,
+    owner_id
+) VALUES (
+             'Łowisko Test Zdjęcia',
+             'Sprawdzenie wyświetlania zdjęcia.',
+             ST_SetSRID(ST_MakePoint(21.1500, 52.2500), 4326),
+             'PRIVATE',
+             'ACCEPTED',
+             'https://upload.wikimedia.org/wikipedia/commons/3/3f/Fishing_lake.jpg',
+             '00000000-0000-0000-0000-000000000001'
+         );
+
 INSERT INTO app_users (id, username, name, surname, email, password, phone, created_at, role)
 VALUES ('22222222-2222-2222-2222-222222222222',
         'janek',

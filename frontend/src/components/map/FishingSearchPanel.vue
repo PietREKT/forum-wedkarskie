@@ -1,3 +1,4 @@
+<!-- src/components/map/FishingSearchPanel.vue -->
 <script setup>
 import { ref, computed } from 'vue'
 
@@ -11,8 +12,8 @@ const search = ref('')
 
 const filteredSpots = computed(() => {
   const term = search.value.trim().toLowerCase()
-  if (!term) return props.spots
-  return props.spots.filter((spot) => String(spot.name || '').toLowerCase().includes(term))
+  if (!term) return props.spots || []
+  return (props.spots || []).filter((spot) => String(spot?.name || '').toLowerCase().includes(term))
 })
 </script>
 

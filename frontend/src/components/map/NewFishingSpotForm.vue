@@ -1,9 +1,14 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { apiClient } from '../../utils/axios.js'
 import { useAuthStore } from '../../stores/auth'
+import { useFishingSpotsStore } from '../../stores/fishingSpots'
 
 const auth = useAuthStore()
+const spotsStore = useFishingSpotsStore()
+
+const isAdmin = computed(() => !!auth.isAdmin)
+const isLoggedIn = computed(() => !!auth.user)
 
 const fishOptions = ref([])
 const selectedFishIds = ref([])
@@ -22,11 +27,12 @@ const form = ref({
 
 const submitted = ref(false)
 const errors = ref({})
+const sending = ref(false)
 
 async function loadFish() {
   try {
-    const resp = await apiClient.get('/fish')
-    fishOptions.value = Array.isArray(resp.data) ? resp.data : resp.data?.content ?? []
+    const { data } = await apiClient.get('/fish')
+    fishOptions.value = Array.isArray(data) ? data : data?.content ?? []
   } catch {
     fishOptions.value = []
   }
@@ -39,26 +45,29 @@ function triggerPhotos() {
 }
 
 function onPhotosChange(e) {
-  const files = e.target.files
+  const files = e?.target?.files
   photos.value = files ? Array.from(files) : []
 }
 
 function validate() {
   const e = {}
 
-  if (!auth.user) e.form = 'Musisz być zalogowany, aby zgłosić łowisko.'
+  if (!isLoggedIn.value) e.form = 'Musisz być zalogowany, aby dodać / zgłosić łowisko.'
   if (!form.value.name.trim()) e.name = 'Nazwa jest wymagana.'
   if (!form.value.ownerType) e.ownerType = 'Wybierz rodzaj łowiska.'
   if (!form.value.addressText.trim()) e.addressText = 'Adres / lokalizacja jest wymagana.'
 
-  const lat = Number(form.value.latitude)
-  const lng = Number(form.value.longitude)
+  const lat = Number(String(form.value.latitude).replace(',', '.'))
+  const lng = Number(String(form.value.longitude).replace(',', '.'))
 
-  if (!form.value.latitude) e.latitude = 'Szerokość geograficzna jest wymagana.'
+  if (!String(form.value.latitude).trim()) e.latitude = 'Szerokość geograficzna jest wymagana.'
   else if (Number.isNaN(lat)) e.latitude = 'Niepoprawna szerokość geograficzna.'
 
-  if (!form.value.longitude) e.longitude = 'Długość geograficzna jest wymagana.'
+  if (!String(form.value.longitude).trim()) e.longitude = 'Długość geograficzna jest wymagana.'
   else if (Number.isNaN(lng)) e.longitude = 'Niepoprawna długość geograficzna.'
+
+  if (!e.latitude && (lat < -90 || lat > 90)) e.latitude = 'Szerokość geograficzna poza zakresem (-90..90).'
+  if (!e.longitude && (lng < -180 || lng > 180)) e.longitude = 'Długość geograficzna poza zakresem (-180..180).'
 
   errors.value = e
   return Object.keys(e).length === 0
@@ -78,19 +87,61 @@ function resetForm() {
   errors.value = {}
 }
 
-async function submit() {
-  if (!validate()) return
+function extractBackendError(err) {
+  const msg =
+      err?.response?.data?.message ||
+      err?.response?.data?.error ||
+      err?.response?.data?.details ||
+      (typeof err?.response?.data === 'string' ? err.response.data : null)
 
+  if (msg) return String(msg)
+
+  const status = err?.response?.status
+  if (status === 400) return 'Błędne dane formularza (400).'
+  if (status === 401) return 'Brak autoryzacji (401).'
+  if (status === 403) return 'Brak uprawnień (403).'
+  return 'Nie udało się wysłać zgłoszenia.'
+}
+
+function normalizeIds(list) {
+  return (list || [])
+      .map((x) => {
+        const n = Number(x)
+        return Number.isFinite(n) ? n : null
+      })
+      .filter((x) => x != null)
+}
+
+async function uploadSpotPic(spotId, file) {
+  if (!spotId || !file) return
+  const fd = new FormData()
+  fd.append('file', file)
+
+  await apiClient.post(`/spots/${spotId}/pic`, fd, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  })
+}
+
+function buildPayload() {
   const typeEnum = form.value.ownerType === 'PZW' ? 'PUBLIC' : 'PRIVATE'
+  const lat = Number(String(form.value.latitude).replace(',', '.'))
+  const lng = Number(String(form.value.longitude).replace(',', '.'))
 
-  const payload = {
+  return {
     name: form.value.name.trim(),
     description: form.value.regulationText.trim() || null,
+
     type: typeEnum,
-    fishIds: selectedFishIds.value,
+    spotType: typeEnum,
+    ownerType: typeEnum,
+
+    managerIds: [],
+
+    fishIds: normalizeIds(selectedFishIds.value),
+
     locationDto: {
-      longitude: Number(form.value.longitude),
-      latitude: Number(form.value.latitude),
+      longitude: lng,
+      latitude: lat,
       address: {
         countryCode: 'PL',
         municipality: null,
@@ -100,22 +151,59 @@ async function submit() {
       },
     },
   }
+}
+
+async function refreshAfterCreate(createdId) {
+  try {
+    await spotsStore.loadAll()
+    const found = spotsStore.spots?.find((s) => String(s?.id) === String(createdId))
+    if (found) {
+      await spotsStore.selectSpot(found, { isLoggedIn: isLoggedIn.value })
+    }
+  } catch {}
+}
+
+async function submit() {
+  if (!validate()) return
+  if (sending.value) return
+
+  const createUrl = isAdmin.value ? '/admin/spots' : '/spots/create'
+  const payload = buildPayload()
 
   try {
+    sending.value = true
     errors.value = {}
-    await apiClient.post('/spots/create', payload)
+
+    const { data } = await apiClient.post(createUrl, payload)
+    const createdId = data?.id ?? data?.spotId ?? null
+
+    if (createdId && photos.value.length) {
+      try {
+        await uploadSpotPic(createdId, photos.value[0])
+      } catch {
+        errors.value = { ...errors.value, form: 'Łowisko dodane, ale nie udało się wysłać zdjęcia.' }
+      }
+    }
+
+    if (createdId) await refreshAfterCreate(createdId)
+
     submitted.value = true
     resetForm()
     setTimeout(() => (submitted.value = false), 2500)
-  } catch {
-    errors.value = { ...errors.value, form: 'Nie udało się wysłać zgłoszenia.' }
+  } catch (err) {
+    errors.value = { ...errors.value, form: extractBackendError(err) }
+  } finally {
+    sending.value = false
   }
 }
+
+const headerText = computed(() => (isAdmin.value ? 'Dodaj nowe łowisko' : 'Zgłoś nowe łowisko'))
+const buttonText = computed(() => (isAdmin.value ? 'Dodaj' : 'Wyślij zgłoszenie'))
 </script>
 
 <template>
   <div class="text-xs">
-    <h3 class="font-semibold mb-2">Zgłoś nowe łowisko</h3>
+    <h3 class="font-semibold mb-2">{{ headerText }}</h3>
 
     <p v-if="errors.form" class="mb-2 text-red-300">{{ errors.form }}</p>
 
@@ -133,10 +221,7 @@ async function submit() {
 
       <div class="flex flex-col gap-1">
         <label>Rodzaj łowiska <span class="text-red-300">*</span></label>
-        <select
-            v-model="form.ownerType"
-            class="bg-white text-black border border-white/60 rounded px-2 py-1 text-xs outline-none"
-        >
+        <select v-model="form.ownerType" class="bg-white text-black border border-white/60 rounded px-2 py-1 text-xs outline-none">
           <option value="">Wybierz rodzaj</option>
           <option value="PZW">PZW / koło</option>
           <option value="Komercyjne">Prywatne / komercyjne</option>
@@ -179,8 +264,8 @@ async function submit() {
       </div>
 
       <div class="flex flex-col gap-1 md:col-span-2">
-        <label>Zdjęcia (tymczasowo bez wysyłki do backendu)</label>
-        <input ref="photosInput" type="file" multiple class="hidden" @change="onPhotosChange" />
+        <label>Zdjęcie główne łowiska (pierwszy plik będzie wysłany)</label>
+        <input ref="photosInput" type="file" accept="image/*" multiple class="hidden" @change="onPhotosChange" />
         <div class="flex items-center gap-2">
           <button type="button" class="px-3 py-1 rounded-full border border-white/60 hover:bg-white/10 text-xs" @click="triggerPhotos">
             Wybierz zdjęcia
@@ -214,12 +299,13 @@ async function submit() {
     <div class="flex items-center gap-3 mt-1">
       <button
           type="button"
-          class="px-3 py-1 rounded-full border border-white/60 hover:bg-white/10 text-xs"
+          class="px-3 py-1 rounded-full border border-white/60 hover:bg-white/10 text-xs disabled:opacity-60"
+          :disabled="sending"
           @click="submit"
       >
-        Wyślij zgłoszenie
+        {{ sending ? 'Wysyłanie...' : buttonText }}
       </button>
-      <span v-if="submitted" class="opacity-90">Zgłoszenie przyjęte.</span>
+      <span v-if="submitted" class="opacity-90">Zapisano.</span>
     </div>
   </div>
 </template>

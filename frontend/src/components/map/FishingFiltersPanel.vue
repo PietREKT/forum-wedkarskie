@@ -1,3 +1,4 @@
+<!-- src/components/map/FishingFiltersPanel.vue -->
 <script setup>
 import { ref, watch } from 'vue'
 
@@ -12,15 +13,15 @@ const props = defineProps({
 const emit = defineEmits(['hide', 'update:filters', 'toggle-moderation'])
 
 const localFilters = ref({
-  spotType: props.filters.spotType ?? 'ALL',
+  spotType: props.filters?.spotType ?? 'ALL',
 })
 
 watch(
-    () => props.filters,
-    (val) => {
-      localFilters.value = { spotType: val.spotType ?? 'ALL' }
+    () => props.filters?.spotType,
+    (spotType) => {
+      localFilters.value = { ...localFilters.value, spotType: spotType ?? 'ALL' }
     },
-    { deep: true },
+    { immediate: true },
 )
 
 function updateField(field, value) {
@@ -33,7 +34,7 @@ function updateField(field, value) {
   <aside class="bg-black/75 backdrop-blur p-4 flex flex-col gap-4 overflow-y-auto min-h-0 text-white">
     <header class="flex items-center justify-between">
       <h2 class="font-semibold text-sm uppercase tracking-wide">FILTRY</h2>
-      <button class="text-xs border border-white/60 rounded px-2 py-0.5 hover:bg-white/10" @click="emit('hide')">
+      <button type="button" class="text-xs border border-white/60 rounded px-2 py-0.5 hover:bg-white/10" @click="emit('hide')">
         Ukryj
       </button>
     </header>
