@@ -218,7 +218,7 @@ INSERT INTO fishing_spot (
      'Małe prywatne łowisko używane do testów aplikacji.',
      ST_SetSRID(ST_MakePoint(22.5667, 51.2500), 4326),  -- lng, lat
      'PRIVATE',
-     'IN_REVIEW',
+     'ACCEPTED',
      'https://example.com/statute.pdf',
      '00000000-0000-0000-0000-000000000001');
 

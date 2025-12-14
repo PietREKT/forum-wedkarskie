@@ -9,6 +9,7 @@ import org.piet.forumbackend.events.dtos.responses.EventDto;
 import org.piet.forumbackend.events.services.EventsService;
 import org.piet.forumbackend.fish.services.FishService;
 import org.piet.forumbackend.fishing_spots.core.dtos.requests.CreateFishingSpotDto;
+import org.piet.forumbackend.fishing_spots.core.dtos.requests.UploadSpotFileDto;
 import org.piet.forumbackend.fishing_spots.core.dtos.responses.FishingSpotDto;
 import org.piet.forumbackend.fishing_spots.core.dtos.responses.FishingSpotListDto;
 import org.piet.forumbackend.fishing_spots.core.exceptions.FishingSpotNotFoundException;
@@ -103,5 +104,20 @@ public class FishingSpotController {
         );
 
         return ResponseEntity.ok(map);
+    }
+
+    @PostMapping("{spotId}/statue")
+    public ResponseEntity<?> updateStatue(@PathVariable Long spotId, @ModelAttribute @Valid UploadSpotFileDto dto) throws UserNotLoggedInException, UnauthorizedAccessException, IOException {
+        var spot = fishingSpotService.getFishingSpotById(spotId);
+        fishingSpotService.updateStatue(spot, dto.getFile(), userService.getCurrentUser());
+
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("{spotId}/pic")
+    public ResponseEntity<?> updatePic(@PathVariable Long spotId, @ModelAttribute @Valid UploadSpotFileDto dto) throws UserNotLoggedInException, UnauthorizedAccessException, IOException {
+        fishingSpotService.setFishingSpotPicture(spotId, dto.getFile());
+
+        return ResponseEntity.noContent().build();
     }
 }

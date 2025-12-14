@@ -23,6 +23,8 @@ public class FileProperties {
     File fishFolder;
     File spotsFolder;
     File contentFolder;
+    File statuesFolder;
+    File spotsPicsFolder;
 
     final String contentFolderUploadsUrl;
 
@@ -87,6 +89,17 @@ public class FileProperties {
                         ));
             }
         });
+
+        statuesFolder = new File(spotsFolder, "statues");
+        spotsPicsFolder = new File(spotsFolder, "pics");
+
+        if (!statuesFolder.exists() && !statuesFolder.mkdir()){
+            throw new IllegalStateException("Error while creating statuesFolder");
+        }
+
+        if (!spotsPicsFolder.exists() && !spotsPicsFolder.mkdir()){
+            throw new IllegalStateException("Error while creating statuesFolder");
+        }
 
         this.contentFolderUploadsUrl = "/uploads/" + contentFolder.getName() + '/';
     }

@@ -20,6 +20,8 @@ public class FishingSpotDto implements Serializable {
     String statuteUrl;
     List<FishListDto> fish;
     double avgRating;
+    String photoUrl;
+
 
     public static FishingSpotDto create(FishingSpot fishingSpot){
         return new FishingSpotDto(
@@ -31,7 +33,8 @@ public class FishingSpotDto implements Serializable {
                 fishingSpot.getType(),
                 fishingSpot.getStatuteUrl(),
                 fishingSpot.getFish().stream().map(FishListDto::create).toList(),
-                fishingSpot.getAverageRating()
+                fishingSpot.getAverageRating(),
+                fishingSpot.getPhotoUrl()
         );
     }
 }
