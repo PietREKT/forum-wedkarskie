@@ -2,40 +2,24 @@
 import { ref, computed } from 'vue'
 
 const props = defineProps({
-  spots: {
-    type: Array,
-    required: true,
-  },
-  selectedId: {
-    type: [Number, String, null],
-    default: null,
-  },
+  spots: { type: Array, required: true },
+  selectedId: { type: [Number, String, null], default: null },
 })
 
 const emit = defineEmits(['select'])
-
 const search = ref('')
 
-// wyszukujemy TYLKO po nazwie łowiska
 const filteredSpots = computed(() => {
   const term = search.value.trim().toLowerCase()
   if (!term) return props.spots
-
-  return props.spots.filter((spot) => {
-    const name = String(spot.name || '').toLowerCase()
-    return name.includes(term)
-  })
+  return props.spots.filter((spot) => String(spot.name || '').toLowerCase().includes(term))
 })
 </script>
 
 <template>
-  <section
-      class="bg-black/70 backdrop-blur p-4 flex flex-col gap-4 overflow-y-auto min-h-0 text-white"
-  >
+  <section class="bg-black/70 backdrop-blur p-4 flex flex-col gap-4 overflow-y-auto min-h-0 text-white">
     <header class="flex flex-col gap-2">
-      <h2 class="font-semibold text-sm uppercase tracking-wide">
-        WYSZUKIWARKA
-      </h2>
+      <h2 class="font-semibold text-sm uppercase tracking-wide">WYSZUKIWARKA</h2>
       <input
           v-model="search"
           type="text"
@@ -53,30 +37,13 @@ const filteredSpots = computed(() => {
           @click="emit('select', spot)"
       >
         <header class="flex items-center justify-between">
-          <h3 class="font-semibold text-sm">
-            {{ spot.name }}
-          </h3>
-          <span class="text-[10px] uppercase opacity-90">
-            {{ spot.ownerType || spot.type || '—' }}
-          </span>
+          <h3 class="font-semibold text-sm">{{ spot.name }}</h3>
+          <span class="text-[10px] uppercase opacity-90">{{ spot.type || '—' }}</span>
         </header>
 
-        <!-- druga linia: województwo -->
-        <p class="opacity-90 mt-1">
-          {{ spot.voivodeship || 'Brak danych' }}
-        </p>
-
-        <!-- trzecia linia: rating jeśli jest -->
         <p class="opacity-80 mt-0.5 text-[10px]">
-          <span v-if="spot.avgRating != null">
-            Śr. ocena: {{ spot.avgRating.toFixed(1) }} / 5
-            <span class="opacity-70">
-              ({{ spot.ratingCount || 0 }} głosów)
-            </span>
-          </span>
-          <span v-else>
-            Brak ocen
-          </span>
+          <span v-if="spot.avgRating != null">Śr. ocena: {{ Number(spot.avgRating).toFixed(1) }} / 5</span>
+          <span v-else>Brak ocen</span>
         </p>
       </article>
     </div>

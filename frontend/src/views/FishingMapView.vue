@@ -8,6 +8,14 @@ import FishingDetailsPanel from '../components/map/FishingDetailsPanel.vue'
 import { apiClient } from '../utils/axios.js'
 import { useAuthStore } from '../stores/auth'
 
+const MODERATION_API = {
+  listPending: '/admin/spots/pending',
+  approve: (id) => `/admin/spots/${id}/approve`,
+  reject: (id) => `/admin/spots/${id}/reject`,
+}
+
+const auth = useAuthStore()
+
 const map = ref(null)
 const markersLayer = ref(null)
 
@@ -29,35 +37,49 @@ const eventsLoading = ref(false)
 const ownerInfo = ref({ is_owner: false })
 const ownerLoading = ref(false)
 
-const auth = useAuthStore()
 const myOpinion = ref(null)
 
-// tylko rodzaj łowiska
+// favourites
+const favouritesIds = ref(new Set())
+const favouritesLoading = ref(false)
+
+// moderation
+const moderationOpen = ref(false)
+const pendingSpots = ref([])
+const pendingLoading = ref(false)
+const pendingError = ref(null)
+const pendingSelectedId = ref(null)
+const moderationBusy = ref(false)
+
 const filters = ref({
   spotType: 'ALL', // ALL | PUBLIC | PRIVATE
 })
 
-const averageRating = computed(() => {
-  if (!opinions.value.length) return null
-  const sum = opinions.value.reduce(
-      (acc, op) => acc + (typeof op.rating === 'number' ? op.rating : 0),
-      0,
-  )
-  return opinions.value.length ? sum / opinions.value.length : null
-})
+const selectedSpotId = computed(() => selectedSpot.value?.id ?? null)
 
 const visibleSpots = computed(() =>
     spots.value.filter((spot) => {
       const f = filters.value
-
       if (f.spotType === 'PUBLIC' && spot.type !== 'PUBLIC') return false
       if (f.spotType === 'PRIVATE' && spot.type !== 'PRIVATE') return false
-
       return true
     }),
 )
 
-const selectedSpotId = computed(() => selectedSpot.value?.id ?? null)
+const isSelectedFavourite = computed(() => {
+  const id = selectedSpotId.value
+  if (!id) return false
+  return favouritesIds.value.has(id)
+})
+
+const isAdminOrRoot = computed(() => !!auth.isAdmin)
+
+const pendingIds = computed(() => new Set((pendingSpots.value || []).map((s) => s?.id).filter(Boolean)))
+const isSelectedPending = computed(() => {
+  const id = selectedSpotId.value
+  if (!id) return false
+  return pendingIds.value.has(id)
+})
 
 function toggleSidePanels() {
   sidePanelsVisible.value = !sidePanelsVisible.value
@@ -67,29 +89,9 @@ function toggleDetails() {
   detailsVisible.value = !detailsVisible.value
 }
 
-async function selectSpot(spot) {
-  if (!spot) {
-    selectedSpot.value = null
-    opinions.value = []
-    events.value = []
-    ownerInfo.value = { is_owner: false }
-    myOpinion.value = null
-    return
-  }
-
-  selectedSpot.value = spot
-
-  const { lat, lng } = getSpotLatLng(spot)
-  if (lat != null && lng != null && map.value) {
-    map.value.setView([lat, lng], 11)
-  }
-
-  await loadSpotExtras(spot.id)
-}
-
 function onApplyFilters(snapshot) {
   filters.value = { ...filters.value, ...snapshot }
-  reloadSpots()
+  renderMarkers()
 }
 
 // MAPA
@@ -113,13 +115,14 @@ function initMap() {
   markersLayer.value = L.layerGroup().addTo(instance)
   map.value = instance
 
+  instance.on('moveend', scheduleReloadFromMap)
+  instance.on('zoomend', scheduleReloadFromMap)
+
   renderMarkers()
 }
 
 function clearMarkers() {
-  if (markersLayer.value) {
-    markersLayer.value.clearLayers()
-  }
+  markersLayer.value?.clearLayers()
 }
 
 function getSpotLatLng(spot) {
@@ -154,25 +157,17 @@ async function loadAllSpots() {
   error.value = null
   try {
     const { data } = await apiClient.get('/spots', {
-      baseURL: '',
       params: { page: 0, size: 500 },
     })
 
-    let list = []
-    if (Array.isArray(data)) {
-      list = data
-    } else if (data && Array.isArray(data.content)) {
-      list = data.content
-    }
-
+    const list = Array.isArray(data) ? data : data?.content ?? []
     spots.value = list
 
     if (!spots.value.length) {
       await selectSpot(null)
     } else {
       const currentId = selectedSpot.value?.id
-      const next =
-          spots.value.find((s) => s.id === currentId) ?? spots.value[0]
+      const next = spots.value.find((s) => s.id === currentId) ?? spots.value[0]
       await selectSpot(next)
     }
 
@@ -185,17 +180,93 @@ async function loadAllSpots() {
   }
 }
 
-async function reloadSpots() {
-  await loadAllSpots()
+function getRadiusKmFromMap() {
+  if (!map.value) return null
+  const b = map.value.getBounds()
+  const center = map.value.getCenter()
+  const northEast = b.getNorthEast()
+  const meters = center.distanceTo(northEast)
+  const km = Math.max(1, Math.round(meters / 1000))
+  return km
+}
+
+async function loadSpotsByRadius() {
+  if (!map.value) return
+  loading.value = true
+  error.value = null
+  try {
+    const center = map.value.getCenter()
+    const radiusKm = getRadiusKmFromMap()
+    if (!radiusKm) {
+      await loadAllSpots()
+      return
+    }
+
+    const { data } = await apiClient.get('/spots/radius', {
+      params: {
+        x: center.lng,
+        y: center.lat,
+        radiusKm,
+        page: 0,
+        size: 500,
+      },
+    })
+
+    const list = Array.isArray(data) ? data : data?.content ?? []
+    spots.value = list
+
+    if (selectedSpot.value?.id) {
+      const stillExists = spots.value.some((s) => s.id === selectedSpot.value.id)
+      if (!stillExists) {
+        await selectSpot(spots.value[0] ?? null)
+      }
+    } else {
+      await selectSpot(spots.value[0] ?? null)
+    }
+
+    renderMarkers()
+  } catch (e) {
+    await loadAllSpots()
+  } finally {
+    loading.value = false
+  }
+}
+
+let reloadTimer = null
+function scheduleReloadFromMap() {
+  if (reloadTimer) clearTimeout(reloadTimer)
+  reloadTimer = setTimeout(() => {
+    loadSpotsByRadius()
+  }, 350)
 }
 
 // SZCZEGÓŁY / OPINIE / WYDARZENIA / WŁAŚCICIEL
 
+async function selectSpot(spot) {
+  if (!spot) {
+    selectedSpot.value = null
+    opinions.value = []
+    events.value = []
+    ownerInfo.value = { is_owner: false }
+    myOpinion.value = null
+    pendingSelectedId.value = null
+    return
+  }
+
+  selectedSpot.value = spot
+  pendingSelectedId.value = spot.id ?? null
+
+  const { lat, lng } = getSpotLatLng(spot)
+  if (lat != null && lng != null && map.value) {
+    map.value.setView([lat, lng], Math.max(map.value.getZoom(), 11))
+  }
+
+  await loadSpotExtras(spot.id)
+}
+
 async function loadSpotDetails(id) {
   try {
-    const { data } = await apiClient.get(`/spots/${id}`, {
-      baseURL: '',
-    })
+    const { data } = await apiClient.get(`/spots/${id}`)
     if (selectedSpot.value && selectedSpot.value.id === id) {
       selectedSpot.value = data
     }
@@ -212,7 +283,7 @@ async function loadSpotOpinions(id) {
       params: { page: 0, size: 50 },
     })
 
-    const list = Array.isArray(data) ? data : data.content ?? []
+    const list = Array.isArray(data) ? data : data?.content ?? []
     opinions.value = list
 
     const currentUser = auth.user
@@ -231,7 +302,6 @@ async function loadSpotOpinions(id) {
       myOpinion.value = null
     }
   } catch (e) {
-    console.error('Błąd pobierania opinii o łowisku', e)
     opinions.value = []
     myOpinion.value = null
   } finally {
@@ -243,12 +313,10 @@ async function loadSpotEvents(id) {
   eventsLoading.value = true
   try {
     const { data } = await apiClient.get(`/spots/${id}/events`, {
-      baseURL: '',
       params: { page: 0, size: 50 },
     })
-    events.value = Array.isArray(data) ? data : data.content ?? []
+    events.value = Array.isArray(data) ? data : data?.content ?? []
   } catch (e) {
-    console.error('Błąd pobierania wydarzeń dla łowiska', e)
     events.value = []
   } finally {
     eventsLoading.value = false
@@ -258,12 +326,19 @@ async function loadSpotEvents(id) {
 async function loadSpotOwnerInfo(id) {
   ownerLoading.value = true
   try {
-    const { data } = await apiClient.get(`/spots/${id}/owner`, {
-      baseURL: '',
-    })
+    if (!auth.user) {
+      ownerInfo.value = { is_owner: false }
+      return
+    }
+
+    const { data } = await apiClient.get(`/spots/${id}/owner`)
     ownerInfo.value = data || { is_owner: false }
   } catch (e) {
-    console.error('Błąd pobierania informacji o właścicielu', e)
+    const status = e?.response?.status
+    if (status === 401 || status === 403) {
+      ownerInfo.value = { is_owner: false }
+      return
+    }
     ownerInfo.value = { is_owner: false }
   } finally {
     ownerLoading.value = false
@@ -272,85 +347,154 @@ async function loadSpotOwnerInfo(id) {
 
 async function loadSpotExtras(id) {
   if (!id) return
-  await Promise.all([
-    loadSpotDetails(id),
-    loadSpotOpinions(id),
-    loadSpotEvents(id),
-    loadSpotOwnerInfo(id),
-  ])
+  await Promise.all([loadSpotDetails(id), loadSpotOpinions(id), loadSpotEvents(id), loadSpotOwnerInfo(id)])
+}
+
+// FAVOURITES
+
+async function loadFavourites() {
+  favouritesIds.value = new Set()
+  if (!auth.user) return
+  favouritesLoading.value = true
+  try {
+    const { data } = await apiClient.get('/users/me/spots/favourites')
+    const list = Array.isArray(data) ? data : data?.content ?? []
+    favouritesIds.value = new Set(list.map((s) => s.id).filter(Boolean))
+  } catch (e) {
+    favouritesIds.value = new Set()
+  } finally {
+    favouritesLoading.value = false
+  }
+}
+
+async function addFavourite(spotId) {
+  await apiClient.post('/users/me/spots/favourites/add', { spotId })
+}
+
+async function removeFavourite(spotId) {
+  await apiClient.post('/users/me/spots/favourites/remove', { spotId })
+}
+
+async function onToggleFavourite(spotId) {
+  if (!spotId) return
+  if (!auth.user) return
+
+  const next = new Set(favouritesIds.value)
+
+  try {
+    if (next.has(spotId)) {
+      next.delete(spotId)
+      favouritesIds.value = next
+      await removeFavourite(spotId)
+    } else {
+      next.add(spotId)
+      favouritesIds.value = next
+      await addFavourite(spotId)
+    }
+  } catch (e) {
+    await loadFavourites()
+  }
 }
 
 // OCENA + USUNIĘCIE
 
-async function onRateSpot({ spotId, rating, opinionId }) {
+async function onRateSpot({ spotId, rating, opinionId, comment }) {
   if (!spotId || !rating) return
   try {
     if (opinionId) {
       await apiClient.patch(`/spots/opinions/${opinionId}`, {
         rating,
-        comment: myOpinion.value?.comment ?? null,
+        comment: comment ?? myOpinion.value?.comment ?? null,
       })
     } else {
       await apiClient.post('/spots/opinions', {
         spotId,
         rating,
-        comment: null,
+        comment: comment ?? null,
       })
     }
 
-    // odśwież opinie
-    await loadSpotOpinions(spotId)
+    await Promise.all([loadSpotOpinions(spotId), loadSpotDetails(spotId)])
 
-    // przelicz średnią i liczbę głosów
-    const avg = averageRating.value
-    const count = opinions.value.length
-
-    // zaktualizuj wybrane łowisko (panel po prawej)
-    if (selectedSpot.value && selectedSpot.value.id === spotId) {
-      selectedSpot.value = {
-        ...selectedSpot.value,
-        avgRating: avg,
-        ratingCount: count,
-      }
-    }
-
-    // zaktualizuj listę łowisk (panel po lewej)
+    const { data } = await apiClient.get(`/spots/${spotId}`)
     const idx = spots.value.findIndex((s) => s.id === spotId)
-    if (idx !== -1) {
-      spots.value[idx] = {
-        ...spots.value[idx],
-        avgRating: avg,
-        ratingCount: count,
-      }
-    }
-  } catch (e) {
-    console.error('Błąd wysyłania oceny łowiska', e)
-  }
+    if (idx !== -1) spots.value[idx] = { ...spots.value[idx], ...data }
+  } catch (e) {}
 }
 
 async function onDeleteSpot() {
   if (!selectedSpot.value?.id) return
-  const ok = window.confirm('Czy na pewno chcesz usunąć to łowisko?')
-  if (!ok) return
   try {
-    await apiClient.delete(`/spots/${selectedSpot.value.id}/delete`, {
-      baseURL: '',
-    })
-    await reloadSpots()
-  } catch (e) {
-    console.error('Błąd usuwania łowiska', e)
-  }
+    await apiClient.delete(`/spots/${selectedSpot.value.id}/delete`)
+    await loadSpotsByRadius()
+  } catch (e) {}
 }
 
-// po utworzeniu łowiska (formularz)
 async function onSpotCreated(newSpot) {
-  await reloadSpots()
+  await loadSpotsByRadius()
   const createdId = newSpot?.id
   if (createdId) {
     const found = spots.value.find((s) => s.id === createdId)
-    if (found) {
-      await selectSpot(found)
-    }
+    if (found) await selectSpot(found)
+  }
+}
+
+// MODERACJA
+
+async function toggleModeration() {
+  if (!isAdminOrRoot.value) return
+  moderationOpen.value = !moderationOpen.value
+  if (moderationOpen.value) {
+    await loadPendingSpots()
+  } else {
+    pendingError.value = null
+  }
+}
+
+async function loadPendingSpots() {
+  if (!isAdminOrRoot.value) return
+  pendingLoading.value = true
+  pendingError.value = null
+  try {
+    const { data } = await apiClient.get(MODERATION_API.listPending, { params: { page: 0, size: 200 } })
+    const list = Array.isArray(data) ? data : data?.content ?? []
+    pendingSpots.value = list
+  } catch (e) {
+    pendingError.value = 'Nie udało się pobrać zgłoszeń łowisk.'
+    pendingSpots.value = []
+  } finally {
+    pendingLoading.value = false
+  }
+}
+
+async function approveSelectedSpot() {
+  if (!isAdminOrRoot.value) return
+  const id = selectedSpot.value?.id
+  if (!id) return
+
+  moderationBusy.value = true
+  try {
+    await apiClient.post(MODERATION_API.approve(id))
+    pendingSpots.value = (pendingSpots.value || []).filter((s) => s?.id !== id)
+    await loadSpotsByRadius()
+  } finally {
+    moderationBusy.value = false
+  }
+}
+
+async function rejectSelectedSpot() {
+  if (!isAdminOrRoot.value) return
+  const id = selectedSpot.value?.id
+  if (!id) return
+
+  const reason = window.prompt('Powód odrzucenia (opcjonalnie):', '') ?? ''
+  moderationBusy.value = true
+  try {
+    await apiClient.post(MODERATION_API.reject(id), { reason: reason.trim() || null })
+    pendingSpots.value = (pendingSpots.value || []).filter((s) => s?.id !== id)
+    await loadSpotsByRadius()
+  } finally {
+    moderationBusy.value = false
   }
 }
 
@@ -358,15 +502,38 @@ async function onSpotCreated(newSpot) {
 
 onMounted(async () => {
   initMap()
-  await loadAllSpots()
+  await Promise.all([loadSpotsByRadius(), loadFavourites()])
 })
 
 onBeforeUnmount(() => {
+  if (reloadTimer) clearTimeout(reloadTimer)
   if (map.value) {
+    map.value.off('moveend', scheduleReloadFromMap)
+    map.value.off('zoomend', scheduleReloadFromMap)
     map.value.remove()
     map.value = null
   }
 })
+
+watch(
+    () => auth.user,
+    async () => {
+      await loadFavourites()
+      if (selectedSpot.value?.id) {
+        await Promise.all([loadSpotOpinions(selectedSpot.value.id), loadSpotOwnerInfo(selectedSpot.value.id)])
+      } else {
+        ownerInfo.value = { is_owner: false }
+        myOpinion.value = null
+      }
+
+      if (!isAdminOrRoot.value) {
+        moderationOpen.value = false
+        pendingSpots.value = []
+        pendingSelectedId.value = null
+        pendingError.value = null
+      }
+    },
+)
 
 watch(
     () => visibleSpots.value,
@@ -417,44 +584,87 @@ watch(
 
       <div class="absolute inset-0 z-10 flex pointer-events-none">
         <Transition name="fade-panels">
-          <div
-              v-if="sidePanelsVisible"
-              class="pointer-events-auto flex flex-col md:flex-row gap-0 w-full max-w-[640px]"
-          >
+          <div v-if="sidePanelsVisible" class="pointer-events-auto flex flex-col md:flex-row gap-0 w-full max-w-[640px]">
             <FishingFiltersPanel
                 class="w-full md:w-1/2"
                 v-model:filters="filters"
+                :show-moderation-button="isAdminOrRoot"
+                :moderation-open="moderationOpen"
+                :pending-count="pendingSpots.length"
+                @toggle-moderation="toggleModeration"
                 @hide="toggleSidePanels"
                 @apply="onApplyFilters"
             />
 
             <FishingSearchPanel
+                v-if="!moderationOpen"
                 class="w-full md:w-1/2"
                 :spots="visibleSpots"
                 :selected-id="selectedSpotId"
                 @select="selectSpot"
             />
+
+            <section
+                v-else
+                class="bg-black/70 backdrop-blur p-4 flex flex-col gap-3 overflow-y-auto min-h-0 text-white w-full md:w-1/2"
+            >
+              <header class="flex items-center justify-between">
+                <h2 class="font-semibold text-sm uppercase tracking-wide">ZGŁOSZENIA ŁOWISK</h2>
+                <button
+                    type="button"
+                    class="text-xs border border-white/60 rounded px-2 py-0.5 hover:bg-white/10 disabled:opacity-60"
+                    @click="loadPendingSpots"
+                    :disabled="pendingLoading"
+                >
+                  Odśwież
+                </button>
+              </header>
+
+              <div v-if="pendingLoading" class="text-xs opacity-80">Ładowanie...</div>
+              <div v-else-if="pendingError" class="text-xs text-red-300">{{ pendingError }}</div>
+              <div v-else-if="!pendingSpots.length" class="text-xs opacity-80">Brak oczekujących zgłoszeń.</div>
+
+              <div v-else class="flex-1 overflow-y-auto space-y-2 text-xs">
+                <article
+                    v-for="p in pendingSpots"
+                    :key="p.id"
+                    class="border rounded-lg px-3 py-2 cursor-pointer bg-white/10 hover:bg-white/20"
+                    :class="p.id === pendingSelectedId ? 'border-white/80' : 'border-white/40'"
+                    @click="selectSpot(p)"
+                >
+                  <header class="flex items-center justify-between">
+                    <h3 class="font-semibold text-sm">{{ p.name }}</h3>
+                    <span class="text-[10px] uppercase opacity-90">{{ p.type || '—' }}</span>
+                  </header>
+                  <p class="opacity-80 mt-0.5 text-[10px]">ID: {{ p.id }}</p>
+                </article>
+              </div>
+            </section>
           </div>
         </Transition>
 
         <Transition name="fade-panels">
-          <div
-              v-if="detailsVisible"
-              class="pointer-events-auto ml-auto w-[460px] max-w-full h-full"
-          >
+          <div v-if="detailsVisible" class="pointer-events-auto ml-auto w-[460px] max-w-full h-full">
             <FishingDetailsPanel
                 class="h-full"
                 :spot="selectedSpot"
                 :opinions="opinions"
                 :opinions-loading="opinionsLoading"
-                :average-rating="averageRating"
                 :events="events"
                 :events-loading="eventsLoading"
                 :owner-info="ownerInfo"
                 :user-opinion="myOpinion"
+                :is-favourite="isSelectedFavourite"
+                :favourites-loading="favouritesLoading"
+                :show-moderation="isAdminOrRoot && moderationOpen"
+                :is-pending="isSelectedPending"
+                :moderation-busy="moderationBusy"
+                @toggle-favourite="onToggleFavourite"
                 @rate-spot="onRateSpot"
                 @delete-spot="onDeleteSpot"
                 @spot-created="onSpotCreated"
+                @approve-spot="approveSelectedSpot"
+                @reject-spot="rejectSelectedSpot"
             />
           </div>
         </Transition>
