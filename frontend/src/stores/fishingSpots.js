@@ -1,283 +1,305 @@
 import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
+import { ref } from 'vue'
 import { apiClient } from '../utils/axios.js'
 
 export const useFishingSpotsStore = defineStore('fishingSpots', () => {
-    // Lista wszystkich zaakceptowanych łowisk (GET /spots)
     const spots = ref([])
-    const spotsLoading = ref(false)
-    const spotsError = ref(null)
+    const loading = ref(false)
+    const error = ref(null)
 
-    // Szczegóły wybranego łowiska (GET /spots/{id})
     const selectedSpot = ref(null)
-    const selectedSpotLoading = ref(false)
-    const selectedSpotError = ref(null)
 
-    // Opinie o łowisku (GET /api/spots/opinions/{spotId})
     const opinions = ref([])
-    const opinionsLast = ref(true)
-    const opinionsTotalElements = ref(0)
     const opinionsLoading = ref(false)
-    const opinionsError = ref(null)
 
-    // Wydarzenia powiązane z łowiskiem (GET /spots/{spotId}/events)
     const events = ref([])
-    const eventsLast = ref(true)
-    const eventsTotalElements = ref(0)
     const eventsLoading = ref(false)
-    const eventsError = ref(null)
 
-    // Informacja o właścicielu (GET /spots/{spotId}/owner)
     const ownerInfo = ref({ is_owner: false })
     const ownerLoading = ref(false)
-    const ownerError = ref(null)
 
-    // Średnia ocena z opinii
-    const averageRating = computed(() => {
-        if (!opinions.value.length) return null
-        const sum = opinions.value.reduce(
-            (acc, op) => acc + (typeof op.rating === 'number' ? op.rating : 0),
-            0,
-        )
-        return opinions.value.length ? sum / opinions.value.length : null
-    })
+    const favouritesIds = ref(new Set())
+    const favouritesLoading = ref(false)
 
-    async function loadAllSpots({ page = 0, size = 500 } = {}) {
-        spotsLoading.value = true
-        spotsError.value = null
+    const moderationOpen = ref(false)
+    const pendingSpots = ref([])
+    const pendingLoading = ref(false)
+    const pendingError = ref(null)
+    const moderationBusy = ref(false)
+
+    const MODERATION_API = {
+        list: '/admin/spots/unverified',
+        accept: (id) => `/admin/spots/${id}/accept`,
+        reject: (id) => `/admin/spots/${id}/reject`,
+    }
+
+    function normalize(data) {
+        return Array.isArray(data) ? data : data?.content ?? []
+    }
+
+    async function loadAll() {
+        loading.value = true
+        error.value = null
         try {
-            const { data } = await apiClient.get('/spots', {
-                baseURL: '',
-                params: { page, size },
-            })
-            if (Array.isArray(data)) {
-                spots.value = data
-            } else if (data && Array.isArray(data.content)) {
-                spots.value = data.content
-            } else {
-                spots.value = []
-            }
-        } catch (e) {
-            spotsError.value = 'Nie udało się załadować łowisk.'
-            console.error(e)
+            const { data } = await apiClient.get('/spots', { params: { page: 0, size: 500 } })
+            spots.value = normalize(data)
+        } catch {
+            error.value = 'Nie udało się pobrać listy łowisk.'
         } finally {
-            spotsLoading.value = false
+            loading.value = false
         }
     }
 
-    async function loadSpotDetails(id) {
-        if (!id) return
-        selectedSpotLoading.value = true
-        selectedSpotError.value = null
+    async function loadByRadius({ x, y, radiusKm }) {
+        loading.value = true
+        error.value = null
         try {
-            const { data } = await apiClient.get(`/spots/${id}`, {
-                baseURL: '',
+            const { data } = await apiClient.get('/spots/radius', {
+                params: { x, y, radiusKm, page: 0, size: 500 },
             })
-            selectedSpot.value = data
-        } catch (e) {
-            selectedSpotError.value = 'Nie udało się załadować szczegółów łowiska.'
-            console.error(e)
+            spots.value = normalize(data)
+        } catch {
+            await loadAll()
         } finally {
-            selectedSpotLoading.value = false
+            loading.value = false
         }
     }
 
-    function selectFromList(spot) {
+    async function selectSpot(spot, { isLoggedIn = false } = {}) {
         if (!spot) {
             selectedSpot.value = null
+            opinions.value = []
+            events.value = []
+            ownerInfo.value = { is_owner: false }
             return
         }
-        selectedSpot.value = {
-            id: spot.id,
-            name: spot.name,
-            type: spot.type,
-            locationX: spot.locationX ?? spot.x,
-            locationY: spot.locationY ?? spot.y,
-        }
+
+        selectedSpot.value = spot
+
+        // publiczne zawsze
+        const tasks = [loadDetails(spot.id), loadOpinions(spot.id), loadEvents(spot.id)]
+
+        // prywatne tylko po zalogowaniu (żeby nie było 401 w konsoli)
+        if (isLoggedIn) tasks.push(loadOwnerInfo(spot.id))
+        else ownerInfo.value = { is_owner: false }
+
+        await Promise.all(tasks)
     }
 
-    async function deleteSpot(id) {
-        if (!id) return
+    async function loadDetails(id) {
         try {
-            // backend ma DELETE /spots/{id}/delete (bez /api)
-            await apiClient.delete(`/spots/${id}/delete`, {
-                baseURL: '',
-            })
-            await loadAllSpots()
-            if (selectedSpot.value?.id === id) {
-                selectedSpot.value = null
-            }
-        } catch (e) {
-            console.error(e)
-            throw e
-        }
+            const { data } = await apiClient.get(`/spots/${id}`)
+            if (selectedSpot.value?.id === id) selectedSpot.value = data
+        } catch {}
     }
 
-    async function loadOpinions(spotId, { page = 0, size = 20 } = {}) {
-        if (!spotId) return
+    async function loadOpinions(id) {
         opinionsLoading.value = true
-        opinionsError.value = null
         try {
-            const { data } = await apiClient.get(`/spots/opinions/${spotId}`, {
-                // tu zostaje /api, bo kontroler ma @RequestMapping("${forum.api.prefix}/spots/opinions")
-                params: { page, size },
-            })
-            if (Array.isArray(data)) {
-                opinions.value = data
-                opinionsLast.value = true
-                opinionsTotalElements.value = data.length
-            } else {
-                opinions.value = data.content ?? []
-                opinionsLast.value = !!data.last
-                opinionsTotalElements.value = data.totalElements ?? 0
-            }
-        } catch (e) {
-            opinionsError.value = 'Nie udało się załadować opinii.'
-            console.error(e)
+            const { data } = await apiClient.get(`/spots/opinions/${id}`, { params: { page: 0, size: 50 } })
+            opinions.value = normalize(data)
+        } catch {
+            opinions.value = []
         } finally {
             opinionsLoading.value = false
         }
     }
 
-    async function addOpinion({ spotId, rating, comment }) {
-        if (!spotId || !rating) return
-        try {
-            await apiClient.post('/spots/opinions', {
-                spotId,
-                rating,
-                comment,
-            })
-            await loadOpinions(spotId, { page: 0 })
-        } catch (e) {
-            console.error(e)
-            throw e
-        }
-    }
-
-    async function editOpinion({ opinionId, rating, comment, spotId }) {
-        if (!opinionId || !rating) return
-        try {
-            await apiClient.patch(`/spots/opinions/${opinionId}`, {
-                rating,
-                comment,
-            })
-            if (spotId) {
-                await loadOpinions(spotId, { page: 0 })
-            }
-        } catch (e) {
-            console.error(e)
-            throw e
-        }
-    }
-
-    async function deleteOpinion({ opinionId, spotId }) {
-        if (!opinionId) return
-        try {
-            await apiClient.delete(`/spots/opinions/${opinionId}`)
-            if (spotId) {
-                await loadOpinions(spotId, { page: 0 })
-            }
-        } catch (e) {
-            console.error(e)
-            throw e
-        }
-    }
-
-    async function loadEventsForSpot(spotId, { page = 0, size = 10 } = {}) {
-        if (!spotId) return
+    async function loadEvents(id) {
         eventsLoading.value = true
-        eventsError.value = null
         try {
-            const { data } = await apiClient.get(`/spots/${spotId}/events`, {
-                baseURL: '',
-                params: { page, size },
-            })
-            if (Array.isArray(data)) {
-                events.value = data
-                eventsLast.value = true
-                eventsTotalElements.value = data.length
-            } else {
-                events.value = data.content ?? []
-                eventsLast.value = !!data.last
-                eventsTotalElements.value = data.totalElements ?? 0
-            }
-        } catch (e) {
-            eventsError.value = 'Nie udało się załadować wydarzeń.'
-            console.error(e)
+            const { data } = await apiClient.get(`/spots/${id}/events`, { params: { page: 0, size: 50 } })
+            events.value = normalize(data)
+        } catch {
+            events.value = []
         } finally {
             eventsLoading.value = false
         }
     }
 
-    async function loadOwnerInfo(spotId) {
-        if (!spotId) return
+    async function loadOwnerInfo(id) {
         ownerLoading.value = true
-        ownerError.value = null
         try {
-            const { data } = await apiClient.get(`/spots/${spotId}/owner`, {
-                baseURL: '',
-            })
+            const { data } = await apiClient.get(`/spots/${id}/owner`)
             ownerInfo.value = data || { is_owner: false }
-        } catch (e) {
-            ownerError.value = 'Nie udało się sprawdzić właściciela.'
-            console.error(e)
+        } catch {
+            ownerInfo.value = { is_owner: false }
         } finally {
             ownerLoading.value = false
         }
     }
 
-    function reset() {
-        spots.value = []
-        spotsError.value = null
-        selectedSpot.value = null
-        selectedSpotError.value = null
-        opinions.value = []
-        opinionsError.value = null
-        events.value = []
-        eventsError.value = null
-        ownerInfo.value = { is_owner: false }
-        ownerError.value = null
+    async function loadFavourites(isLoggedIn) {
+        favouritesIds.value = new Set()
+        if (!isLoggedIn) return
+
+        favouritesLoading.value = true
+        try {
+            const { data } = await apiClient.get('/users/me/spots/favourites')
+            const list = normalize(data)
+            favouritesIds.value = new Set(list.map((s) => s.id).filter(Boolean))
+        } catch {
+            favouritesIds.value = new Set()
+        } finally {
+            favouritesLoading.value = false
+        }
+    }
+
+    async function addFavourite(id) {
+        await apiClient.post('/users/me/spots/favourites/add', { spotId: id })
+    }
+
+    async function removeFavourite(id) {
+        await apiClient.post('/users/me/spots/favourites/remove', { spotId: id })
+    }
+
+    async function toggleFavourite(id, isLoggedIn) {
+        if (!id) return
+        if (!isLoggedIn) throw new Error('Zaloguj się, aby dodać do ulubionych.')
+
+        const next = new Set(favouritesIds.value)
+
+        try {
+            if (next.has(id)) {
+                next.delete(id)
+                favouritesIds.value = next
+                await removeFavourite(id)
+            } else {
+                next.add(id)
+                favouritesIds.value = next
+                await addFavourite(id)
+            }
+        } catch {
+            await loadFavourites(true)
+            throw new Error('Nie udało się zmienić ulubionych.')
+        }
+    }
+
+    async function rateSpot({ spotId, rating, opinionId, comment }, isLoggedIn) {
+        if (!isLoggedIn) throw new Error('Zaloguj się, aby dodać ocenę.')
+        if (!spotId || !rating) return
+
+        try {
+            if (opinionId) {
+                await apiClient.patch(`/spots/opinions/${opinionId}`, { rating, comment: comment ?? null })
+            } else {
+                await apiClient.post('/spots/opinions', { spotId, rating, comment: comment ?? null })
+            }
+
+            await Promise.all([loadOpinions(spotId), loadDetails(spotId)])
+
+            // odśwież listę (avgRating itp.)
+            try {
+                const { data } = await apiClient.get(`/spots/${spotId}`)
+                const idx = spots.value.findIndex((s) => s.id === spotId)
+                if (idx !== -1) spots.value[idx] = { ...spots.value[idx], ...data }
+            } catch {}
+        } catch {
+            throw new Error('Nie udało się zapisać oceny.')
+        }
+    }
+
+    async function deleteSpot(id) {
+        if (!id) return
+        // retry: jak backend ma bez /api (różnie bywało u Ciebie wcześniej)
+        try {
+            await apiClient.delete(`/spots/${id}/delete`)
+            return
+        } catch (e1) {
+            try {
+                await apiClient.delete(`/spots/${id}/delete`, { baseURL: '' })
+                return
+            } catch {
+                throw new Error('Nie udało się usunąć łowiska.')
+            }
+        }
+    }
+
+    async function toggleModeration(isAdmin) {
+        if (!isAdmin) return
+        moderationOpen.value = !moderationOpen.value
+        if (moderationOpen.value) await loadPending(isAdmin)
+        else pendingError.value = null
+    }
+
+    async function loadPending(isAdmin) {
+        if (!isAdmin) return
+        pendingLoading.value = true
+        pendingError.value = null
+        try {
+            const { data } = await apiClient.get(MODERATION_API.list, { params: { page: 0, size: 200 } })
+            pendingSpots.value = normalize(data)
+        } catch {
+            pendingSpots.value = []
+            pendingError.value = 'Nie udało się pobrać zgłoszeń łowisk.'
+        } finally {
+            pendingLoading.value = false
+        }
+    }
+
+    async function acceptSpot(id, isAdmin) {
+        if (!isAdmin || !id) return
+        moderationBusy.value = true
+        try {
+            await apiClient.post(MODERATION_API.accept(id))
+            pendingSpots.value = pendingSpots.value.filter((s) => s.id !== id)
+        } catch {
+            throw new Error('Nie udało się zaakceptować łowiska.')
+        } finally {
+            moderationBusy.value = false
+        }
+    }
+
+    async function rejectSpot(id, isAdmin) {
+        if (!isAdmin || !id) return
+        moderationBusy.value = true
+        try {
+            await apiClient.post(MODERATION_API.reject(id))
+            pendingSpots.value = pendingSpots.value.filter((s) => s.id !== id)
+        } catch {
+            throw new Error('Nie udało się odrzucić łowiska.')
+        } finally {
+            moderationBusy.value = false
+        }
     }
 
     return {
         spots,
-        spotsLoading,
-        spotsError,
-
+        loading,
+        error,
         selectedSpot,
-        selectedSpotLoading,
-        selectedSpotError,
 
         opinions,
-        opinionsLast,
-        opinionsTotalElements,
         opinionsLoading,
-        opinionsError,
-        averageRating,
 
         events,
-        eventsLast,
-        eventsTotalElements,
         eventsLoading,
-        eventsError,
 
         ownerInfo,
         ownerLoading,
-        ownerError,
 
-        loadAllSpots,
-        loadSpotDetails,
-        selectFromList,
+        favouritesIds,
+        favouritesLoading,
+
+        moderationOpen,
+        pendingSpots,
+        pendingLoading,
+        pendingError,
+        moderationBusy,
+
+        loadAll,
+        loadByRadius,
+        selectSpot,
+
+        loadFavourites,
+        toggleFavourite,
+
+        rateSpot,
         deleteSpot,
 
-        loadOpinions,
-        addOpinion,
-        editOpinion,
-        deleteOpinion,
-
-        loadEventsForSpot,
-        loadOwnerInfo,
-
-        reset,
+        toggleModeration,
+        loadPending,
+        acceptSpot,
+        rejectSpot,
     }
 })

@@ -9,7 +9,7 @@ const props = defineProps({
   pendingCount: { type: Number, default: 0 },
 })
 
-const emit = defineEmits(['hide', 'update:filters', 'apply', 'toggle-moderation'])
+const emit = defineEmits(['hide', 'update:filters', 'toggle-moderation'])
 
 const localFilters = ref({
   spotType: props.filters.spotType ?? 'ALL',
@@ -18,24 +18,14 @@ const localFilters = ref({
 watch(
     () => props.filters,
     (val) => {
-      localFilters.value = {
-        spotType: val.spotType ?? 'ALL',
-      }
+      localFilters.value = { spotType: val.spotType ?? 'ALL' }
     },
     { deep: true },
 )
 
 function updateField(field, value) {
-  localFilters.value = {
-    ...localFilters.value,
-    [field]: value,
-  }
-}
-
-function applyFilters() {
-  const snapshot = { ...localFilters.value }
-  emit('update:filters', snapshot)
-  emit('apply', snapshot)
+  localFilters.value = { ...localFilters.value, [field]: value }
+  emit('update:filters', { ...localFilters.value })
 }
 </script>
 
@@ -70,16 +60,6 @@ function applyFilters() {
         <option value="PUBLIC">PZW / koło</option>
         <option value="PRIVATE">Prywatne / komercyjne</option>
       </select>
-    </div>
-
-    <div class="mt-2">
-      <button
-          type="button"
-          class="px-3 py-1 rounded-full border border-white/60 hover:bg-white/10 text-xs"
-          @click="applyFilters"
-      >
-        Zastosuj
-      </button>
     </div>
   </aside>
 </template>

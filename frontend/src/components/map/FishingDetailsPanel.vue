@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import NewFishingSpotForm from './NewFishingSpotForm.vue'
 import { useAuthStore } from '../../stores/auth'
 
@@ -12,7 +12,6 @@ const props = defineProps({
   events: { type: Array, default: () => [] },
   eventsLoading: { type: Boolean, default: false },
   ownerInfo: { type: Object, default: () => ({ is_owner: false }) },
-  userOpinion: { type: Object, default: null },
 
   isFavourite: { type: Boolean, default: false },
   favouritesLoading: { type: Boolean, default: false },
@@ -20,40 +19,26 @@ const props = defineProps({
   showModeration: { type: Boolean, default: false },
   isPending: { type: Boolean, default: false },
   moderationBusy: { type: Boolean, default: false },
+
+  isLoggedIn: { type: Boolean, default: false },
 })
 
 const emit = defineEmits([
   'rate-spot',
   'delete-spot',
-  'spot-created',
   'toggle-favourite',
   'approve-spot',
   'reject-spot',
 ])
 
-const currentRating = computed(() => {
-  if (props.userOpinion && typeof props.userOpinion.rating === 'number') return props.userOpinion.rating
-  return 0
-})
+const isOwnerOrAdmin = computed(() => !!props.ownerInfo?.is_owner || !!auth.isAdmin)
 
-const displayAverageRating = computed(() => {
-  if (!props.spot || props.spot.avgRating == null) return null
-  return props.spot.avgRating
-})
-
-const userAddress = ref('')
-function showRoute() {
-  if (!props.spot) return
-  const lat = props.spot.lat ?? props.spot.locationY
-  const lng = props.spot.lng ?? props.spot.locationX
-  if (lat == null || lng == null) return
-
-  const origin = encodeURIComponent(userAddress.value || '')
-  const destination = `${lat},${lng}`
-  const url = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(destination)}${
-      origin ? `&origin=${origin}` : ''
-  }`
-  window.open(url, '_blank')
+const confirmDeleteOpen = ref(false)
+function requestDelete() { confirmDeleteOpen.value = true }
+function cancelDelete() { confirmDeleteOpen.value = false }
+function confirmDelete() {
+  confirmDeleteOpen.value = false
+  emit('delete-spot')
 }
 
 const showNewSpotForm = ref(false)
@@ -63,29 +48,58 @@ const sortedOpinions = computed(() => {
   return [...list].sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())
 })
 
-const isOwnerOrAdmin = computed(() => !!props.ownerInfo?.is_owner || !!auth.isAdmin)
+const myOpinion = computed(() => {
+  const uid = auth.user?.id
+  if (!uid) return null
+  return (props.opinions || []).find((o) => o?.author?.id === uid) || null
+})
 
-const confirmDeleteOpen = ref(false)
-function requestDelete() {
-  confirmDeleteOpen.value = true
-}
-function cancelDelete() {
-  confirmDeleteOpen.value = false
-}
-function confirmDelete() {
-  confirmDeleteOpen.value = false
-  emit('delete-spot')
+const myOpinionId = computed(() => myOpinion.value?.id ?? null)
+
+const currentRating = computed(() => {
+  const r = myOpinion.value?.rating
+  return typeof r === 'number' ? r : 0
+})
+
+const displayAverageRating = computed(() => {
+  if (!props.spot || props.spot.avgRating == null) return null
+  return Number(props.spot.avgRating)
+})
+
+// UI do publikacji
+const draftRating = ref(0)
+const draftComment = ref('')
+
+watch(
+    () => props.spot?.id,
+    () => {
+      // reset na zmianę łowiska
+      draftRating.value = currentRating.value || 0
+      draftComment.value = myOpinion.value?.comment || ''
+    },
+    { immediate: true },
+)
+
+watch(
+    () => myOpinion.value?.id,
+    () => {
+      draftRating.value = currentRating.value || 0
+      draftComment.value = myOpinion.value?.comment || ''
+    },
+)
+
+function pickStar(star) {
+  draftRating.value = star
 }
 
-// zdjęcia (UI only)
-const photosInput = ref(null)
-const photos = ref([])
-function triggerPhotos() {
-  photosInput.value?.click()
-}
-function onPhotosChange(e) {
-  const files = e.target.files
-  photos.value = files ? Array.from(files) : []
+function publishOpinion() {
+  if (!props.spot?.id) return
+  emit('rate-spot', {
+    spotId: props.spot.id,
+    rating: draftRating.value,
+    opinionId: myOpinionId.value,
+    comment: draftComment.value?.trim() ? draftComment.value.trim() : null,
+  })
 }
 </script>
 
@@ -95,15 +109,11 @@ function onPhotosChange(e) {
       <div>
         <h2 class="text-lg font-semibold">{{ spot.name }}</h2>
 
-        <p class="text-xs opacity-90 mt-1">
-          {{ spot.type || '—' }}
-        </p>
+        <p class="text-xs opacity-90 mt-1">{{ spot.type || '—' }}</p>
 
         <p class="text-xs opacity-90 mt-1">
           Ocena łowiska:
-          <span v-if="displayAverageRating != null">
-            {{ displayAverageRating.toFixed(1) }} / 5
-          </span>
+          <span v-if="displayAverageRating != null">{{ displayAverageRating.toFixed(1) }} / 5</span>
           <span v-else>brak oceny</span>
         </p>
       </div>
@@ -112,7 +122,7 @@ function onPhotosChange(e) {
         <button
             type="button"
             class="text-xs border border-white/60 rounded-full px-3 py-1 hover:bg-white/10 disabled:opacity-60"
-            :disabled="!auth.user || favouritesLoading"
+            :disabled="!isLoggedIn || favouritesLoading"
             @click="spot && emit('toggle-favourite', spot.id)"
         >
           <span v-if="isFavourite">★ Ulubione</span>
@@ -134,7 +144,6 @@ function onPhotosChange(e) {
       Wybierz łowisko z listy, aby zobaczyć szczegóły.
     </div>
 
-    <!-- Potwierdzenie usuwania - NA STRONIE -->
     <div v-if="spot && confirmDeleteOpen" class="text-xs border border-red-400/60 rounded-lg p-3 bg-red-600/10">
       <p class="font-semibold mb-2">Czy na pewno chcesz usunąć to łowisko?</p>
       <div class="flex gap-2">
@@ -155,7 +164,6 @@ function onPhotosChange(e) {
       </div>
     </div>
 
-    <!-- Moderacja -->
     <div v-if="spot && showModeration && isPending" class="text-xs border border-yellow-300/60 rounded-lg p-3 bg-yellow-500/10">
       <h3 class="font-semibold mb-2">Moderacja zgłoszenia</h3>
       <div class="flex gap-2">
@@ -178,29 +186,6 @@ function onPhotosChange(e) {
       </div>
     </div>
 
-    <div
-        v-if="spot"
-        class="aspect-video max-h-[40vh] w-full rounded-xl bg-black/60 border border-white/40 grid place-items-center text-xs opacity-90"
-    >
-      Tu będą zdjęcia łowiska
-    </div>
-
-    <!-- UI zdjęć (bez wysyłki do backendu) -->
-    <div v-if="spot" class="text-xs">
-      <h3 class="font-semibold mb-1">Zdjęcia (tymczasowo bez wysyłki)</h3>
-      <input ref="photosInput" type="file" multiple class="hidden" @change="onPhotosChange" />
-      <div class="flex items-center gap-2">
-        <button type="button" class="px-3 py-1 rounded-full border border-white/60 hover:bg-white/10 text-xs" @click="triggerPhotos">
-          Wybierz zdjęcia
-        </button>
-        <span class="opacity-80" v-if="photos.length">Wybrano: {{ photos.length }}</span>
-        <span class="opacity-80" v-else>Brak</span>
-      </div>
-      <p class="opacity-70 mt-1">
-        Backend nie obsługuje jeszcze zdjęć, więc to jest tylko UI.
-      </p>
-    </div>
-
     <div v-if="spot" class="text-xs">
       <h3 class="font-semibold mb-1">Gatunki ryb</h3>
       <p class="opacity-90">
@@ -214,9 +199,7 @@ function onPhotosChange(e) {
 
     <div v-if="spot" class="text-xs">
       <h3 class="font-semibold mb-1">Regulamin / opis</h3>
-      <p class="opacity-90 leading-relaxed">
-        {{ spot.description || 'Brak opisu.' }}
-      </p>
+      <p class="opacity-90 leading-relaxed">{{ spot.description || 'Brak opisu.' }}</p>
     </div>
 
     <div v-if="spot" class="text-xs">
@@ -256,36 +239,51 @@ function onPhotosChange(e) {
     </div>
 
     <div v-if="spot" class="text-xs">
-      <h3 class="font-semibold mb-1">Twoja ocena łowiska</h3>
-      <div class="flex items-center gap-1">
-        <button
-            v-for="star in 5"
-            :key="star"
-            type="button"
-            class="w-6 h-6 text-sm border border-white/60 rounded-full grid place-items-center hover:bg-white/20"
-            :class="currentRating >= star ? 'bg-white/40 text-black' : 'bg-black/40'"
-            @click="emit('rate-spot', { spotId: spot.id, rating: star, opinionId: userOpinion?.id ?? null })"
-        >
-          {{ star }}
-        </button>
-        <span class="ml-2 opacity-90">
-          {{ currentRating ? `Oceniłeś na ${currentRating}/5` : 'Jeszcze nie oceniono' }}
-        </span>
-      </div>
-    </div>
+      <h3 class="font-semibold mb-1">Twoja opinia</h3>
 
-    <div v-if="spot" class="text-xs">
-      <h3 class="font-semibold mb-1">Trasa do łowiska</h3>
-      <div class="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center">
-        <input
-            v-model="userAddress"
-            type="text"
-            placeholder="Twój adres (opcjonalnie)"
-            class="flex-1 bg-white/10 text-white placeholder:text-white/70 border border-white/60 rounded px-2 py-1 text-xs outline-none"
+      <div v-if="!isLoggedIn" class="opacity-80">
+        Zaloguj się, aby dodać opinię.
+      </div>
+
+      <div v-else class="space-y-2">
+        <div class="flex items-center gap-1">
+          <button
+              v-for="star in 5"
+              :key="star"
+              type="button"
+              class="w-7 h-7 text-sm border border-white/60 rounded-full grid place-items-center hover:bg-white/20"
+              :class="draftRating >= star ? 'bg-white/40 text-black' : 'bg-black/40'"
+              @click="pickStar(star)"
+          >
+            {{ star }}
+          </button>
+
+          <span class="ml-2 opacity-90">
+            {{ draftRating ? `Wybrano ${draftRating}/5` : 'Wybierz ocenę' }}
+          </span>
+        </div>
+
+        <textarea
+            v-model="draftComment"
+            rows="3"
+            placeholder="Komentarz (opcjonalnie)"
+            class="w-full bg-white/10 text-white placeholder:text-white/70 border border-white/60 rounded px-2 py-1 text-xs outline-none resize-none"
         />
-        <button type="button" class="px-3 py-1 rounded-full border border-white/60 hover:bg-white/10 text-xs" @click="showRoute">
-          Pokaż trasę
-        </button>
+
+        <div class="flex items-center gap-2">
+          <button
+              type="button"
+              class="px-3 py-1 rounded-full border border-white/60 hover:bg-white/10 text-xs disabled:opacity-60"
+              :disabled="!draftRating"
+              @click="publishOpinion"
+          >
+            Opublikuj
+          </button>
+
+          <span class="opacity-80" v-if="myOpinionId">
+            Edytujesz swoją opinię.
+          </span>
+        </div>
       </div>
     </div>
 
@@ -299,10 +297,6 @@ function onPhotosChange(e) {
       </button>
     </div>
 
-    <NewFishingSpotForm
-        v-if="showNewSpotForm"
-        class="mt-3 border-t border-white/40 pt-3"
-        @created="emit('spot-created', $event)"
-    />
+    <NewFishingSpotForm v-if="showNewSpotForm" class="mt-3 border-t border-white/40 pt-3" />
   </section>
 </template>
