@@ -133,6 +133,7 @@ public class TutorialServiceImpl implements TutorialService {
     }
 
     @Override
+    @Transactional
     public void deleteTutorial(Long tutorialId, User currentUser) throws AccessDeniedException {
         try {
             Tutorial t = getById(tutorialId, currentUser);

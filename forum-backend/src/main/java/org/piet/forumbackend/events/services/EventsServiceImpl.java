@@ -262,7 +262,6 @@ public class EventsServiceImpl implements EventsService {
     }
 
     @Override
-    @Transactional
     public PageDto<UserEventDto> getParticipants(Long eventId, PaginationDto pagination) throws NotFoundException {
         var userEvents = userEventRepository.findAllByEvent_Id(eventId, pagination.toPageable())
                 .map(EventDtoMapper::toUserEventDto);
