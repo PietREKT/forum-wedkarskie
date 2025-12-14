@@ -1,9 +1,6 @@
 package org.piet.forumbackend.users.core.dtos;
 
-import org.piet.forumbackend.users.core.dtos.responses.ContentUserDto;
-import org.piet.forumbackend.users.core.dtos.responses.ListUserDto;
-import org.piet.forumbackend.users.core.dtos.responses.RoleDto;
-import org.piet.forumbackend.users.core.dtos.responses.UserDto;
+import org.piet.forumbackend.users.core.dtos.responses.*;
 import org.piet.forumbackend.users.core.entities.Role;
 import org.piet.forumbackend.users.core.entities.User;
 
@@ -37,6 +34,19 @@ public class UsersDtoMapper {
                 user.getUsername(),
                 user.getName(),
                 user.getSurname(),
+                user.getProfilePicUrl()
+        );
+    }
+
+    public static PunishedUserListDto toPunishedUserListDto(User user){
+        return new PunishedUserListDto(
+                user.getId(),
+                user.getUsername(),
+                user.getName(),
+                user.getSurname(),
+                user.getBannedUntil(),
+                user.getMutedUntil(),
+                user.getBanReason(),
                 user.getProfilePicUrl()
         );
     }

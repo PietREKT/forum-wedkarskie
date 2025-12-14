@@ -82,6 +82,8 @@ public interface FishingSpotService {
 
     void addFishingSpotToFavourites(Long spotId) throws NotFoundException, UserNotLoggedInException;
     void removeFishingSpotFromFavourites(Long spotId) throws NotFoundException, UserNotLoggedInException;
+
+    void setFishingSpotPicture(Long spotId, MultipartFile file) throws UserNotLoggedInException, UnauthorizedAccessException, IOException;
 }
 
 

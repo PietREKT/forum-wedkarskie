@@ -202,7 +202,7 @@ public class FishingSpotServiceImpl implements FishingSpotService {
     @Override
     @Transactional
     public FishingSpot updateStatue(FishingSpot fishingSpot, MultipartFile newStatue, User user) throws BadRequestException, IOException, UnauthorizedAccessException {
-        if (fishingSpot.getManagers().stream().noneMatch(u -> u.equalsUser(user))) {
+        if (fishingSpot.getManagers().stream().noneMatch(u -> u.equalsUser(user)) && !fishingSpot.getOwner().equalsUser(user)) {
             log.warn("User with id: {} tried to update statue for a fishing spot with id: {} despite lacking permissions.", user.getId(), fishingSpot.getId());
             throw new UnauthorizedAccessException(
                     messageSource.getMessage(
@@ -220,12 +220,15 @@ public class FishingSpotServiceImpl implements FishingSpotService {
                             LocaleContextHolder.getLocale())
             );
         }
-        File fishingSpotFolder = new File(fileProperties.getSpotsFolder(), "spot-" + fishingSpot.getId());
         String fileExtension = FileProperties.getFileExtension(newStatue.getOriginalFilename());
-        File statue = new File(fishingSpotFolder, "statue" + fileExtension);
+
+        if (!fileExtension.equals(".pdf"))
+            throw new BadRequestException("Fishing spot's statue must be in *.pdf format!");
+
+        File statue = new File(fileProperties.getStatuesFolder(), fishingSpot.getId() + fileExtension);
         newStatue.transferTo(statue);
 
-        fishingSpot.setStatuteUrl("/spots/spot-" + fishingSpot.getId() + File.separator + statue.getName() + fileExtension);
+        fishingSpot.setStatuteUrl("/spots/statues/" + statue.getName());
         log.info("User with id: {} updated a statue for fishing spot with id: {}", user.getId(), fishingSpot.getId());
         return fishingSpotRepository.save(fishingSpot);
     }
@@ -367,5 +370,30 @@ public class FishingSpotServiceImpl implements FishingSpotService {
 
         currentUser.removeFavouriteFishingSpot(spot);
         userRepository.save(currentUser);
+    }
+
+    @Override
+    @Transactional
+    public void setFishingSpotPicture(Long spotId, MultipartFile file) throws UserNotLoggedInException, IOException {
+        FishingSpot spot = getFishingSpotById(spotId);
+        User user = userService.getCurrentUser();
+
+        if (spot.getManagers().stream().noneMatch(u -> u.equalsUser(user)) && !spot.getOwner().equalsUser(user)) {
+            log.warn("User with id: {} tried to update picture of a fishing spot with id: {} despite lacking permissions.", user.getId(), spot.getId());
+            throw new AccessDeniedException(
+                    messageSource.getMessage(
+                            "error.users.unauthorized_access",
+                            null,
+                            LocaleContextHolder.getLocale()
+                    )
+            );
+        }
+        String ext = FileProperties.getFileExtension(file.getOriginalFilename());
+        File pic = new File(fileProperties.getSpotsPicsFolder(), spot.getId() + ext);
+        file.transferTo(pic);
+
+        spot.setPhotoUrl("/spots/pics/" + pic.getName());
+
+        fishingSpotRepository.save(spot);
     }
 }

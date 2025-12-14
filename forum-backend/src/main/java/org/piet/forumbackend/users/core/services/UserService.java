@@ -4,6 +4,7 @@ import org.piet.forumbackend.globals.exceptions.NotFoundException;
 import org.piet.forumbackend.globals.pagination.PaginationDto;
 import org.piet.forumbackend.users.core.dtos.requests.RegisterUserDto;
 import org.piet.forumbackend.users.core.dtos.responses.ListUserDto;
+import org.piet.forumbackend.users.core.dtos.responses.PunishedUserListDto;
 import org.piet.forumbackend.users.core.entities.Role;
 import org.piet.forumbackend.users.core.entities.User;
 import org.piet.forumbackend.users.core.exceptions.UserNotLoggedInException;
@@ -42,15 +43,15 @@ public interface UserService {
         banUser(userId, Instant.MAX, reason, currentUser);
     }
     void unbanUser(UUID userId) throws NotFoundException;
-    Page<ListUserDto> getBannedUsers(Pageable pageable);
-    default Page<ListUserDto> getBannedUsers(PaginationDto pagination){
-        return getMutedUsers(pagination.toPageable());
+    Page<PunishedUserListDto> getBannedUsers(Pageable pageable);
+    default Page<PunishedUserListDto> getBannedUsers(PaginationDto pagination){
+        return getBannedUsers(pagination.toPageable());
     }
 
     void muteUser(UUID userId, Instant until, String reason, User currentUser) throws NotFoundException;
     void unmuteUser(UUID userId) throws NotFoundException;
-    Page<ListUserDto> getMutedUsers(Pageable pageable);
-    default Page<ListUserDto> getMutedUsers(PaginationDto pagination){
+    Page<PunishedUserListDto> getMutedUsers(Pageable pageable);
+    default Page<PunishedUserListDto> getMutedUsers(PaginationDto pagination){
         return getMutedUsers(pagination.toPageable());
     }
 

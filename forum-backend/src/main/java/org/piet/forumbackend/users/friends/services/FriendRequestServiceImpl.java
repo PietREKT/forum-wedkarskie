@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.piet.forumbackend.globals.exceptions.BadRequestException;
 import org.piet.forumbackend.globals.exceptions.NotFoundException;
+import org.piet.forumbackend.notifications.factory.NotificationFactory;
 import org.piet.forumbackend.users.core.entities.User;
 import org.piet.forumbackend.users.friends.entities.FriendRequest;
 import org.piet.forumbackend.users.friends.entities.FriendRequestStatus;
@@ -22,6 +23,7 @@ import java.util.UUID;
 public class FriendRequestServiceImpl implements FriendRequestService {
     private final MessageSource messageSource;
     private final FriendRequestRepository friendRequestRepository;
+    private final NotificationFactory notificationFactory;
 
     @Override
     public FriendRequest getById(UUID id) throws NotFoundException {
@@ -73,6 +75,7 @@ public class FriendRequestServiceImpl implements FriendRequestService {
 
         log.info("User with id: {} sent friend invite to user with id: {}", from.getId(), to.getId());
 
+        notificationFactory.friendInvitation(to, from);
         return friendRequestRepository.save(request);
     }
 
@@ -92,6 +95,8 @@ public class FriendRequestServiceImpl implements FriendRequestService {
         request.setRespondedAt(Instant.now());
 
         log.info("User with id: {} accepted friend invite from user with id: {}", receiver.getId(), sender.getId());
+
+        notificationFactory.friendInvitationAccepted(sender, receiver);
 
         friendRequestRepository.save(request);
     }

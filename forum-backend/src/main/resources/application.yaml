@@ -33,6 +33,11 @@ spring:
     compose:
       enabled: true
       file: ../docker-compose.yaml
+logging:
+  level:
+    root: info
+    org.piet.forumbackend: debug
+    org.springframework.web: debug
 
 
 forum:

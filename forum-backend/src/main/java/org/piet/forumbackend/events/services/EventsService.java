@@ -47,4 +47,5 @@ public interface EventsService {
 
     PageDto<UserEventDto> getParticipants(Long eventId, PaginationDto pagination) throws NotFoundException;
 
+    void leave(Long eventId) throws UserNotLoggedInException;
 }

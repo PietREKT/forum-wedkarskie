@@ -33,7 +33,7 @@ public class EventController {
     private final EventsService eventsService;
     private final UserService userService;
 
-    @PostMapping()
+    @PostMapping
     public ResponseEntity<EventDto> createEvent(@Valid @RequestBody CreateEventDto dto) throws UserNotLoggedInException, FishingSpotNotFoundException {
         EventDto eventDto = EventDtoMapper.toEventDto(eventsService.createEvent(dto), userService.getCurrentUserOrNull());
 
@@ -82,6 +82,13 @@ public class EventController {
     @DeleteMapping("{eventId}/participants/{userId}")
     public ResponseEntity<?> removeParticipant(@PathVariable Long eventId, @PathVariable UUID userId) throws UserNotLoggedInException, NotFoundException {
         eventsService.removeUserFromEvent(eventId, userId);
+
+        return ResponseEntity.noContent().build();
+    }
+
+    @DeleteMapping("{eventId}/leave")
+    public ResponseEntity<?> leaveEvent(@PathVariable Long eventId) throws UserNotLoggedInException {
+        eventsService.leave(eventId);
 
         return ResponseEntity.noContent().build();
     }

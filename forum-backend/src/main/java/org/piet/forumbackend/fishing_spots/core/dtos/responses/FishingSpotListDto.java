@@ -15,6 +15,8 @@ public class FishingSpotListDto implements Serializable {
     double locationX, locationY;
     FishingSpot.FISHING_SPOT_TYPE type;
     double avgRating;
+    String photoUrl;
+
 
     public static FishingSpotListDto create(FishingSpot spot){
         return new FishingSpotListDto(
@@ -23,7 +25,8 @@ public class FishingSpotListDto implements Serializable {
                 spot.getLocation().getX(),
                 spot.getLocation().getY(),
                 spot.getType(),
-                spot.getAverageRating()
+                spot.getAverageRating(),
+                spot.getPhotoUrl()
         );
     }
 }

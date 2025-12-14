@@ -41,6 +41,8 @@ public class FishingSpot {
 
     private String statuteUrl;
 
+    private String photoUrl;
+
     @ManyToOne
     @JoinColumn(name = "owner_id", nullable = false)
     User owner;

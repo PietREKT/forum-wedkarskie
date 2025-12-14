@@ -4,6 +4,7 @@ import org.piet.forumbackend.globals.exceptions.NotFoundException;
 import org.piet.forumbackend.globals.pagination.PaginationDto;
 import org.piet.forumbackend.users.core.dtos.responses.ListUserDto;
 import org.piet.forumbackend.users.core.entities.User;
+import org.piet.forumbackend.users.core.exceptions.UserNotLoggedInException;
 import org.piet.forumbackend.users.groups.dtos.responses.ListUserGroupDto;
 import org.piet.forumbackend.users.groups.entities.UserGroup;
 import org.springframework.data.domain.Page;
@@ -92,9 +93,9 @@ public interface UserGroupService {
     }
 
 
-    Page<ListUserDto> getMemberCandidates(UUID groupId, Pageable pageable);
+    Page<ListUserDto> getMemberCandidates(UUID groupId, Pageable pageable) throws UserNotLoggedInException;
 
-    default Page<ListUserDto> getMemberCandidates(UUID groupId, PaginationDto pagination) {
+    default Page<ListUserDto> getMemberCandidates(UUID groupId, PaginationDto pagination) throws UserNotLoggedInException {
         return getMemberCandidates(groupId, pagination.toPageable());
     }
 

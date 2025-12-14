@@ -8,6 +8,7 @@ import org.piet.forumbackend.globals.security.SecurityUserDto;
 import org.piet.forumbackend.users.core.dtos.UsersDtoMapper;
 import org.piet.forumbackend.users.core.dtos.requests.RegisterUserDto;
 import org.piet.forumbackend.users.core.dtos.responses.ListUserDto;
+import org.piet.forumbackend.users.core.dtos.responses.PunishedUserListDto;
 import org.piet.forumbackend.users.core.entities.Role;
 import org.piet.forumbackend.users.core.entities.User;
 import org.piet.forumbackend.users.core.exceptions.UserNotLoggedInException;
@@ -176,15 +177,15 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public Page<ListUserDto> getBannedUsers(Pageable pageable) {
+    public Page<PunishedUserListDto> getBannedUsers(Pageable pageable) {
         return userRepository.findByBannedUntilAfter(Instant.now(), pageable)
-                .map(UsersDtoMapper::toListUserDto);
+                .map(UsersDtoMapper::toPunishedUserListDto);
     }
 
     @Override
-    public Page<ListUserDto> getMutedUsers(Pageable pageable) {
+    public Page<PunishedUserListDto> getMutedUsers(Pageable pageable) {
         return userRepository.findByMutedUntilAfter(Instant.now(), pageable)
-                .map(UsersDtoMapper::toListUserDto);
+                .map(UsersDtoMapper::toPunishedUserListDto);
     }
 
     @Override
