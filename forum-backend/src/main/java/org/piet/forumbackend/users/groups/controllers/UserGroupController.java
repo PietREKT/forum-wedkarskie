@@ -11,7 +11,6 @@ import org.piet.forumbackend.globals.exceptions.NotFoundException;
 import org.piet.forumbackend.globals.pagination.PageDto;
 import org.piet.forumbackend.globals.pagination.PaginationDto;
 import org.piet.forumbackend.users.core.dtos.requests.GetUserDto;
-import org.piet.forumbackend.users.core.dtos.responses.ListUserDto;
 import org.piet.forumbackend.users.core.entities.User;
 import org.piet.forumbackend.users.core.exceptions.UserNotLoggedInException;
 import org.piet.forumbackend.users.core.services.UserService;
@@ -95,13 +94,6 @@ public class UserGroupController {
         return ResponseEntity.ok(
                 eventsService.getEventsForGroup(groupId, pagination)
         );
-    }
-
-    @GetMapping("/{groupId}/candidates")
-    public ResponseEntity<PageDto<ListUserDto>> getGroupCandidates(@PathVariable UUID groupId, PaginationDto pagination) {
-        var page = userGroupService.getMemberCandidates(groupId, pagination);
-
-        return ResponseEntity.ok(PageDto.of(page));
     }
 
     @GetMapping("/{groupId}/posts")

@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.multipart.support.MissingServletRequestPartException;
 
 import java.io.IOException;
+import java.nio.file.AccessDeniedException;
 import java.nio.file.FileSystemException;
 import java.util.HashMap;
 import java.util.Map;
@@ -27,7 +28,7 @@ import java.util.Objects;
 public class GlobalExceptionHandler {
     private final MessageSource messageSource;
 
-    @ExceptionHandler({BadCredentialsException.class, UserNotLoggedInException.class})
+    @ExceptionHandler({BadCredentialsException.class, UserNotLoggedInException.class, AccessDeniedException.class})
     public ResponseEntity<Map<String, String>> handleBadCredentials(Exception e) {
         Map<String, String> m = new HashMap<>();
         m.put("message", e.getMessage());

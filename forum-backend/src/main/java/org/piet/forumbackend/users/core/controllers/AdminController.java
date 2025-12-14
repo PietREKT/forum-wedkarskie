@@ -10,6 +10,7 @@ import org.piet.forumbackend.users.core.dtos.requests.GetUserDto;
 import org.piet.forumbackend.users.core.dtos.requests.admins.ChangeUserRoleDto;
 import org.piet.forumbackend.users.core.dtos.requests.admins.PunishUserDto;
 import org.piet.forumbackend.users.core.dtos.responses.ListUserDto;
+import org.piet.forumbackend.users.core.dtos.responses.PunishedUserListDto;
 import org.piet.forumbackend.users.core.exceptions.UserNotLoggedInException;
 import org.piet.forumbackend.users.core.services.UserService;
 import org.springframework.http.ResponseEntity;
@@ -40,7 +41,7 @@ public class AdminController {
     }
 
     @GetMapping("/banned")
-    public ResponseEntity<PageDto<ListUserDto>> getBannedUsers(PaginationDto pagination){
+    public ResponseEntity<PageDto<PunishedUserListDto>> getBannedUsers(PaginationDto pagination){
         var users = userService.getBannedUsers(pagination);
 
         return ResponseEntity.ok(PageDto.of(users));

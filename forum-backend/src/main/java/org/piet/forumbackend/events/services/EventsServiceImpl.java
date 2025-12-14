@@ -236,9 +236,12 @@ public class EventsServiceImpl implements EventsService {
         }
         event.getUserEvents().stream()
                 .filter(ue -> ue.getUser().equalsUser(user))
+                .peek(ue -> log.debug(ue.toLogString()))
                 .findFirst()
-                .orElseThrow()
+                .orElseThrow(() -> new BadRequestException("You haven't been invited to the event."))
                 .setStatus(status);
+
+        eventRepository.save(event);
     }
 
     @Override
@@ -264,5 +267,15 @@ public class EventsServiceImpl implements EventsService {
         var userEvents = userEventRepository.findAllByEvent_Id(eventId, pagination.toPageable())
                 .map(EventDtoMapper::toUserEventDto);
         return PageDto.of(userEvents);
+    }
+
+    @Override
+    @Transactional
+    public void leave(Long eventId) throws UserNotLoggedInException {
+        Event event = getEventById(eventId);
+        User user = userService.getCurrentUser();
+        event.getUserEvents()
+                .removeIf(ue -> ue.getUser().equalsUser(user));
+        eventRepository.save(event);
     }
 }

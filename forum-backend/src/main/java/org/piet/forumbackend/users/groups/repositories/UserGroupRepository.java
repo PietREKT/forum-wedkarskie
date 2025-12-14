@@ -22,7 +22,7 @@ public interface UserGroupRepository extends JpaRepository<UserGroup, UUID> {
 
     @Query("""
             select distinct m from UserGroup ug
-                        join ug.members m
+                        join ug.memberCandidates m
                         where ug.id = :groupId
             """)
     Page<User> findMemberCandidatesById(@Param("groupId") UUID groupId, Pageable pageable);

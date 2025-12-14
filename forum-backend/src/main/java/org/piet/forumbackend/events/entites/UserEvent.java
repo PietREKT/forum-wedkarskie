@@ -28,4 +28,12 @@ public class UserEvent {
     @Enumerated(EnumType.STRING)
             @Column(nullable = false)
     AttendanceStatus status;
+
+    public String toLogString(){
+        return "UserEvent: {" +
+                " id: " + id +
+                ", event: " + event.toLogStringShort() +
+                ", user: " + user.toLogStringShort() +
+                " }";
+    }
 }

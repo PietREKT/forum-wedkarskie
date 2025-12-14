@@ -3,9 +3,12 @@ package org.piet.forumbackend.users.groups.services;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.piet.forumbackend.globals.exceptions.NotFoundException;
+import org.piet.forumbackend.notifications.factory.NotificationFactory;
 import org.piet.forumbackend.users.core.dtos.UsersDtoMapper;
 import org.piet.forumbackend.users.core.dtos.responses.ListUserDto;
 import org.piet.forumbackend.users.core.entities.User;
+import org.piet.forumbackend.users.core.exceptions.UserNotLoggedInException;
+import org.piet.forumbackend.users.core.services.UserService;
 import org.piet.forumbackend.users.groups.dtos.UserGroupDtoMapper;
 import org.piet.forumbackend.users.groups.dtos.responses.ListUserGroupDto;
 import org.piet.forumbackend.users.groups.entities.UserGroup;
@@ -28,6 +31,8 @@ import java.util.UUID;
 public class UserGroupServiceImpl implements UserGroupService {
     private final UserGroupRepository userGroupRepository;
     private final MessageSource messageSource;
+    private final NotificationFactory notificationFactory;
+    private final UserService userService;
 
     private void checkOwner(UserGroup group, User user) throws AccessDeniedException {
         if (!group.isOwner(user))
@@ -40,7 +45,7 @@ public class UserGroupServiceImpl implements UserGroupService {
     }
 
     private void checkAdmin(UserGroup group, User user) throws AccessDeniedException {
-        if (!group.isAdmin(user)) {
+        if (!group.isAdmin(user) && !group.isOwner(user)) {
             throw new AccessDeniedException(
                     messageSource.getMessage("error.users.groups.not_admin",
                             null,
@@ -118,6 +123,7 @@ public class UserGroupServiceImpl implements UserGroupService {
         group.addMember(memberCandidate);
         group.removeMemberCandidate(memberCandidate);
         log.info("{} accepted/added {} into {}", currentUser.toLogStringShort(), memberCandidate.toLogStringShort(), group.toLogStringShort());
+        notificationFactory.acceptedIntoGroup(memberCandidate, group);
         userGroupRepository.save(group);
     }
 
@@ -198,7 +204,8 @@ public class UserGroupServiceImpl implements UserGroupService {
     }
 
     @Override
-    public Page<ListUserDto> getMemberCandidates(UUID groupId, Pageable pageable){
+    public Page<ListUserDto> getMemberCandidates(UUID groupId, Pageable pageable) throws UserNotLoggedInException {
+        checkAdmin(getById(groupId), userService.getCurrentUser());
         return userGroupRepository.findMemberCandidatesById(groupId, pageable)
                 .map(UsersDtoMapper::toListUserDto);
     }
