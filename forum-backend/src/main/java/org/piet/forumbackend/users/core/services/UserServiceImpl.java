@@ -160,8 +160,8 @@ public class UserServiceImpl implements UserService {
     public void muteUser(UUID userId, Instant until, String reason, User currentUser) throws NotFoundException {
         User user = getUserById(userId);
         checkUserToBeBannedHasHigherPerms(user, currentUser);
-        user.setBanReason(null);
-        user.setBannedUntil(null);
+        user.setBanReason(reason);
+        user.setMutedUntil(until);
         userRepository.save(user);
     }
 
