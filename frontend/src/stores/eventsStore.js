@@ -2,6 +2,8 @@ import { defineStore } from 'pinia'
 import { apiClient } from '../utils/axios.js'
 import { useAuthStore } from './auth.js'
 
+const EVENT_EXPIRE_HOURS = 12
+
 function formatDateTime(isoString) {
     if (!isoString) return ''
     const d = new Date(isoString)
@@ -43,50 +45,15 @@ function mapUserDto(dto) {
     }
 }
 
-function mapEventDto(dto, meId) {
+function mapSpotListDto(dto) {
     if (!dto) return null
-
-    const spot = dto.location || {}
-    const creator = dto.creator || {}
-    const group = dto.group || {}
-    const participantsRaw = Array.isArray(dto.userEvents) ? dto.userEvents : []
-
-    const participants = participantsRaw.map(p => {
-        const u = p.user || {}
-        return {
-            id: u.id,
-            initials: makeInitials(u),
-        }
-    })
-
-    const creatorId = creator.id ?? null
-    const isOwner = !!(meId && creatorId && String(meId) === String(creatorId))
-
-    // backend potrafi zwracać "participating" zamiast "isParticipating"
-    const isParticipating = dto.isParticipating != null ? !!dto.isParticipating : !!dto.participating
-
     return {
         id: dto.id,
         name: dto.name,
-        description: dto.description,
-        dateTime: dto.startsAt,
-        dateLabel: formatDateTime(dto.startsAt),
-
-        spotId: spot.id ?? null,
-        spotName: spot.name || 'Brak łowiska',
-
-        organizerId: creatorId,
-        organizer: creator.username || [creator.name, creator.surname].filter(Boolean).join(' ') || 'Organizator',
-
-        participants,
-
-        isPrivate: !!dto.group,
-        isParticipating,
-
-        groupId: group.id ?? null,
-        groupName: group.name || null,
-
-        isOwner,
+        locationX: dto.locationX,
+        locationY: dto.locationY,
+        type: dto.type,
+        avgRating: dto.avgRating,
     }
 }
 
@@ -100,25 +67,13 @@ function mapInviteDto(dto) {
     }
 }
 
-function mapSpotListDto(dto) {
-    if (!dto) return null
-    return {
-        id: dto.id,
-        name: dto.name,
-        locationX: dto.locationX,
-        locationY: dto.locationY,
-        type: dto.type,
-        avgRating: dto.avgRating,
-    }
-}
-
 function mapGroupDetailsDto(dto) {
     if (!dto) return null
 
     const admins = Array.isArray(dto.admins) ? dto.admins : []
     const adminsIds = new Set(admins.map(a => String(a.id)))
 
-    const ownerId = dto.owner?.id ?? null
+    const ownerId = dto.owner?.id ?? dto.ownerId ?? null
 
     const membersRaw = Array.isArray(dto.members) ? dto.members : []
     const members = membersRaw.map(m => ({
@@ -135,20 +90,86 @@ function mapGroupDetailsDto(dto) {
         id: dto.id,
         name: dto.name,
         members,
-        admins: admins.map(a => ({ id: a.id, username: a.username, name: a.name, surname: a.surname })),
-        owner: dto.owner || null,
+        admins: admins.map(a => ({
+            id: a.id,
+            username: a.username,
+            name: a.name,
+            surname: a.surname,
+        })),
+        owner: dto.owner || (ownerId ? { id: ownerId } : null),
+        // opcjonalnie jeśli backend kiedyś doda:
+        myRole: dto.myRole ?? null,
     }
 }
 
 function canManageGroup(groupDetails, myId) {
     if (!groupDetails || !myId) return false
+
+    // jeśli backend zwróci myRole, to to jest najbardziej wiarygodne
+    if (groupDetails.myRole) {
+        const r = String(groupDetails.myRole).toUpperCase()
+        return r === 'OWNER' || r === 'ADMIN'
+    }
+
     const ownerId = groupDetails.owner?.id ?? null
     if (ownerId && String(ownerId) === String(myId)) return true
+
     const admins = Array.isArray(groupDetails.admins) ? groupDetails.admins : []
     return admins.some(a => String(a.id) === String(myId))
 }
 
-// datetime-local ("2025-12-20T23:50") -> "2025-12-20T22:50:00Z" (ISO instant)
+function mapEventDto(dto, meId) {
+    if (!dto) return null
+
+    const spot = dto.location || {}
+    const creator = dto.creator || {}
+    const group = dto.group || {}
+    const participantsRaw = Array.isArray(dto.userEvents) ? dto.userEvents : []
+
+    const participants = participantsRaw.map(p => {
+        const u = p.user || {}
+        return { id: u.id, initials: makeInitials(u) }
+    })
+
+    const creatorId = creator.id ?? null
+    const isOwner = !!(meId && creatorId && String(meId) === String(creatorId))
+    const isParticipating = dto.isParticipating != null ? !!dto.isParticipating : !!dto.participating
+
+    const startsAt = dto.startsAt || null
+    const t = startsAt ? Date.parse(startsAt) : NaN
+    const now = Date.now()
+    const isPast = Number.isFinite(t) ? t < now : false
+    const isExpired = Number.isFinite(t) ? (t + EVENT_EXPIRE_HOURS * 60 * 60 * 1000) < now : false
+
+    return {
+        id: dto.id,
+        name: dto.name,
+        description: dto.description,
+        dateTime: startsAt,
+        dateLabel: formatDateTime(startsAt),
+
+        spotId: spot.id ?? null,
+        spotName: spot.name || 'Brak łowiska',
+
+        organizerId: creatorId,
+        organizer: creator.username || [creator.name, creator.surname].filter(Boolean).join(' ') || 'Organizator',
+
+        participants,
+
+        isPrivate: !!dto.group,
+        isParticipating,
+
+        groupId: group.id ?? null,
+        groupName: group.name || null,
+
+        isOwner,
+
+        // UI logika czasu (12h po starcie jeszcze widoczne jako "odbyło się")
+        isPast,
+        isExpired,
+    }
+}
+
 function localDateTimeToIsoZ(localStr) {
     const s = String(localStr || '').trim()
     if (!s) return null
@@ -169,17 +190,18 @@ function uniqById(list) {
 
 export const useEventsStore = defineStore('events', {
     state: () => ({
-        // wydarzenia
         events: [],
         selectedEventId: null,
         isLoadingEvents: false,
         isSavingEvent: false,
         isJoiningEvent: false,
 
-        // grupy / łowiska / powiadomienia
         groups: [],
         groupsMine: [],
         _myGroupIds: null,
+
+        // mapa: groupId -> canManage (OWNER/ADMIN)
+        groupManageMap: {},
 
         spots: [],
         invitations: [],
@@ -189,7 +211,6 @@ export const useEventsStore = defineStore('events', {
         isLoadingSpots: false,
         isLoadingInvitations: false,
 
-        // panel zarządzania grupą
         groupDetails: null,
         groupCandidates: [],
 
@@ -200,8 +221,7 @@ export const useEventsStore = defineStore('events', {
         isAcceptingCandidate: false,
         isRejectingCandidate: false,
 
-        // proste komunikaty UI
-        lastGroupAction: null, // { type: 'success'|'error', message: string, ts: number }
+        lastGroupAction: null,
     }),
 
     getters: {
@@ -216,6 +236,14 @@ export const useEventsStore = defineStore('events', {
             const myId = auth.user?.id
             return canManageGroup(state.groupDetails, myId)
         },
+        // do formularza: lista groupId, gdzie user jest OWNER/ADMIN (zadziała jak backend zacznie zwracać owner/admin/myRole)
+        manageableGroupIds(state) {
+            const ids = []
+            for (const [gid, val] of Object.entries(state.groupManageMap || {})) {
+                if (val) ids.push(gid)
+            }
+            return new Set(ids.map(String))
+        },
     },
 
     actions: {
@@ -226,6 +254,7 @@ export const useEventsStore = defineStore('events', {
             this.groups = []
             this.groupsMine = []
             this._myGroupIds = null
+            this.groupManageMap = {}
 
             this.spots = []
             this.invitations = []
@@ -260,24 +289,14 @@ export const useEventsStore = defineStore('events', {
             this.lastGroupAction = { type, message, ts: Date.now() }
         },
 
-        // ===== WYDARZENIA =====
-
         async fetchEvents() {
             this.isLoadingEvents = true
             try {
                 const auth = useAuthStore()
                 const meId = auth.user?.id ?? null
 
-                // 1) wydarzenia "moje" (uczestnictwo / zaproszenia etc.) - to już masz
-                const upcomingReq = apiClient.get('/users/me/events/upcoming', {
-                    params: { page: 0, size: 50 },
-                })
-
-                // 2) wydarzenia grup, w których jestem członkiem
-                // bierzemy moje grupy i dla każdej pobieramy /api/users/groups/{groupId}/events
-                const groupsReq = apiClient.get('/users/me/groups', {
-                    params: { page: 0, size: 200 },
-                })
+                const upcomingReq = apiClient.get('/users/me/events/upcoming', { params: { page: 0, size: 50 } })
+                const groupsReq = apiClient.get('/users/me/groups', { params: { page: 0, size: 200 } })
 
                 const [upcomingRes, groupsRes] = await Promise.all([upcomingReq, groupsReq])
 
@@ -288,7 +307,6 @@ export const useEventsStore = defineStore('events', {
                 this._myGroupIds = new Set(myGroupIds.map(id => String(id)))
 
                 const groupEventsAll = []
-                // równolegle, ale bez przesady (tu zwykle mało grup)
                 await Promise.all(
                     myGroupIds.map(async gid => {
                         try {
@@ -298,27 +316,24 @@ export const useEventsStore = defineStore('events', {
                             const list = pageContent(data).map(dto => mapEventDto(dto, meId)).filter(Boolean)
                             groupEventsAll.push(...list)
                         } catch (e) {
-                            // pojedyncza grupa może nie mieć endpointu/permów - nie blokujemy całości
                             console.error('fetch group events error', gid, e)
                         }
                     }),
                 )
 
-                // merge + dedupe
                 const merged = uniqById([...upcoming, ...groupEventsAll])
 
-                // filtr przeterminowanych (zostawiamy jak było)
-                const now = Date.now()
-                const list = merged.filter(e => {
-                    if (!e.dateTime) return true
-                    const t = Date.parse(e.dateTime)
-                    if (Number.isNaN(t)) return true
-                    const expire = t + 24 * 60 * 60 * 1000
-                    return expire >= now
+                // filtr 12h po starcie (po tym czasie nie pokazujemy)
+                const list = merged.filter(e => !e.isExpired)
+
+                // sort po starcie rosnąco (braki daty na końcu)
+                list.sort((a, b) => {
+                    const ta = a?.dateTime ? Date.parse(a.dateTime) : Number.POSITIVE_INFINITY
+                    const tb = b?.dateTime ? Date.parse(b.dateTime) : Number.POSITIVE_INFINITY
+                    return ta - tb
                 })
 
                 this.events = list
-
                 if (!this.events.find(e => String(e.id) === String(this.selectedEventId))) {
                     this.selectedEventId = this.events[0]?.id ?? null
                 }
@@ -351,7 +366,7 @@ export const useEventsStore = defineStore('events', {
                 const meId = auth.user?.id ?? null
                 const event = mapEventDto(data, meId)
 
-                if (event) {
+                if (event && !event.isExpired) {
                     this.events = uniqById([...(this.events || []), event])
                     this.selectedEventId = event.id
                 }
@@ -365,7 +380,6 @@ export const useEventsStore = defineStore('events', {
         async joinEvent(eventId) {
             if (!eventId) return
             this.isJoiningEvent = true
-
             const auth = useAuthStore()
             const user = auth.user
             const userId = user?.id
@@ -378,7 +392,6 @@ export const useEventsStore = defineStore('events', {
                     ev.participants.push({ id: userId, initials: makeInitials(user) })
                     ev.isParticipating = true
                 }
-
                 await apiClient.post(`/events/${eventId}/response`, { status: 'CONFIRMED' })
             } catch (err) {
                 if (prev && ev) {
@@ -394,7 +407,6 @@ export const useEventsStore = defineStore('events', {
         async leaveEvent(eventId) {
             if (!eventId) return
             this.isJoiningEvent = true
-
             const auth = useAuthStore()
             const userId = auth.user?.id
 
@@ -406,10 +418,8 @@ export const useEventsStore = defineStore('events', {
                     ev.participants = ev.participants.filter(p => String(p.id) !== String(userId))
                     ev.isParticipating = false
                 }
-
-                if (userId) {
-                    await apiClient.delete(`/events/${eventId}/participants/${userId}`)
-                }
+                // poprawny endpoint dla wyjścia z wydarzenia
+                await apiClient.delete(`/events/${eventId}/leave`)
             } catch (err) {
                 if (prev && ev) {
                     ev.participants = prev.participants
@@ -445,11 +455,24 @@ export const useEventsStore = defineStore('events', {
                 if (payload.dateTime != null) {
                     ev.dateTime = startsAtIso
                     ev.dateLabel = formatDateTime(startsAtIso)
+
+                    const t = startsAtIso ? Date.parse(startsAtIso) : NaN
+                    const now = Date.now()
+                    ev.isPast = Number.isFinite(t) ? t < now : false
+                    ev.isExpired = Number.isFinite(t) ? (t + EVENT_EXPIRE_HOURS * 60 * 60 * 1000) < now : false
                 }
                 if (payload.spotId != null) {
                     ev.spotId = Number(payload.spotId) || null
                     const spot = this.spots.find(s => String(s.id) === String(ev.spotId)) || null
                     ev.spotName = spot ? spot.name : 'Brak łowiska'
+                }
+
+                // jeśli po edycji wydarzenie wypadło poza okno 12h, usuń z listy
+                if (ev.isExpired) {
+                    this.events = (this.events || []).filter(e => String(e.id) !== String(eventId))
+                    if (String(this.selectedEventId) === String(eventId)) {
+                        this.selectedEventId = this.events[0]?.id ?? null
+                    }
                 }
             } catch (err) {
                 console.error('updateEvent error', err)
@@ -470,14 +493,10 @@ export const useEventsStore = defineStore('events', {
             }
         },
 
-        // ===== GRUPY =====
-
         async fetchInvitations() {
             this.isLoadingInvitations = true
             try {
-                const { data } = await apiClient.get('/users/me/groups/invites', {
-                    params: { page: 0, size: 50 },
-                })
+                const { data } = await apiClient.get('/users/me/groups/invites', { params: { page: 0, size: 50 } })
                 this.invitations = pageContent(data).map(mapInviteDto).filter(Boolean)
             } catch (err) {
                 console.error('fetchInvitations error', err)
@@ -491,10 +510,7 @@ export const useEventsStore = defineStore('events', {
             try {
                 await this.fetchInvitations()
 
-                const { data } = await apiClient.get('/users/me/groups', {
-                    params: { page: 0, size: 200 },
-                })
-
+                const { data } = await apiClient.get('/users/me/groups', { params: { page: 0, size: 200 } })
                 const myListRaw = pageContent(data)
                 const myIds = new Set(myListRaw.map(g => String(g.id)))
                 this._myGroupIds = myIds
@@ -529,6 +545,9 @@ export const useEventsStore = defineStore('events', {
                     ...g,
                     isPending: g.isMine ? false : pending.has(String(g.id)),
                 }))
+
+                // dociągnięcie ról dla grup (zadziała dopiero jak backend zwróci owner/admin/myRole)
+                await this.refreshGroupManageMap()
             } catch (err) {
                 console.error('fetchGroups error', err)
             } finally {
@@ -536,9 +555,35 @@ export const useEventsStore = defineStore('events', {
             }
         },
 
+        async refreshGroupManageMap() {
+            const auth = useAuthStore()
+            const myId = auth.user?.id
+            if (!myId) {
+                this.groupManageMap = {}
+                return
+            }
+
+            const groups = Array.isArray(this.groupsMine) ? this.groupsMine : []
+            const ids = groups.map(g => g?.id).filter(Boolean)
+
+            const map = {}
+            await Promise.all(
+                ids.map(async gid => {
+                    try {
+                        const { data } = await apiClient.get(`/users/groups/${gid}`)
+                        const details = mapGroupDetailsDto(data)
+                        map[String(gid)] = canManageGroup(details, myId)
+                    } catch (e) {
+                        map[String(gid)] = false
+                    }
+                }),
+            )
+
+            this.groupManageMap = map
+        },
+
         async searchGroups(query) {
             const q = String(query || '').trim()
-
             if (!q) {
                 await this.fetchGroups()
                 return
@@ -632,7 +677,6 @@ export const useEventsStore = defineStore('events', {
 
             try {
                 await apiClient.patch(`/users/groups/${groupId}/invite`, { userId })
-
                 await this.fetchInvitations()
                 const pending = this.pendingGroupIds
 
@@ -654,6 +698,16 @@ export const useEventsStore = defineStore('events', {
             try {
                 const { data } = await apiClient.get(`/users/groups/${groupId}`)
                 this.groupDetails = mapGroupDetailsDto(data)
+
+                // jeżeli to jest moja grupa, aktualizuj mapę uprawnień dla tej jednej
+                const auth = useAuthStore()
+                const myId = auth.user?.id
+                if (myId && this.groupDetails?.id != null) {
+                    this.groupManageMap = {
+                        ...(this.groupManageMap || {}),
+                        [String(this.groupDetails.id)]: canManageGroup(this.groupDetails, myId),
+                    }
+                }
             } catch (err) {
                 console.error('loadGroupDetails error', err)
                 this.groupDetails = null
@@ -666,7 +720,7 @@ export const useEventsStore = defineStore('events', {
             if (!groupId) return
             this.isLoadingGroupCandidates = true
             try {
-                const { data } = await apiClient.get(`/users/groups/${groupId}/candidates`, {
+                const { data } = await apiClient.get(`/users/groups/${groupId}/admin/candidates`, {
                     params: { page: 0, size: 100 },
                 })
 
@@ -728,8 +782,6 @@ export const useEventsStore = defineStore('events', {
                 this.isKickingMember = false
             }
         },
-
-        // ===== ŁOWISKA =====
 
         async fetchSpots() {
             this.isLoadingSpots = true

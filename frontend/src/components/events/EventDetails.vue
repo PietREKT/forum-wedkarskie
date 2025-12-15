@@ -12,6 +12,7 @@
           <p class="text-sm font-medium">{{ event.name }}</p>
           <p class="text-[11px] text-[var(--color-muted)]">
             Łowisko: {{ event.spotName }} · {{ event.dateLabel }}
+            <span v-if="event.isPast" class="ml-1">· odbyło się</span>
           </p>
         </div>
 
@@ -42,18 +43,20 @@
         <div class="flex items-center gap-2">
           <button
               v-if="!event.isParticipating"
-              class="px-3 py-1.5 rounded-lg text-xs font-medium border theme-border"
-              :disabled="isJoining"
+              class="px-3 py-1.5 rounded-lg text-xs font-medium border theme-border disabled:opacity-50"
+              :disabled="isJoining || event.isPast"
               @click="$emit('join')"
+              :title="event.isPast ? 'Nie można dołączyć do wydarzenia, które już się odbyło.' : ''"
           >
             {{ isJoining ? 'Dołączanie...' : 'Dołącz' }}
           </button>
 
           <button
               v-else
-              class="px-3 py-1.5 rounded-lg text-xs font-medium border theme-border"
-              :disabled="isJoining"
+              class="px-3 py-1.5 rounded-lg text-xs font-medium border theme-border disabled:opacity-50"
+              :disabled="isJoining || event.isPast"
               @click="$emit('leave')"
+              :title="event.isPast ? 'Nie można opuszczać wydarzenia, które już się odbyło.' : ''"
           >
             {{ isJoining ? 'Opuszczanie...' : 'Opuść wydarzenie' }}
           </button>

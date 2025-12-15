@@ -17,6 +17,7 @@
             :groups="groups"
             :spots="spots"
             :is-saving="store.isSavingEvent"
+            :manageable-group-ids="store.manageableGroupIds"
             @save="handleSaveEvent"
         />
 
@@ -88,7 +89,6 @@ async function reloadAll() {
 watch(
     () => auth.user?.id,
     async (newId, oldId) => {
-      // jeśli user się wylogował -> wyczyść stan
       if (!newId) {
         store.hardReset()
         return
@@ -107,7 +107,6 @@ async function handleSaveEvent(payload) {
     spotId: payload.spotId || null,
     groupId: payload.groupId || null,
   })
-  // po zapisie odśwież listę (jeśli backend nie zwraca pełnego dto)
   await store.fetchEvents()
 }
 
@@ -145,6 +144,8 @@ async function handleRequestJoinGroup(groupId) {
 }
 
 async function handleSelectGroupForManage(groupId) {
+  store.groupDetails = null
+  store.groupCandidates = []
   await store.loadGroupDetails(groupId)
   await store.loadGroupCandidates(groupId)
 }

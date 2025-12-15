@@ -30,6 +30,7 @@
         <p class="text-[11px] text-[var(--color-muted)]">
           {{ event.groupName ? ('Grupa: ' + event.groupName) : 'Bez grupy' }} ·
           organizator: {{ event.organizer }}
+          <span v-if="event.isPast" class="ml-1">· odbyło się</span>
         </p>
       </li>
     </ul>

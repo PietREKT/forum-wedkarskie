@@ -110,7 +110,7 @@
                 class="px-2 py-1 rounded-lg text-[11px] font-medium border theme-border"
                 @click="$emit('select-group-manage', group.id)"
             >
-              Wybierz do zarządzania
+              {{ group.isPending && !group.isMine ? 'Podgląd' : 'Wybierz do zarządzania' }}
             </button>
 
             <button
@@ -178,7 +178,7 @@
           Nie masz uprawnień do zarządzania tą grupą (podgląd tylko).
         </p>
 
-        <!-- kandydaci -->
+        <!-- KANDYDACI -->
         <div class="space-y-2">
           <p class="text-[11px] font-medium">Kandydaci do grupy</p>
 
@@ -231,7 +231,10 @@
           </ul>
         </div>
 
-        <!-- członkowie -->
+        <hr class="border-[var(--color-border)] opacity-60" />
+        <p class="text-[11px] font-medium">Członkowie</p>
+
+        <!-- CZŁONKOWIE -->
         <ul class="space-y-1 max-h-52 overflow-y-auto pr-1 text-xs">
           <li
               v-for="m in groupDetails.members"
@@ -317,7 +320,7 @@ const canManage = computed(() => {
   const myId = auth.user?.id
   if (!props.groupDetails || !myId) return false
 
-  const ownerId = props.groupDetails.owner?.id ?? null
+  const ownerId = props.groupDetails.owner?.id ?? props.groupDetails.ownerId ?? null
   if (ownerId && String(ownerId) === String(myId)) return true
 
   const admins = Array.isArray(props.groupDetails.admins) ? props.groupDetails.admins : []
@@ -354,7 +357,6 @@ async function onClear() {
 watch(
     () => auth.user?.id,
     () => {
-      // przy zmianie konta czyścimy lokalne UI stanu tworzenia/wyszukiwania
       cancelCreate()
       search.value = ''
     },
