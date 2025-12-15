@@ -3,7 +3,7 @@ package org.piet.forumbackend.users.core.services;
 import lombok.RequiredArgsConstructor;
 import org.piet.forumbackend.globals.exceptions.NotFoundException;
 import org.piet.forumbackend.globals.pagination.PaginationDto;
-import org.piet.forumbackend.globals.properties.FileProperties;
+import org.piet.forumbackend.globals.properties.file_properties.FileProperties;
 import org.piet.forumbackend.globals.security.SecurityUserDto;
 import org.piet.forumbackend.users.core.dtos.UsersDtoMapper;
 import org.piet.forumbackend.users.core.dtos.requests.RegisterUserDto;

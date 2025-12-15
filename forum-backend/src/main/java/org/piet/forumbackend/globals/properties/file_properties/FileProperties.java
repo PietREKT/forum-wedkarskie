@@ -1,4 +1,4 @@
-package org.piet.forumbackend.globals.properties;
+package org.piet.forumbackend.globals.properties.file_properties;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -8,9 +8,10 @@ import org.springframework.context.MessageSource;
 import org.springframework.context.i18n.LocaleContextHolder;
 
 import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Map;
 
 @ConfigurationProperties(prefix = "forum.files.default.folders")
 @Getter
@@ -70,39 +71,20 @@ public class FileProperties {
         this.fishFolder = fishPath.toFile();
         this.spotsFolder = spotsPath.toFile();
         this.contentFolder = contentPath.toFile();
-
-        Map<File, String> files = Map.of(
-                mainDataFolder, "main",
-                userFilesFolder, "user_files",
-                defaultUserFolder, "user",
-                fishFolder, "fish",
-                spotsFolder, "spots",
-                contentFolder, "content"
-        );
-
-        files.forEach((k, v) -> {
-            if (!k.exists() && !k.mkdir()) {
-                log.error("Error while creating \"{}\" directory.", k.getName());
-                throw new IllegalStateException(
-                        messageSource.getMessage("error.folders.creation.default." + v,
-                                null, LocaleContextHolder.getLocale()
-                        ));
-            }
-        });
-
         statuesFolder = new File(spotsFolder, "statues");
         spotsPicsFolder = new File(spotsFolder, "pics");
 
-        if (!statuesFolder.exists() && !statuesFolder.mkdir()){
-            throw new IllegalStateException("Error while creating statuesFolder");
-        }
-
-        if (!spotsPicsFolder.exists() && !spotsPicsFolder.mkdir()){
-            throw new IllegalStateException("Error while creating statuesFolder");
-        }
-
         this.contentFolderUploadsUrl = "/uploads/" + contentFolder.getName() + '/';
     }
+
+    private void ensureDirectoryExists(File dir) {
+        try {
+            Files.createDirectories(dir.toPath());
+        } catch (IOException e) {
+            throw new IllegalStateException("Error while creating directory: " + dir.getAbsolutePath(), e);
+        }
+    }
+
 
     public static String getFileExtension(String filename){
         if (filename == null) throw new IllegalArgumentException("Filename can not be null!");

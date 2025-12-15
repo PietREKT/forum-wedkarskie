@@ -47,7 +47,7 @@ public class MeController {
 
     @PostMapping("/pic")
     public ResponseEntity<?> setProfilePic(@ModelAttribute ChangeProfilePicDto dto) throws UserNotLoggedInException, IOException {
-        userService.setUserProfilePic(dto.getProfilePic());
+        userService.setUserProfilePic(dto.getFile());
 
         return ResponseEntity.noContent().build();
     }

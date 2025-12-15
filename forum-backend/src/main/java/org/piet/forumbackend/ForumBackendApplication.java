@@ -1,8 +1,8 @@
 package org.piet.forumbackend;
 
-import org.piet.forumbackend.globals.properties.FileProperties;
 import org.piet.forumbackend.globals.properties.JwtProperties;
 import org.piet.forumbackend.globals.properties.PaginationProperties;
+import org.piet.forumbackend.globals.properties.file_properties.FileProperties;
 import org.piet.forumbackend.globals.security.cookies.AuthCookieProps;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
