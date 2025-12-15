@@ -241,8 +241,8 @@ INSERT INTO event (name,
                    group_id)
 VALUES ('Testowe spotkanie nad wodą',
         'Pierwsze testowe wydarzenie na łowisku testowym.',
-        '2025-05-01T08:00:00Z',
-        '2025-05-01T16:00:00Z',
+        '2025-12-17T08:00:00Z',
+        '2025-12-17T16:00:00Z',
         1,
         '00000000-0000-0000-0000-000000000001',
         'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa');

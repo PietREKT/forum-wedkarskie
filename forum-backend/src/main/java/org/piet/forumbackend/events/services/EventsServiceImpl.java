@@ -72,6 +72,10 @@ public class EventsServiceImpl implements EventsService {
         FishingSpot spot = fishingSpotService.getFishingSpotById(eventDto.getLocationId());
         User currentUser = userService.getCurrentUser();
         Set<UUID> invitedUserIds = eventDto.getInvitedUsersIds();
+
+        if (group != null && !group.isAdmin(currentUser) && !group.isOwner(currentUser))
+            throw new AccessDeniedException("You have to be a group admin to create events in that group!");
+
         Event event = new Event();
         event.setCreator(currentUser);
         event.setName(eventDto.getName());
