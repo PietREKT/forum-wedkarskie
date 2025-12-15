@@ -1,6 +1,7 @@
 package org.piet.forumbackend.content.core.dtos;
 
 import org.piet.forumbackend.content.core.dtos.responses.tutorials.ListTutorialDto;
+import org.piet.forumbackend.content.core.dtos.responses.tutorials.MyTutorialDto;
 import org.piet.forumbackend.content.core.dtos.responses.tutorials.TutorialDto;
 import org.piet.forumbackend.content.core.entities.Tutorial;
 import org.piet.forumbackend.fish.dtos.FishDtoMapper;
@@ -27,6 +28,22 @@ public class TutorialDtoMapper {
                 tutorial.getMethods(),
                 tutorial.getFishMentioned().stream().map(FishDtoMapper::toFishListDto).collect(Collectors.toSet()),
                 tutorial.getRating()
+        );
+    }
+
+    public static MyTutorialDto toMyTutorialDto(Tutorial tutorial){
+        return new MyTutorialDto(
+                tutorial.getId(),
+                UsersDtoMapper.toListUserDto(tutorial.getAuthor()),
+                tutorial.getContent(),
+                tutorial.getCreatedAt(),
+                tutorial.getAttachedPhotos(),
+                tutorial.getTitle(),
+                tutorial.getVerificationStatus(),
+                UsersDtoMapper.toListUserDto(tutorial.getVerifiedBy()),
+                tutorial.getRejectionReason(),
+                tutorial.getMethods(),
+                tutorial.getFishMentioned().stream().map(FishDtoMapper::toFishListDto).collect(Collectors.toSet())
         );
     }
 }

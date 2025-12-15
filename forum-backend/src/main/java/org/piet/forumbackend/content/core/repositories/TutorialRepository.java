@@ -11,6 +11,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
+import java.util.UUID;
 
 public interface TutorialRepository extends JpaRepository<Tutorial, Long> {
     @Query("""
@@ -37,4 +38,6 @@ public interface TutorialRepository extends JpaRepository<Tutorial, Long> {
     Page<Tutorial> findByMultipleFish(@Param("fishIds")List<Long> fishIds, Pageable pageable);
 
     Page<Tutorial> findByVerificationStatus(VerificationStatus verificationStatus, Pageable pageable);
+
+    Page<Tutorial> findAllByAuthor_Id(UUID authorId, Pageable pageable);
 }

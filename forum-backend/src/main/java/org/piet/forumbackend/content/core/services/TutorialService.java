@@ -1,6 +1,7 @@
 package org.piet.forumbackend.content.core.services;
 
 import org.piet.forumbackend.content.core.dtos.responses.tutorials.ListTutorialDto;
+import org.piet.forumbackend.content.core.dtos.responses.tutorials.MyTutorialDto;
 import org.piet.forumbackend.content.core.dtos.responses.tutorials.TutorialDto;
 import org.piet.forumbackend.content.core.entities.Tutorial;
 import org.piet.forumbackend.fish.entities.Fish;
@@ -10,6 +11,7 @@ import org.piet.forumbackend.globals.exceptions.NotFoundException;
 import org.piet.forumbackend.globals.exceptions.UnauthorizedAccessException;
 import org.piet.forumbackend.globals.pagination.PaginationDto;
 import org.piet.forumbackend.users.core.entities.User;
+import org.piet.forumbackend.users.core.exceptions.UserNotLoggedInException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -56,4 +58,6 @@ public interface TutorialService {
     }
 
     void deleteTutorial(Long tutorialId, User currentUser) throws org.springframework.security.access.AccessDeniedException;
+
+    Page<MyTutorialDto> getTutorialsByCurrentUser(PaginationDto pagination) throws UserNotLoggedInException;
 }
