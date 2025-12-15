@@ -91,7 +91,7 @@ public class UserGroup {
     }
 
     public boolean isMember(User user){
-        return members.contains(user);
+        return members.contains(user) || admins.contains(user);
     }
 
     public void addAdmin(User user){
@@ -103,7 +103,7 @@ public class UserGroup {
     }
 
     public boolean isAdmin(User user){
-        return admins.contains(user);
+        return admins.contains(user) || isOwner(user);
     }
 
     public boolean isOwner(User user){
