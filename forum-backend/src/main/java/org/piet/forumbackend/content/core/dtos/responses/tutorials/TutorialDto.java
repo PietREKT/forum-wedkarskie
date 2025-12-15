@@ -15,6 +15,7 @@ import java.util.Set;
  */
 @Value
 public class TutorialDto implements Serializable {
+    Long tutorialId;
     ListUserDto verifiedBy;
     Set<FishingMethod> methods;
     Set<FishListDto> fishMentioned;

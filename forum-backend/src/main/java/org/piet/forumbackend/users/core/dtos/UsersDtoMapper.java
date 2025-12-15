@@ -29,6 +29,7 @@ public class UsersDtoMapper {
     }
 
     public static ListUserDto toListUserDto(User user){
+        if (user == null) return null;
         return new ListUserDto(
                 user.getId(),
                 user.getUsername(),

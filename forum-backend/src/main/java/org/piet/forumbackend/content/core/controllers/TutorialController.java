@@ -3,9 +3,13 @@ package org.piet.forumbackend.content.core.controllers;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.piet.forumbackend.content.core.dtos.requests.tutorials.CreateTutorialDto;
 import org.piet.forumbackend.content.core.dtos.responses.tutorials.ListTutorialDto;
 import org.piet.forumbackend.content.core.dtos.responses.tutorials.TutorialDto;
+import org.piet.forumbackend.content.core.entities.Content;
+import org.piet.forumbackend.content.core.entities.enums.VoteType;
+import org.piet.forumbackend.content.core.services.ContentService;
 import org.piet.forumbackend.content.core.services.TutorialService;
 import org.piet.forumbackend.fish.entities.Fish;
 import org.piet.forumbackend.fish.entities.enums.FishingMethod;
@@ -20,11 +24,13 @@ import org.piet.forumbackend.users.core.exceptions.UserNotLoggedInException;
 import org.piet.forumbackend.users.core.services.UserService;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.io.IOException;
 import java.util.List;
 
+@Slf4j
 @RestController
 @RequestMapping("${forum.api.prefix}/tutorials")
 @RequiredArgsConstructor
@@ -33,6 +39,7 @@ public class TutorialController {
     private final UserService userService;
     private final TutorialService tutorialService;
     private final FishService fishService;
+    private final ContentService contentService;
 
     @PostMapping("/create")
     public ResponseEntity<TutorialDto> createTutorial(@Valid @ModelAttribute CreateTutorialDto dto) throws UserNotLoggedInException, UnauthorizedAccessException, IOException {
@@ -88,6 +95,26 @@ public class TutorialController {
         User currentUser = userService.getCurrentUser();
         tutorialService.deleteTutorial(id, currentUser);
 
+        return ResponseEntity.ok().build();
+    }
+
+    @PatchMapping("/{tutorialId}/downvote")
+    public ResponseEntity<?> downvoteTutorial(@PathVariable Long tutorialId, Authentication auth) throws NotFoundException, UserNotLoggedInException {
+        User u = userService.getUserFromAuth(auth);
+        Content tutorial = contentService.getContentById(tutorialId);
+        contentService.vote(tutorial, u, VoteType.DOWNVOTE);
+
+        log.info("User: {} downvoted tutorial with id: {}", u, tutorialId);
+        return ResponseEntity.ok().build();
+    }
+
+    @PatchMapping("/{tutorialId}/upvote")
+    public ResponseEntity<?> upvoteTutorial(@PathVariable Long tutorialId, Authentication auth) throws NotFoundException, UserNotLoggedInException {
+        User u = userService.getUserFromAuth(auth);
+        Content tutorial = contentService.getContentById(tutorialId);
+        contentService.vote(tutorial, u, VoteType.UPVOTE);
+
+        log.info("User: {} upvoted tutorial with id: {}", u, tutorialId);
         return ResponseEntity.ok().build();
     }
 }

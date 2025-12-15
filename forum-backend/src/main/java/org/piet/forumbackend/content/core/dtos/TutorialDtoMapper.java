@@ -11,6 +11,7 @@ import java.util.stream.Collectors;
 public class TutorialDtoMapper {
     public static TutorialDto toTutorialDto(Tutorial tutorial){
         return new TutorialDto(
+                tutorial.getId(),
                 UsersDtoMapper.toListUserDto(tutorial.getVerifiedBy()),
                 tutorial.getMethods(),
                 tutorial.getFishMentioned().stream().map(FishDtoMapper::toFishListDto).collect(Collectors.toSet()),
