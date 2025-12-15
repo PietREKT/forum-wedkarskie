@@ -4,7 +4,6 @@ export function getMe() {
     return apiClient.get('/users/me')
 }
 
-// backend oczekuje parametru: q
 export function searchUsersByUsername(username) {
     return apiClient.get('/users/search', {
         params: { q: username },
@@ -17,6 +16,14 @@ export function sendFriendInvite(userId) {
     })
 }
 
-export function removeFriend(userId) {
-    return apiClient.delete(`/users/friends/${userId}`)
+export function acceptFriendRequest(reqId) {
+    return apiClient.patch(`/users/friends/${reqId}/accept`)
+}
+
+export function rejectFriendRequest(reqId) {
+    return apiClient.patch(`/users/friends/${reqId}/reject`)
+}
+
+export function cancelFriendRequest(reqId) {
+    return apiClient.patch(`/users/friends/${reqId}/cancel`)
 }

@@ -21,7 +21,7 @@
         <button
             type="button"
             class="px-4 py-2 rounded-lg text-sm font-medium
-                 bg-[var(--color-primary)] text-white hover:bg-[var(--color-primary-600)]"
+                 bg-[var(--color-primary)] text-white hover:bg-[var(--color-primary-600)] disabled:opacity-60"
             @click="onSearchUsers"
             :disabled="searchLoading"
         >
@@ -58,6 +58,7 @@
               {{ u.name || '—' }} {{ u.surname || '' }}
             </p>
           </div>
+
           <div class="flex flex-wrap gap-2">
             <RouterLink
                 :to="{ name: 'profile', query: { u: u.username } }"
@@ -66,27 +67,25 @@
             >
               Profil
             </RouterLink>
+
             <button
                 type="button"
                 class="px-3 py-1 text-xs rounded-lg bg-[var(--color-primary)]
                      text-white hover:bg-[var(--color-primary-600)] disabled:opacity-60"
-                @click="onInviteUser(u)"
-                :disabled="inviteLoading"
+                @click="onFollowUser(u)"
+                :disabled="inviteLoadingId === u.id || isAlreadyFollowed(u)"
+                :title="isAlreadyFollowed(u) ? 'Już obserwujesz' : 'Wyślij zaproszenie'"
             >
-              {{ inviteLoading ? 'Wysyłanie...' : 'Obserwuj' }}
+              {{
+                isAlreadyFollowed(u)
+                    ? 'Obserwujesz'
+                    : inviteLoadingId === u.id
+                        ? 'Wysyłanie...'
+                        : 'Obserwuj'
+              }}
             </button>
           </div>
         </div>
-      </div>
-    </div>
-
-    <!-- POWIADOMIENIA O ZAPROSZENIACH – pusta ramka -->
-    <div class="space-y-2">
-      <h4 class="text-sm font-semibold">Zaproszenia do obserwowania</h4>
-      <div
-          class="h-24 rounded-xl border-2 border-[var(--color-border)]
-               flex items-center justify-center text-[var(--color-muted)] text-center px-4"
-      >
       </div>
     </div>
 
@@ -96,7 +95,6 @@
         <h4 class="text-sm font-semibold">Twoi obserwowani</h4>
       </div>
 
-      <!-- stan ładowania -->
       <div
           v-if="friendsLoading"
           class="h-32 rounded-xl border-2 border-[var(--color-border)]
@@ -105,7 +103,6 @@
         Ładowanie listy obserwowanych...
       </div>
 
-      <!-- brak znajomych -->
       <div
           v-else-if="friends.length === 0"
           class="h-32 rounded-xl border-2 border-[var(--color-border)]
@@ -114,7 +111,6 @@
         Brak obserwowanych użytkowników.
       </div>
 
-      <!-- lista znajomych -->
       <div
           v-else
           class="max-h-48 rounded-xl border-2 border-[var(--color-border)]
@@ -145,19 +141,20 @@
             >
               Posty
             </RouterLink>
-            <button
-                type="button"
-                class="px-3 py-1 text-xs rounded-lg border border-red-500/80
-                     text-red-500/90 bg-[var(--color-bg)] hover:bg-red-500/10
-                     disabled:opacity-60"
-                @click="onRemoveFriend(friend)"
-                :disabled="removeLoadingId === friend.id"
+
+            <span
+                class="px-3 py-1 text-xs rounded-lg border border-[var(--color-border)] text-[var(--color-muted)]"
             >
-              {{ removeLoadingId === friend.id ? 'Usuwanie...' : 'Usuń' }}
-            </button>
+              Brak opcji usunięcia
+            </span>
           </div>
         </div>
       </div>
+
+      <p class="text-[10px] text-[var(--color-muted)]">
+        Backend nie udostępnia endpointu do usunięcia obserwowanego. W modelu API są tylko zaproszenia i operacje na reqId,
+        ale brak listy zaproszeń w danych użytkownika, więc nie da się tego zrealizować na froncie.
+      </p>
     </div>
   </div>
 </template>
@@ -167,11 +164,6 @@ import { computed, ref } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import { useUserStore } from '../../stores/userStore.js'
 import { useAuthStore } from '../../stores/auth.js'
-import {
-  searchUsersByUsername,
-  sendFriendInvite,
-  removeFriend,
-} from '../../utils/usersApi.js'
 
 const route = useRoute()
 const userStore = useUserStore()
@@ -192,16 +184,20 @@ const isOwner = computed(() => {
   return loggedUser.value.username === displayedUsername.value
 })
 
-const friends = computed(() => userStore.friends)
+const friends = computed(() => userStore.friends || [])
 const friendsLoading = computed(() => userStore.status === 'loading' && !userStore.me)
 
-// wyszukiwanie użytkowników
 const searchQuery = ref('')
 const searchResults = ref([])
 const searchLoading = ref(false)
 const searchError = ref('')
-const inviteLoading = ref(false)
-const removeLoadingId = ref(null)
+const inviteLoadingId = ref(null)
+
+function isAlreadyFollowed(u) {
+  const username = String(u?.username || '')
+  if (!username) return false
+  return friends.value.some(f => f.username === username)
+}
 
 async function onSearchUsers() {
   const q = searchQuery.value.trim()
@@ -210,42 +206,35 @@ async function onSearchUsers() {
     searchError.value = ''
     return
   }
+
   searchLoading.value = true
   searchError.value = ''
   try {
-    const { data } = await searchUsersByUsername(q)
-    searchResults.value = Array.isArray(data) ? data : []
+    const list = await userStore.searchUsers(q)
+    searchResults.value = Array.isArray(list) ? list : []
   } catch (err) {
     console.error('onSearchUsers error', err)
-    searchError.value = 'Nie udało się wyszukać użytkowników (błąd serwera).'
+    searchError.value =
+        userStore.searchError ||
+        err?.response?.data?.message ||
+        err?.message ||
+        'Nie udało się wyszukać użytkowników (błąd serwera).'
   } finally {
     searchLoading.value = false
   }
 }
 
-async function onInviteUser(userToInvite) {
-  if (!userToInvite?.id) return
-  inviteLoading.value = true
-  try {
-    await sendFriendInvite(userToInvite.id)
-    await userStore.fetchMe(true)
-  } catch (err) {
-    console.error('Nie udało się wysłać zaproszenia', err)
-  } finally {
-    inviteLoading.value = false
-  }
-}
+async function onFollowUser(userToFollow) {
+  if (!userToFollow?.id) return
+  if (isAlreadyFollowed(userToFollow)) return
 
-async function onRemoveFriend(friend) {
-  if (!friend?.id) return
-  removeLoadingId.value = friend.id
+  inviteLoadingId.value = userToFollow.id
   try {
-    await removeFriend(friend.id)
-    await userStore.fetchMe(true)
+    await userStore.followUserById(userToFollow.id)
   } catch (err) {
-    console.error('Nie udało się usunąć z obserwowanych', err)
+    console.error('followUserById error', err)
   } finally {
-    removeLoadingId.value = null
+    inviteLoadingId.value = null
   }
 }
 </script>
