@@ -11,6 +11,7 @@ import org.piet.forumbackend.users.core.exceptions.UserNotLoggedInException;
 import org.piet.forumbackend.users.core.services.UserService;
 import org.piet.forumbackend.users.groups.dtos.UserGroupDtoMapper;
 import org.piet.forumbackend.users.groups.dtos.responses.ListUserGroupDto;
+import org.piet.forumbackend.users.groups.dtos.responses.UserGroupDto;
 import org.piet.forumbackend.users.groups.entities.UserGroup;
 import org.piet.forumbackend.users.groups.repositories.UserGroupRepository;
 import org.springframework.context.MessageSource;
@@ -20,10 +21,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 
-import java.util.HashSet;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 
 @Service
 @Log4j2
@@ -71,6 +69,11 @@ public class UserGroupServiceImpl implements UserGroupService {
     }
 
     @Override
+    public UserGroupDto getDtoById(UUID id) {
+        return UserGroupDtoMapper.toUserGroupDto(getById(id), userService.getCurrentUserOrNull());
+    }
+
+    @Override
     public List<ListUserGroupDto> getByName(String query) {
         if (query == null) return List.of();
         String q = query.trim();
@@ -89,6 +92,7 @@ public class UserGroupServiceImpl implements UserGroupService {
         group.setOwner(creator);
         group.setMembers(new HashSet<>(members));
         group.setName(name);
+        group.setAdmins(Set.of(creator));
         log.info("{} created {}", creator.toLogStringShort(), group.toLogStringShort());
         return userGroupRepository.save(group);
     }

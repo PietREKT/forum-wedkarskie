@@ -84,9 +84,9 @@ public class UserGroupController {
 
     @GetMapping("/{groupId}")
     public ResponseEntity<UserGroupDto> getGroupById(@PathVariable UUID groupId) throws NotFoundException {
-        UserGroup group = userGroupService.getById(groupId);
+        UserGroupDto group = userGroupService.getDtoById(groupId);
 
-        return ResponseEntity.ok(UserGroupDto.create(group));
+        return ResponseEntity.ok(group);
     }
 
     @GetMapping("/{groupId}/events")

@@ -6,6 +6,7 @@ import org.piet.forumbackend.users.core.dtos.responses.ListUserDto;
 import org.piet.forumbackend.users.core.entities.User;
 import org.piet.forumbackend.users.core.exceptions.UserNotLoggedInException;
 import org.piet.forumbackend.users.groups.dtos.responses.ListUserGroupDto;
+import org.piet.forumbackend.users.groups.dtos.responses.UserGroupDto;
 import org.piet.forumbackend.users.groups.entities.UserGroup;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -17,6 +18,8 @@ import java.util.UUID;
 
 public interface UserGroupService {
     UserGroup getById(UUID id) throws NotFoundException;
+
+    UserGroupDto getDtoById(UUID id);
 
     Optional<UserGroup> getByIdOpt(UUID id);
 
