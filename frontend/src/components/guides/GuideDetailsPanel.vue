@@ -17,7 +17,6 @@ const deleteError = ref(null)
 
 const isAdmin = computed(() => auth.isAdmin)
 
-// mapowanie enum metod -> polskie etykiety
 const methodLabels = {
   FLOAT: 'Spławik',
   SPINNING: 'Spinning',
@@ -64,13 +63,11 @@ const title = computed(() => {
 })
 
 function askDelete() {
-  console.log('Kliknięto Usuń poradnik (pytanie o potwierdzenie)')
   if (!isAdmin.value) return
   showDeleteConfirm.value = true
 }
 
 function cancelDelete() {
-  console.log('Anulowano usuwanie poradnika')
   showDeleteConfirm.value = false
 }
 
@@ -84,9 +81,7 @@ async function confirmDelete() {
   deleteSaving.value = true
   try {
     const id = route.params.id
-    console.log('Wysyłam DELETE /tutorials/' + id)
     await apiClient.delete(`/tutorials/${id}`)
-    console.log('Poradnik usunięty, przejście na /guides')
     showDeleteConfirm.value = false
     router.push('/guides')
   } catch (e) {
@@ -96,6 +91,41 @@ async function confirmDelete() {
     deleteSaving.value = false
   }
 }
+
+const apiBase = computed(() => {
+  const b = apiClient?.defaults?.baseURL || ''
+  return b.replace(/\/api\/?$/, '')
+})
+
+function resolvePhotoUrl(path) {
+  if (!path) return null
+  if (typeof path !== 'string') return null
+  if (path.startsWith('http://') || path.startsWith('https://')) return path
+
+  const base = apiBase.value || ''
+  if (!base) return path
+
+  if (path.startsWith('/')) return `${base}${path}`
+  return `${base}/${path}`
+}
+
+const photoUrls = computed(() => {
+  const raw = tutorial.value?.content?.attachedPhotos
+  if (!Array.isArray(raw)) return []
+  return raw.map(resolvePhotoUrl).filter(Boolean)
+})
+
+const ratingText = computed(() => {
+  const r = tutorial.value?.content?.rating
+  if (r == null) return null
+  return `${r}/5`
+})
+
+const voteText = computed(() => {
+  const v = tutorial.value?.content?.loggedUserVote
+  if (!v) return null
+  return String(v)
+})
 
 onMounted(loadTutorial)
 </script>
@@ -113,6 +143,15 @@ onMounted(loadTutorial)
             {{ tutorial?.content?.author?.username || 'nieznany' }}
           </span>
         </p>
+
+        <div class="mt-1 flex flex-wrap items-center gap-2 text-xs opacity-80">
+          <span v-if="ratingText">
+            Ocena: <span class="font-medium">{{ ratingText }}</span>
+          </span>
+          <span v-if="voteText" class="opacity-70">
+            (Twój głos: {{ voteText }})
+          </span>
+        </div>
       </div>
 
       <div class="flex items-center gap-2">
@@ -169,15 +208,8 @@ onMounted(loadTutorial)
       {{ error }}
     </div>
 
-    <div
-        v-if="!loading && !error && tutorial"
-        class="space-y-4"
-    >
-      <!-- Metody -->
-      <div
-          v-if="tutorial.methods && tutorial.methods.length"
-          class="flex flex-wrap gap-2"
-      >
+    <div v-if="!loading && !error && tutorial" class="space-y-4">
+      <div v-if="tutorial.methods && tutorial.methods.length" class="flex flex-wrap gap-2">
         <span
             v-for="m in tutorial.methods"
             :key="m"
@@ -187,11 +219,7 @@ onMounted(loadTutorial)
         </span>
       </div>
 
-      <!-- Ryby -->
-      <div
-          v-if="tutorial.fishMentioned && tutorial.fishMentioned.length"
-          class="flex flex-wrap gap-2"
-      >
+      <div v-if="tutorial.fishMentioned && tutorial.fishMentioned.length" class="flex flex-wrap gap-2">
         <span
             v-for="fishItem in tutorial.fishMentioned"
             :key="fishItem.id ?? fishItem.name"
@@ -205,7 +233,30 @@ onMounted(loadTutorial)
         {{ deleteError }}
       </div>
 
-      <!-- Treść poradnika -->
+      <div v-if="photoUrls.length" class="space-y-2">
+        <div class="text-xs opacity-70">
+          Zdjęcia:
+        </div>
+
+        <div class="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+          <a
+              v-for="(url, idx) in photoUrls"
+              :key="url + '_' + idx"
+              :href="url"
+              target="_blank"
+              rel="noopener"
+              class="block border border-gray-300 rounded-xl overflow-hidden bg-[var(--color-bg-elevated)]"
+          >
+            <img
+                :src="url"
+                class="w-full h-40 object-cover"
+                alt="Zdjęcie poradnika"
+                loading="lazy"
+            />
+          </a>
+        </div>
+      </div>
+
       <article class="border border-gray-300 rounded-2xl p-4 bg-[var(--color-bg-elevated)] text-sm leading-relaxed whitespace-pre-wrap shadow-sm">
         {{ tutorial.content?.content }}
       </article>

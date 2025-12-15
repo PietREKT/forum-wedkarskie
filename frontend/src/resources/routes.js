@@ -19,8 +19,9 @@ export const routes = [
     { path: '/posts', name: 'posts', component: PostsListView, meta: { requiresAuth: true } },
     { path: '/map', name: 'map', component: FishingMapView },
     { path: '/guides', name: 'guides', component: GuidesView },
+    { path: '/guides/create', name: 'guides.create', component: GuideCreatePanel, meta: { requiresAuth: true } },
     { path: '/guides/:id', name: 'guides.details', component: GuideDetailsPanel },
-    { path: '/guides/create', name: 'guides.create', component: GuideCreatePanel },
+    { path: '/guides/moderation', name: 'guides.moderation', component: () => import('../views/AdminGuidesModerationView.vue'), meta: { requiresAuth: true, requiresAdmin: true },},
     { path: '/posts/:id', name: 'postDetails', component: PostDetailsView, meta: { requiresAuth: true }, props: true },
     { path: '/admin', name: 'admin', component: AdminPanelView, meta: { requiresAuth: true, requiresAdmin: true } },
 ]
