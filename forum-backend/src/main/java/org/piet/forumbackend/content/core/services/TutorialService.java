@@ -42,6 +42,8 @@ public interface TutorialService {
         return getTutorialsByFish(fish, pagination.toPageable());
     }
 
+    Page<TutorialDto> getTutorialsByMultipleFish(List<Long> fishIds, PaginationDto pagination);
+
     Page<TutorialDto> getTutorialsUnverified(Pageable pageable);
     default Page<TutorialDto> getTutorialsUnverified(PaginationDto pagination){
         return getTutorialsUnverified(pagination.toPageable(Sort.by(Sort.Direction.ASC,

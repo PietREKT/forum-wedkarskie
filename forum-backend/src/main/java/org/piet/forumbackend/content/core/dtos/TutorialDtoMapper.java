@@ -11,7 +11,7 @@ import java.util.stream.Collectors;
 public class TutorialDtoMapper {
     public static TutorialDto toTutorialDto(Tutorial tutorial){
         return new TutorialDto(
-                UsersDtoMapper.toUserDto(tutorial.getAuthor()),
+                UsersDtoMapper.toListUserDto(tutorial.getVerifiedBy()),
                 tutorial.getMethods(),
                 tutorial.getFishMentioned().stream().map(FishDtoMapper::toFishListDto).collect(Collectors.toSet()),
                 ContentDtoMapper.toContentDto(tutorial)
@@ -22,6 +22,9 @@ public class TutorialDtoMapper {
         return new ListTutorialDto(
                 tutorial.getId(),
                 tutorial.getTitle(),
+                UsersDtoMapper.toListUserDto(tutorial.getAuthor()),
+                tutorial.getMethods(),
+                tutorial.getFishMentioned().stream().map(FishDtoMapper::toFishListDto).collect(Collectors.toSet()),
                 tutorial.getRating()
         );
     }

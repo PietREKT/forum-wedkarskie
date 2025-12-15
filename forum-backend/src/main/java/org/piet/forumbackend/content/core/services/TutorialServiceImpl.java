@@ -13,6 +13,7 @@ import org.piet.forumbackend.fish.entities.enums.FishingMethod;
 import org.piet.forumbackend.globals.exceptions.BadRequestException;
 import org.piet.forumbackend.globals.exceptions.NotFoundException;
 import org.piet.forumbackend.globals.exceptions.UnauthorizedAccessException;
+import org.piet.forumbackend.globals.pagination.PaginationDto;
 import org.piet.forumbackend.users.core.entities.Role;
 import org.piet.forumbackend.users.core.entities.User;
 import org.springframework.context.MessageSource;
@@ -153,6 +154,14 @@ public class TutorialServiceImpl implements TutorialService {
     @Override
     public Page<TutorialDto> getTutorialsUnverified(Pageable pageable) {
         return tutorialRepository.findByVerificationStatus(VerificationStatus.IN_REVIEW, pageable)
+                .map(TutorialDtoMapper::toTutorialDto);
+    }
+
+    @Override
+    public Page<TutorialDto> getTutorialsByMultipleFish(List<Long> fishIds, PaginationDto pagination) {
+        if (fishIds == null || fishIds.isEmpty())
+            return Page.empty(pagination.toPageable());
+        return tutorialRepository.findByMultipleFish(fishIds, pagination.toPageable())
                 .map(TutorialDtoMapper::toTutorialDto);
     }
 }

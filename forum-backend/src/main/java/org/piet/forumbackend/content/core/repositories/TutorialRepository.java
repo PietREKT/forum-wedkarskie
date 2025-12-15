@@ -10,6 +10,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.List;
+
 public interface TutorialRepository extends JpaRepository<Tutorial, Long> {
     @Query("""
             select t from Tutorial t
@@ -24,6 +26,15 @@ public interface TutorialRepository extends JpaRepository<Tutorial, Long> {
                         and t.verificationStatus=:status
             """)
     Page<Tutorial> findByFish(@Param("fish") Fish fish, @Param("status") VerificationStatus status, Pageable pageable);
+
+    @Query("""
+            select t from Tutorial t
+                        join t.fishMentioned f
+                                    where f.id in :fishIds
+                                                group by t
+                                                            having count(distinct f.id) >= :#{#fishIds.size()}
+            """)
+    Page<Tutorial> findByMultipleFish(@Param("fishIds")List<Long> fishIds, Pageable pageable);
 
     Page<Tutorial> findByVerificationStatus(VerificationStatus verificationStatus, Pageable pageable);
 }

@@ -23,6 +23,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.io.IOException;
+import java.util.List;
 
 @RestController
 @RequestMapping("${forum.api.prefix}/tutorials")
@@ -65,7 +66,7 @@ public class TutorialController {
                 )
         );
     }
-    @GetMapping("/fish")
+    @GetMapping(path = "/fish", params = {"fishId", "!fishIds"})
     public ResponseEntity<PageDto<TutorialDto>> getByFish(@RequestParam Long fishId, PaginationDto pagination) throws FishNotFoundException {
         Fish fish = fishService.getFishById(fishId);
         return ResponseEntity.ok(
@@ -73,6 +74,13 @@ public class TutorialController {
                         tutorialService.getTutorialsByFish(fish, pagination)
                 )
         );
+    }
+
+    @GetMapping(path = "/fish", params = {"fishIds", "!fishId"})
+    public ResponseEntity<PageDto<TutorialDto>> getByFishMultiple(@RequestParam List<Long> fishIds, PaginationDto pagination){
+        var dto = tutorialService.getTutorialsByMultipleFish(fishIds, pagination);
+
+        return ResponseEntity.ok(PageDto.of(dto));
     }
 
     @DeleteMapping("/{id}")
