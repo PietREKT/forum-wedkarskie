@@ -106,12 +106,6 @@ const spotPhotoUrl = computed(() => {
   return String(u)
 })
 
-const spotStatuteUrl = computed(() => {
-  const u = props.spot?.statuteUrl
-  if (!u) return null
-  return String(u)
-})
-
 const addOrReportLabel = computed(() => (auth.isAdmin ? 'Dodaj łowisko' : 'Zgłoś łowisko'))
 const toggleFormLabel = computed(() => (showNewSpotForm.value ? 'Ukryj formularz' : addOrReportLabel.value))
 </script>
@@ -165,11 +159,7 @@ const toggleFormLabel = computed(() => (showNewSpotForm.value ? 'Ukryj formularz
         >
           Usuń
         </button>
-        <button
-            type="button"
-            class="px-3 py-1 rounded-full border border-white/60 hover:bg-white/10 text-xs"
-            @click="cancelDelete"
-        >
+        <button type="button" class="px-3 py-1 rounded-full border border-white/60 hover:bg-white/10 text-xs" @click="cancelDelete">
           Anuluj
         </button>
       </div>
@@ -197,18 +187,9 @@ const toggleFormLabel = computed(() => (showNewSpotForm.value ? 'Ukryj formularz
       </div>
     </div>
 
-    <div v-if="spot && (spotPhotoUrl || spotStatuteUrl)" class="text-xs">
+    <div v-if="spot && spotPhotoUrl" class="text-xs">
       <h3 class="font-semibold mb-2">Materiały</h3>
-
-      <div v-if="spotPhotoUrl" class="mb-2">
-        <img :src="spotPhotoUrl" alt="Zdjęcie łowiska" class="w-full max-h-40 object-cover rounded border border-white/40" />
-      </div>
-
-      <div v-if="spotStatuteUrl" class="opacity-90">
-        <a :href="spotStatuteUrl" target="_blank" rel="noreferrer" class="underline hover:opacity-80">
-          Otwórz regulamin (plik)
-        </a>
-      </div>
+      <img :src="spotPhotoUrl" alt="Zdjęcie łowiska" class="w-full max-h-40 object-cover rounded border border-white/40" />
     </div>
 
     <div v-if="spot" class="text-xs">

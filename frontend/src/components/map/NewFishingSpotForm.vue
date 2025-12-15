@@ -31,7 +31,7 @@ const sending = ref(false)
 
 async function loadFish() {
   try {
-    const { data } = await apiClient.get('/fish')
+    const { data } = await apiClient.get('/fish', { params: { page: 0, size: 500 } })
     fishOptions.value = Array.isArray(data) ? data : data?.content ?? []
   } catch {
     fishOptions.value = []
@@ -94,12 +94,14 @@ function extractBackendError(err) {
       err?.response?.data?.details ||
       (typeof err?.response?.data === 'string' ? err.response.data : null)
 
-  if (msg) return String(msg)
-
   const status = err?.response?.status
+
+  if (status === 409) return 'Nie można wykonać operacji (konflikt danych).'
   if (status === 400) return 'Błędne dane formularza (400).'
   if (status === 401) return 'Brak autoryzacji (401).'
   if (status === 403) return 'Brak uprawnień (403).'
+  if (msg) return String(msg)
+
   return 'Nie udało się wysłać zgłoszenia.'
 }
 
@@ -122,6 +124,7 @@ async function uploadSpotPic(spotId, file) {
   })
 }
 
+// Minimalny payload zgodny z backendem (bez address obiektu, bez spotType/ownerType)
 function buildPayload() {
   const typeEnum = form.value.ownerType === 'PZW' ? 'PUBLIC' : 'PRIVATE'
   const lat = Number(String(form.value.latitude).replace(',', '.'))
@@ -130,25 +133,13 @@ function buildPayload() {
   return {
     name: form.value.name.trim(),
     description: form.value.regulationText.trim() || null,
-
     type: typeEnum,
-    spotType: typeEnum,
-    ownerType: typeEnum,
-
     managerIds: [],
-
     fishIds: normalizeIds(selectedFishIds.value),
-
     locationDto: {
       longitude: lng,
       latitude: lat,
-      address: {
-        countryCode: 'PL',
-        municipality: null,
-        city: form.value.addressText.trim() || null,
-        street: null,
-        propertyNo: null,
-      },
+      address: null,
     },
   }
 }

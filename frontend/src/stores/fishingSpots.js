@@ -143,7 +143,8 @@ export const useFishingSpotsStore = defineStore('fishingSpots', () => {
 
         favouritesLoading.value = true
         try {
-            const { data } = await apiClient.get('/users/me/spots/favourites')
+            // backend zwraca Page => { content: [...] }
+            const { data } = await apiClient.get('/users/me/spots/favourites', { params: { page: 0, size: 500 } })
             const list = normalize(data)
             favouritesIds.value = new Set(list.map((s) => s?.id).filter(Boolean))
         } catch {
@@ -153,12 +154,13 @@ export const useFishingSpotsStore = defineStore('fishingSpots', () => {
         }
     }
 
+    // WAŻNE: backend oczekuje DTO z polem "id", nie "spotId"
     async function addFavourite(id) {
-        await apiClient.post('/users/me/spots/favourites/add', { spotId: id })
+        await apiClient.post('/users/me/spots/favourites/add', { id })
     }
 
     async function removeFavourite(id) {
-        await apiClient.post('/users/me/spots/favourites/remove', { spotId: id })
+        await apiClient.post('/users/me/spots/favourites/remove', { id })
     }
 
     async function toggleFavourite(id, isLoggedIn) {
@@ -201,7 +203,11 @@ export const useFishingSpotsStore = defineStore('fishingSpots', () => {
                 const idx = spots.value.findIndex((s) => s?.id === spotId)
                 if (idx !== -1) spots.value[idx] = { ...spots.value[idx], ...data }
             } catch {}
-        } catch {
+        } catch (err) {
+            const status = err?.response?.status
+            if (status === 409) {
+                throw new Error('Już oceniłeś to łowisko. Edytuj swoją opinię.')
+            }
             throw new Error('Nie udało się zapisać oceny.')
         }
     }
@@ -210,7 +216,11 @@ export const useFishingSpotsStore = defineStore('fishingSpots', () => {
         if (!id) return
         try {
             await apiClient.delete(`/spots/${id}/delete`)
-        } catch {
+        } catch (err) {
+            const status = err?.response?.status
+            if (status === 409) {
+                throw new Error('Nie można usunąć łowiska, ponieważ istnieją powiązane wydarzenia.')
+            }
             throw new Error('Nie udało się usunąć łowiska.')
         }
     }
