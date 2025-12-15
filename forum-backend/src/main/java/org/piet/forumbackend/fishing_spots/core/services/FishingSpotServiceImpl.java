@@ -24,7 +24,7 @@ import org.piet.forumbackend.globals.exceptions.BadRequestException;
 import org.piet.forumbackend.globals.exceptions.NotFoundException;
 import org.piet.forumbackend.globals.exceptions.UnauthorizedAccessException;
 import org.piet.forumbackend.globals.pagination.PaginationDto;
-import org.piet.forumbackend.globals.properties.FileProperties;
+import org.piet.forumbackend.globals.properties.file_properties.FileProperties;
 import org.piet.forumbackend.users.core.entities.Role;
 import org.piet.forumbackend.users.core.entities.User;
 import org.piet.forumbackend.users.core.exceptions.UserNotLoggedInException;
@@ -195,6 +195,8 @@ public class FishingSpotServiceImpl implements FishingSpotService {
         spot.setDescription(dto.getDescription());
         spot.setManagers(managers);
         spot.setOwner(sentBy);
+        spot.setType(dto.getType());
+
 
         return fishingSpotRepository.save(spot);
     }

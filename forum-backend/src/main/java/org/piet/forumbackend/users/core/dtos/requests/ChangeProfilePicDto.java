@@ -9,5 +9,5 @@ import java.io.Serializable;
 @Value
 public class ChangeProfilePicDto implements Serializable {
     @NotNull
-    MultipartFile profilePic;
+    MultipartFile file;
 }

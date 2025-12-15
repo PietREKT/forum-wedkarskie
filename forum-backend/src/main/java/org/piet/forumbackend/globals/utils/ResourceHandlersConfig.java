@@ -1,7 +1,7 @@
 package org.piet.forumbackend.globals.utils;
 
 import lombok.RequiredArgsConstructor;
-import org.piet.forumbackend.globals.properties.FileProperties;
+import org.piet.forumbackend.globals.properties.file_properties.FileProperties;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;

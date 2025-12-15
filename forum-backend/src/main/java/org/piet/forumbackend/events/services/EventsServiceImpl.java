@@ -33,6 +33,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -72,6 +73,10 @@ public class EventsServiceImpl implements EventsService {
         FishingSpot spot = fishingSpotService.getFishingSpotById(eventDto.getLocationId());
         User currentUser = userService.getCurrentUser();
         Set<UUID> invitedUserIds = eventDto.getInvitedUsersIds();
+
+        if (group != null && !group.isAdmin(currentUser) && !group.isOwner(currentUser))
+            throw new AccessDeniedException("You have to be a group admin to create events in that group!");
+
         Event event = new Event();
         event.setCreator(currentUser);
         event.setName(eventDto.getName());
@@ -152,11 +157,11 @@ public class EventsServiceImpl implements EventsService {
 
     @Override
     public List<ListEventDto> getEventsByName(String query) {
-        if(query == null) return List.of();
+        if (query == null) return List.of();
 
         String q = query.trim();
 
-        if(q.length() < 2){
+        if (q.length() < 2) {
             return List.of();
         }
 
@@ -184,8 +189,8 @@ public class EventsServiceImpl implements EventsService {
     @Override
     public PageDto<EventDto> getEventsCreatedByUser(UUID userId, PaginationDto pagination) {
         var page = eventRepository.findAllByCreator_IdAndFuture(userId,
-                Instant.now(),
-                pagination.toPageable())
+                        Instant.now(),
+                        pagination.toPageable())
                 .map(e -> EventDtoMapper.toEventDto(e, userService.getCurrentUserOrNull()));
 
         return PageDto.of(page);
@@ -194,9 +199,9 @@ public class EventsServiceImpl implements EventsService {
     @Override
     public PageDto<EventDto> getUpcomingEventsForUser(UUID userId, PaginationDto pagination) {
         var page = eventRepository.findAllByUserParticipatingAndStatus(userId,
-                Instant.now(),
-                List.of(AttendanceStatus.CONFIRMED, AttendanceStatus.MAYBE),
-                pagination.toPageable())
+                        Instant.now(),
+                        List.of(AttendanceStatus.CONFIRMED, AttendanceStatus.MAYBE),
+                        pagination.toPageable())
                 .map(e -> EventDtoMapper.toEventDto(e, userService.getCurrentUserOrNull()));
         return PageDto.of(page);
     }
@@ -213,12 +218,21 @@ public class EventsServiceImpl implements EventsService {
 
     @Override
     @Transactional
-    public void inviteUser(Long eventId, UUID userIdToInvite, UUID inviterId) throws NotFoundException {
+    public void inviteUser(Long eventId, UUID userIdToInvite, UUID inviterId) throws NotFoundException, UserNotLoggedInException {
+        User invited = userService.getUserById(userIdToInvite);
         Event event = getEventById(eventId);
+        User currentUser = userService.getCurrentUser();
+
+        if (event.getGroup() != null && !event.getGroup().isMember(currentUser))
+            throw new AccessDeniedException("You have to be a group's member to invite others to it's events!");
+
+        if (event.getGroup() != null && !event.getGroup().isMember(invited))
+            throw new AccessDeniedException("You can't invite someone who is not a member of the group to that group's event!");
+
         UserEvent userEvent = new UserEvent();
         userEvent.setStatus(AttendanceStatus.INVITED);
         userEvent.setEvent(event);
-        userEvent.setUser(userService.getUserById(userIdToInvite));
+        userEvent.setUser(invited);
         event.addUserEvent(userEvent);
     }
 
@@ -227,19 +241,31 @@ public class EventsServiceImpl implements EventsService {
     public void respondToInvite(Long eventId, AttendanceStatus status) throws UserNotLoggedInException, NotFoundException {
         User user = userService.getCurrentUser();
         Event event = getEventById(eventId);
-        if (status == AttendanceStatus.INVITED){
-            throw new BadRequestException("You can't reinvite yourself!");
+        if (status == AttendanceStatus.INVITED) {
+            throw new BadRequestException("You can't invite yourself!");
         }
-        if (status == AttendanceStatus.REJECTED){
+        if (status == AttendanceStatus.REJECTED) {
             event.getUserEvents().removeIf(ue -> ue.getUser().equalsUser(user));
             return;
         }
-        event.getUserEvents().stream()
+
+        if (event.getGroup() != null && !event.getGroup().isMember(user))
+            throw new AccessDeniedException("You have to be a member of the group to join it's events!");
+
+        Optional<UserEvent> optionalUe = event.getUserEvents().stream()
                 .filter(ue -> ue.getUser().equalsUser(user))
-                .peek(ue -> log.debug(ue.toLogString()))
-                .findFirst()
-                .orElseThrow(() -> new BadRequestException("You haven't been invited to the event."))
-                .setStatus(status);
+                .findFirst();
+
+        if (optionalUe.isPresent()) {
+            optionalUe.get()
+                    .setStatus(status);
+        } else {
+            UserEvent joined = new UserEvent();
+            joined.setEvent(event);
+            joined.setUser(user);
+            joined.setStatus(status);
+            event.addUserEvent(joined);
+        }
 
         eventRepository.save(event);
     }
@@ -249,11 +275,11 @@ public class EventsServiceImpl implements EventsService {
     public void removeUserFromEvent(Long eventId, UUID userIdToRemove) throws UserNotLoggedInException, NotFoundException {
         User currentUser = userService.getCurrentUser();
         Event event = getEventById(eventId);
-        if (!currentUser.isMod() && !event.getCreator().equalsUser(currentUser)){
+        if (!currentUser.isMod() && !event.getCreator().equalsUser(currentUser)) {
             throw new AccessDeniedException("You can't remove users from events if you're not the creator of that event.");
         }
         boolean removed = event.getUserEvents().removeIf(ue -> ue.getUser().getId().equals(userIdToRemove));
-        if (removed){
+        if (removed) {
             log.info("{} removed user with id: {} from {}",
                     currentUser.toLogStringShort(),
                     userIdToRemove,

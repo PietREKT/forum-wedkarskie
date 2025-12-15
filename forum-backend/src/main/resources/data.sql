@@ -162,60 +162,59 @@ VALUES ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', '44444444-4444-4444-4444-4444444
 INSERT INTO content (author_id, content, created_at, content_type, parent_id)
 VALUES ('00000000-0000-0000-0000-000000000001', 'Pierwszy testowy post na forum.', '2025-01-01T10:00:00Z', 'POST',
         NULL),
-       ( '33333333-3333-3333-3333-333333333333', 'Drugi testowy post o ulubionych łowiskach.', '2025-01-02T12:30:00Z',
+       ('33333333-3333-3333-3333-333333333333', 'Drugi testowy post o ulubionych łowiskach.', '2025-01-02T12:30:00Z',
         'POST', NULL),
        ('00000000-0000-0000-0000-000000000001', 'Post o sprzęcie wędkarskim.', '2025-01-03T09:15:00Z', 'POST', NULL);
 
 -- Comment under post #1 (child content)
-INSERT INTO content ( author_id, content, created_at, content_type, parent_id)
-VALUES ( '33333333-3333-3333-3333-333333333333', 'Komentarz pod pierwszym postem.', '2025-01-03T10:00:00Z', 'COMMENT',
+INSERT INTO content (author_id, content, created_at, content_type, parent_id)
+VALUES ('33333333-3333-3333-3333-333333333333', 'Komentarz pod pierwszym postem.', '2025-01-03T10:00:00Z', 'COMMENT',
         1);
 
 ------------------------------------------------------------
 --  FISH (3 example species)
 ------------------------------------------------------------
 INSERT INTO fish (id, name, species, avg_length, avg_mass, photo_url, description, is_predatory, water_type)
-VALUES
-    (1,
-     'Sandacz',
-     'Sander lucioperca',
-     60.0,
-     3.0,
-     'https://example.com/sandacz.jpg',
-     'Drapieżna ryba, lubi głębszą wodę.',
-     true,
-     'FRESHWATER'),
+VALUES (1,
+        'Sandacz',
+        'Sander lucioperca',
+        60.0,
+        3.0,
+        'https://example.com/sandacz.jpg',
+        'Drapieżna ryba, lubi głębszą wodę.',
+        true,
+        'FRESHWATER'),
 
-    (2,
-     'Karp',
-     'Cyprinus carpio',
-     50.0,
-     4.5,
-     'https://example.com/karp.jpg',
-     'Klasyk komercyjnych łowisk.',
-     false,
-     'SWEETWATER'),
+       (2,
+        'Karp',
+        'Cyprinus carpio',
+        50.0,
+        4.5,
+        'https://example.com/karp.jpg',
+        'Klasyk komercyjnych łowisk.',
+        false,
+        'SWEETWATER'),
 
-    (3,
-     'Okoń',
-     'Perca fluviatilis',
-     25.0,
-     0.3,
-     'https://example.com/okon.jpg',
-     'Stadny drapieżnik.',
-     true,
-     'BOTH');
+       (3,
+        'Okoń',
+        'Perca fluviatilis',
+        25.0,
+        0.3,
+        'https://example.com/okon.jpg',
+        'Stadny drapieżnik.',
+        true,
+        'BOTH');
 
 ------------------------------------------------------------
 --  FISHING METHODS (ElementCollection -> fishing_methods)
 -- table: fishing_methods (fish_id, method)
 ------------------------------------------------------------
-INSERT INTO fishing_methods (fish_id, method) VALUES
-                                                  (1, 'SPINNING'),
-                                                  (1, 'FEEDER'),
-                                                  (2, 'FLOAT'),
-                                                  (2, 'FEEDER'),
-                                                  (3, 'SPINNING');
+INSERT INTO fishing_methods (fish_id, method)
+VALUES (1, 'SPINNING'),
+       (1, 'FEEDER'),
+       (2, 'FLOAT'),
+       (2, 'FEEDER'),
+       (3, 'SPINNING');
 
 
 ------------------------------------------------------------
@@ -223,101 +222,142 @@ INSERT INTO fishing_methods (fish_id, method) VALUES
 ------------------------------------------------------------
 -- assumes PostGIS + SRID 4326
 -- owner_id = '2222...' (existing user)
-INSERT INTO fishing_spot (
-    name,
-    description,
-    location,
-    type,
-    verification_status,
-    statute_url,
-    owner_id
-) VALUES
-    ('Łowisko Testowe',
-     'Małe prywatne łowisko używane do testów aplikacji.',
-     ST_SetSRID(ST_MakePoint(22.5667, 51.2500), 4326),  -- lng, lat
-     'PRIVATE',
-     'ACCEPTED',
-     'https://example.com/statute.pdf',
-     '00000000-0000-0000-0000-000000000001');
+INSERT INTO fishing_spot (name,
+                          description,
+                          location,
+                          type,
+                          verification_status,
+                          statute_url,
+                          owner_id)
+VALUES ('Łowisko Testowe',
+        'Małe prywatne łowisko używane do testów aplikacji.',
+        ST_SetSRID(ST_MakePoint(22.5667, 51.2500), 4326), -- lng, lat
+        'PRIVATE',
+        'ACCEPTED',
+        'https://example.com/statute.pdf',
+        '00000000-0000-0000-0000-000000000001');
 
 ------------------------------------------------------------
 --  LINK FISH TO SPOT (ManyToMany -> fishing_spots_fish)
 ------------------------------------------------------------
-INSERT INTO fishing_spots_fish (spot_id, fish_id) VALUES
-                                                      (1, 1),
-                                                      (1, 2),
-                                                      (1, 3);
+INSERT INTO fishing_spots_fish (spot_id, fish_id)
+VALUES (1, 1),
+       (1, 2),
+       (1, 3);
 
 ------------------------------------------------------------
 --  EVENT (1 example event on that spot)
 ------------------------------------------------------------
 -- creator_id = '2222...' (janek)
 -- group_id   = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa' (existing group)
-INSERT INTO event (
-    name,
-    description,
-    starts_at,
-    ends_at,
-    spot_id,
-    creator_id,
-    group_id
-) VALUES
-    ('Testowe spotkanie nad wodą',
-     'Pierwsze testowe wydarzenie na łowisku testowym.',
-     '2025-05-01T08:00:00Z',
-     '2025-05-01T16:00:00Z',
-     1,
-     '00000000-0000-0000-0000-000000000001',
-     'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa');
+INSERT INTO event (name,
+                   description,
+                   starts_at,
+                   ends_at,
+                   spot_id,
+                   creator_id,
+                   group_id)
+VALUES ('Testowe spotkanie nad wodą',
+        'Pierwsze testowe wydarzenie na łowisku testowym.',
+        '2025-12-17T08:00:00Z',
+        '2025-12-17T16:00:00Z',
+        1,
+        '00000000-0000-0000-0000-000000000001',
+        'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa');
 
 ------------------------------------------------------------
 --  EVENT PARTICIPANTS (UserEvent)
 ------------------------------------------------------------
 -- table: user_events (id, event_id, user_id, status)
 -- status values: INVITED / MAYBE / CONFIRMED
-INSERT INTO user_events (event_id, user_id, status) VALUES
-                                                            ( 1, '22222222-2222-2222-2222-222222222222', 'CONFIRMED'),  -- creator as confirmed
-                                                            ( 1, '33333333-3333-3333-3333-333333333333', 'INVITED');   -- another user invited
+INSERT INTO user_events (event_id, user_id, status)
+VALUES (1, '22222222-2222-2222-2222-222222222222', 'CONFIRMED'), -- creator as confirmed
+       (1, '33333333-3333-3333-3333-333333333333', 'INVITED');
+-- another user invited
 
 
 ------------------------------------------------------------
 --  FISHING SPOT OPINIONS (each user can rate a spot once)
 ------------------------------------------------------------
 INSERT INTO fishing_spots_opinions (rating, comment, user_id, spot_id, created_at)
-VALUES
-    (5,
-     'Świetne łowisko, dużo miejsca i spokój.',
-     '22222222-2222-2222-2222-222222222222',  -- janek
-     1,
-     '2025-02-10T08:30:00Z'),
+VALUES (5,
+        'Świetne łowisko, dużo miejsca i spokój.',
+        '22222222-2222-2222-2222-222222222222', -- janek
+        1,
+        '2025-02-10T08:30:00Z'),
 
-    (4,
-     'Fajne miejsce, ale dojazd mógłby być lepszy.',
-     '33333333-3333-3333-3333-333333333333',  -- kasia
-     1,
-     '2025-02-11T09:15:00Z'),
+       (4,
+        'Fajne miejsce, ale dojazd mógłby być lepszy.',
+        '33333333-3333-3333-3333-333333333333', -- kasia
+        1,
+        '2025-02-11T09:15:00Z'),
 
-    (3,
-     'Średnio, złowiłem niewiele, ale może to nie był mój dzień.',
-     '44444444-4444-4444-4444-444444444444',  -- marek
-     1,
-     '2025-02-11T15:40:00Z'),
+       (3,
+        'Średnio, złowiłem niewiele, ale może to nie był mój dzień.',
+        '44444444-4444-4444-4444-444444444444', -- marek
+        1,
+        '2025-02-11T15:40:00Z'),
 
-    (5,
-     'Super klimat, idealne miejsce na wieczorne wędkowanie.',
-     '55555555-5555-5555-5555-555555555555',  -- janek2
-     1,
-     '2025-02-12T06:10:00Z'),
+       (5,
+        'Super klimat, idealne miejsce na wieczorne wędkowanie.',
+        '55555555-5555-5555-5555-555555555555', -- janek2
+        1,
+        '2025-02-12T06:10:00Z'),
 
-    (2,
-     'Dużo zaczepów, trudno się łowi. Raczej nie wrócę.',
-     '66666666-6666-6666-6666-666666666666',  -- janusz
-     1,
-     '2025-02-12T18:05:00Z'),
+       (2,
+        'Dużo zaczepów, trudno się łowi. Raczej nie wrócę.',
+        '66666666-6666-6666-6666-666666666666', -- janusz
+        1,
+        '2025-02-12T18:05:00Z'),
 
-    (4,
-     'Ładne otoczenie, zadbane brzegi, ryby biorą przyzwoicie.',
-     '77777777-7777-7777-7777-777777777777',  -- janina
-     1,
-     '2025-02-13T10:25:00Z');
+       (4,
+        'Ładne otoczenie, zadbane brzegi, ryby biorą przyzwoicie.',
+        '77777777-7777-7777-7777-777777777777', -- janina
+        1,
+        '2025-02-13T10:25:00Z');
 
+------------------------------------------------------------
+--  TUTORIAL AS CHILD OF CONTENT (status = ACCEPTED)
+------------------------------------------------------------
+-- 1) Base CONTENT row
+INSERT INTO content (
+    id,
+    author_id,
+    content,
+    created_at,
+    content_type,
+    parent_id
+) VALUES (
+             5,  -- new content/tutorial id
+             '22222222-2222-2222-2222-222222222222',  -- janek as author
+             'Pełny poradnik łowienia sandacza i okonia na spinning – sprzęt, prowadzenie przynęty i miejscówki.',
+             '2025-03-01T10:00:00Z',
+             'TUTORIAL',   -- whatever enum/string you use in ContentType for tutorials
+             NULL
+         );
+
+-- 2) Child TUTORIAL row referencing the same id
+INSERT INTO tutorial (
+    id,
+    title,
+    verification_status
+    -- add other NOT NULL columns here if you have them (e.g. short_description, updated_at, etc.)
+) VALUES (
+             5,  -- must match content.id
+             'Jak łowić sandacza i okonia na spinning',
+             'ACCEPTED'
+         );
+
+------------------------------------------------------------
+--  LINK TUTORIAL TO FISH (ManyToMany -> tutorials_fish)
+------------------------------------------------------------
+INSERT INTO fish_tutorials (tutorial_id, fish_id) VALUES
+                                                      (5, 1),  -- Sandacz
+                                                      (5, 3);  -- Okoń
+
+------------------------------------------------------------
+--  LINK TUTORIAL TO METHODS (ElementCollection -> tutorials_methods)
+------------------------------------------------------------
+INSERT INTO methods_tutorials (tutorial_id, methods) VALUES
+                                                        (5, 'SPINNING'),
+                                                        (5, 'FEEDER');

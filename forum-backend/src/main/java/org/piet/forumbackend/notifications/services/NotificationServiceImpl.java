@@ -31,13 +31,13 @@ public class NotificationServiceImpl implements NotificationService{
 
     @Override
     public Page<NotificationDto> getUnreadNotificationsForUser(UUID userId, PaginationDto pagination) {
-        return notificationRepository.findByTarget_IdAndReadAtIsNull(userId, pagination.toPageable(Sort.by(Sort.Direction.DESC, "createAt")))
+        return notificationRepository.findByTarget_IdAndReadAtIsNull(userId, pagination.toPageable(Sort.by(Sort.Direction.DESC, "createdAt")))
                 .map(NotificationDtoMapper::toNotificationDto);
     }
 
     @Override
     public Page<NotificationDto> getNotificationsForUserByType(UUID userId, NotificationType type, PaginationDto pagination) {
-        return notificationRepository.findByTarget_IdAndNotificationType(userId, type, pagination.toPageable(Sort.by(Sort.Direction.DESC, "createAt")))
+        return notificationRepository.findByTarget_IdAndNotificationType(userId, type, pagination.toPageable(Sort.by(Sort.Direction.DESC, "createdAt")))
                 .map(NotificationDtoMapper::toNotificationDto);
     }
 

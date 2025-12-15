@@ -1,6 +1,7 @@
 package org.piet.forumbackend.content.core.dtos;
 
 import org.piet.forumbackend.content.core.dtos.responses.tutorials.ListTutorialDto;
+import org.piet.forumbackend.content.core.dtos.responses.tutorials.MyTutorialDto;
 import org.piet.forumbackend.content.core.dtos.responses.tutorials.TutorialDto;
 import org.piet.forumbackend.content.core.entities.Tutorial;
 import org.piet.forumbackend.fish.dtos.FishDtoMapper;
@@ -11,7 +12,8 @@ import java.util.stream.Collectors;
 public class TutorialDtoMapper {
     public static TutorialDto toTutorialDto(Tutorial tutorial){
         return new TutorialDto(
-                UsersDtoMapper.toUserDto(tutorial.getAuthor()),
+                tutorial.getId(),
+                UsersDtoMapper.toListUserDto(tutorial.getVerifiedBy()),
                 tutorial.getMethods(),
                 tutorial.getFishMentioned().stream().map(FishDtoMapper::toFishListDto).collect(Collectors.toSet()),
                 ContentDtoMapper.toContentDto(tutorial)
@@ -22,7 +24,26 @@ public class TutorialDtoMapper {
         return new ListTutorialDto(
                 tutorial.getId(),
                 tutorial.getTitle(),
+                UsersDtoMapper.toListUserDto(tutorial.getAuthor()),
+                tutorial.getMethods(),
+                tutorial.getFishMentioned().stream().map(FishDtoMapper::toFishListDto).collect(Collectors.toSet()),
                 tutorial.getRating()
+        );
+    }
+
+    public static MyTutorialDto toMyTutorialDto(Tutorial tutorial){
+        return new MyTutorialDto(
+                tutorial.getId(),
+                UsersDtoMapper.toListUserDto(tutorial.getAuthor()),
+                tutorial.getContent(),
+                tutorial.getCreatedAt(),
+                tutorial.getAttachedPhotos(),
+                tutorial.getTitle(),
+                tutorial.getVerificationStatus(),
+                UsersDtoMapper.toListUserDto(tutorial.getVerifiedBy()),
+                tutorial.getRejectionReason(),
+                tutorial.getMethods(),
+                tutorial.getFishMentioned().stream().map(FishDtoMapper::toFishListDto).collect(Collectors.toSet())
         );
     }
 }

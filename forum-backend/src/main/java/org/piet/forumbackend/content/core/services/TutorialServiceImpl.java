@@ -3,6 +3,7 @@ package org.piet.forumbackend.content.core.services;
 import lombok.RequiredArgsConstructor;
 import org.piet.forumbackend.content.core.dtos.TutorialDtoMapper;
 import org.piet.forumbackend.content.core.dtos.responses.tutorials.ListTutorialDto;
+import org.piet.forumbackend.content.core.dtos.responses.tutorials.MyTutorialDto;
 import org.piet.forumbackend.content.core.dtos.responses.tutorials.TutorialDto;
 import org.piet.forumbackend.content.core.entities.Tutorial;
 import org.piet.forumbackend.content.core.entities.enums.ContentType;
@@ -13,12 +14,16 @@ import org.piet.forumbackend.fish.entities.enums.FishingMethod;
 import org.piet.forumbackend.globals.exceptions.BadRequestException;
 import org.piet.forumbackend.globals.exceptions.NotFoundException;
 import org.piet.forumbackend.globals.exceptions.UnauthorizedAccessException;
+import org.piet.forumbackend.globals.pagination.PaginationDto;
 import org.piet.forumbackend.users.core.entities.Role;
 import org.piet.forumbackend.users.core.entities.User;
+import org.piet.forumbackend.users.core.exceptions.UserNotLoggedInException;
+import org.piet.forumbackend.users.core.services.UserService;
 import org.springframework.context.MessageSource;
 import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -34,6 +39,7 @@ public class TutorialServiceImpl implements TutorialService {
     private final ContentService contentService;
     private final TutorialRepository tutorialRepository;
     private final MessageSource messageSource;
+    private final UserService userService;
 
     private void canAccept(Tutorial tutorial, User currentUser) throws NotFoundException, BadRequestException {
         if (!currentUser.getRole().hasPermsAtLeast(Role.ADMIN)) {
@@ -154,5 +160,23 @@ public class TutorialServiceImpl implements TutorialService {
     public Page<TutorialDto> getTutorialsUnverified(Pageable pageable) {
         return tutorialRepository.findByVerificationStatus(VerificationStatus.IN_REVIEW, pageable)
                 .map(TutorialDtoMapper::toTutorialDto);
+    }
+
+    @Override
+    public Page<TutorialDto> getTutorialsByMultipleFish(List<Long> fishIds, PaginationDto pagination) {
+        if (fishIds == null || fishIds.isEmpty())
+            return Page.empty(pagination.toPageable());
+        return tutorialRepository.findByMultipleFish(fishIds, pagination.toPageable())
+                .map(TutorialDtoMapper::toTutorialDto);
+    }
+
+    @Override
+    public Page<MyTutorialDto> getTutorialsByCurrentUser(PaginationDto pagination) throws UserNotLoggedInException {
+        return tutorialRepository.findAllByAuthor_Id(userService.getCurrentUser().getId(),
+                pagination.toPageable(
+                        Sort.by(Sort.Direction.DESC, "createdAt")
+                                .and(Sort.by(Sort.Direction.ASC, "verificationStatus"))
+                )
+        ).map(TutorialDtoMapper::toMyTutorialDto);
     }
 }

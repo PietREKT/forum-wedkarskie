@@ -39,7 +39,7 @@ public interface EventsService {
 
     PageDto<EventDto> getUserInvites(UUID userId, PaginationDto pagination);
 
-    void inviteUser(Long eventId, UUID userIdToInvite, UUID inviterId) throws NotFoundException;
+    void inviteUser(Long eventId, UUID userIdToInvite, UUID inviterId) throws NotFoundException, UserNotLoggedInException;
 
     void respondToInvite(Long eventId, AttendanceStatus status) throws UserNotLoggedInException, NotFoundException;
 

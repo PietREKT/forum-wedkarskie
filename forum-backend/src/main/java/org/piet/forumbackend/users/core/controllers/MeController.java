@@ -4,6 +4,8 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.piet.forumbackend.content.core.dtos.responses.tutorials.MyTutorialDto;
+import org.piet.forumbackend.content.core.services.TutorialService;
 import org.piet.forumbackend.events.dtos.responses.EventDto;
 import org.piet.forumbackend.events.services.EventsService;
 import org.piet.forumbackend.fishing_spots.core.dtos.requests.GetFishingSpotDto;
@@ -34,6 +36,7 @@ public class MeController {
     private final UserGroupService userGroupService;
     private final EventsService eventsService;
     private final FishingSpotService fishingSpotService;
+    private final TutorialService tutorialService;
 
     @Operation(summary = "Get user info")
     @GetMapping
@@ -44,7 +47,7 @@ public class MeController {
 
     @PostMapping("/pic")
     public ResponseEntity<?> setProfilePic(@ModelAttribute ChangeProfilePicDto dto) throws UserNotLoggedInException, IOException {
-        userService.setUserProfilePic(dto.getProfilePic());
+        userService.setUserProfilePic(dto.getFile());
 
         return ResponseEntity.noContent().build();
     }
@@ -96,6 +99,13 @@ public class MeController {
     @GetMapping("/spots/favourites")
     public ResponseEntity<PageDto<FishingSpotListDto>> getFavouriteFishingSpots(PaginationDto pagination) throws UserNotLoggedInException {
         var dtos = fishingSpotService.getUserCurrentFavourites(pagination);
+
+        return ResponseEntity.ok(PageDto.of(dtos));
+    }
+
+    @GetMapping("/tutorials")
+    public ResponseEntity<PageDto<MyTutorialDto>> getMyTutorials(PaginationDto pagination) throws UserNotLoggedInException {
+        var dtos = tutorialService.getTutorialsByCurrentUser(pagination);
 
         return ResponseEntity.ok(PageDto.of(dtos));
     }

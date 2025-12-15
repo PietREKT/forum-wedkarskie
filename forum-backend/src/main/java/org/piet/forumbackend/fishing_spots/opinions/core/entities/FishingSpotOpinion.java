@@ -6,9 +6,12 @@ import jakarta.validation.constraints.Min;
 import lombok.Getter;
 import lombok.Setter;
 import org.piet.forumbackend.fishing_spots.core.entities.FishingSpot;
+import org.piet.forumbackend.fishing_spots.opinions.reports.entities.FishingSpotOpinionReport;
 import org.piet.forumbackend.users.core.entities.User;
 
 import java.time.Instant;
+import java.util.HashSet;
+import java.util.Set;
 
 @Entity
 @Getter
@@ -38,4 +41,12 @@ public class FishingSpotOpinion {
     private FishingSpot spot;
 
     Instant createdAt;
+
+    @OneToMany(
+            mappedBy = "opinion",
+            cascade = CascadeType.ALL,
+            orphanRemoval = true,
+            fetch = FetchType.LAZY
+    )
+    Set<FishingSpotOpinionReport> reports = new HashSet<>();
 }

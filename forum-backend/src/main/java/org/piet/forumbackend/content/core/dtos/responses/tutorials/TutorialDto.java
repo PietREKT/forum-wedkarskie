@@ -5,7 +5,7 @@ import org.piet.forumbackend.content.core.dtos.responses.content.ContentDto;
 import org.piet.forumbackend.content.core.entities.Tutorial;
 import org.piet.forumbackend.fish.dtos.FishListDto;
 import org.piet.forumbackend.fish.entities.enums.FishingMethod;
-import org.piet.forumbackend.users.core.dtos.responses.UserDto;
+import org.piet.forumbackend.users.core.dtos.responses.ListUserDto;
 
 import java.io.Serializable;
 import java.util.Set;
@@ -15,8 +15,9 @@ import java.util.Set;
  */
 @Value
 public class TutorialDto implements Serializable {
-    UserDto verifiedBy;
+    Long tutorialId;
+    ListUserDto verifiedBy;
     Set<FishingMethod> methods;
     Set<FishListDto> fishMentioned;
-    ContentDto content;
+    ContentDto tutorial_content;
 }

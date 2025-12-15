@@ -15,7 +15,7 @@ import org.piet.forumbackend.globals.exceptions.NotFoundException;
 import org.piet.forumbackend.globals.exceptions.UnauthorizedAccessException;
 import org.piet.forumbackend.globals.pagination.PageDto;
 import org.piet.forumbackend.globals.pagination.PaginationDto;
-import org.piet.forumbackend.globals.properties.FileProperties;
+import org.piet.forumbackend.globals.properties.file_properties.FileProperties;
 import org.piet.forumbackend.users.core.entities.Role;
 import org.piet.forumbackend.users.core.entities.User;
 import org.piet.forumbackend.users.core.services.UserService;
