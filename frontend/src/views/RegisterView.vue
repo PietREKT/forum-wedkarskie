@@ -12,7 +12,7 @@
                 v-model.trim="name"
                 type="text"
                 class="w-full rounded-xl border border-[var(--color-border)] bg-transparent px-3 py-2.5
-                     outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
+                   outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
             />
           </div>
           <div>
@@ -21,7 +21,7 @@
                 v-model.trim="surname"
                 type="text"
                 class="w-full rounded-xl border border-[var(--color-border)] bg-transparent px-3 py-2.5
-                     outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
+                   outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
             />
           </div>
         </div>
@@ -34,7 +34,7 @@
               autocomplete="username"
               required
               class="w-full rounded-xl border border-[var(--color-border)] bg-transparent px-3 py-2.5
-                   outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
+                 outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
           />
         </div>
 
@@ -45,7 +45,7 @@
               type="email"
               autocomplete="email"
               class="w-full rounded-xl border border-[var(--color-border)] bg-transparent px-3 py-2.5
-                   outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
+                 outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
           />
         </div>
 
@@ -58,7 +58,7 @@
                 autocomplete="new-password"
                 required
                 class="w-full rounded-xl border border-[var(--color-border)] bg-transparent px-3 py-2.5
-                     outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
+                   outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
             />
           </div>
           <div>
@@ -69,7 +69,7 @@
                 autocomplete="new-password"
                 required
                 class="w-full rounded-xl border border-[var(--color-border)] bg-transparent px-3 py-2.5
-                     outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
+                   outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
             />
           </div>
         </div>
@@ -77,8 +77,8 @@
         <button
             :disabled="auth.status === 'loading'"
             class="w-full rounded-xl py-2.5 font-medium transition
-                 bg-[var(--color-primary)] hover:bg-[var(--color-primary-600)] text-white
-                 disabled:opacity-60 disabled:cursor-not-allowed shadow"
+               bg-[var(--color-primary)] hover:bg-[var(--color-primary-600)] text-white
+               disabled:opacity-60 disabled:cursor-not-allowed shadow"
         >
           {{ auth.status === 'loading' ? 'Rejestrowanie…' : 'Zarejestruj' }}
         </button>
@@ -95,35 +95,43 @@
       </form>
     </section>
 
-    <!-- PRAWA -->
+    <!-- PRAWA (NOWE, BEZ KAFELKÓW) -->
     <aside
         class="relative overflow-hidden rounded-2xl p-0 md:p-8 bg-gradient-to-br
              from-[var(--header-from)] to-[var(--header-to)]"
     >
-      <div class="absolute inset-0 opacity-20 dark:opacity-10 pointer-events-none"
-           style="background-image: radial-gradient(#fff 1px, transparent 1px);
-                  background-size: 14px 14px;"></div>
+      <div
+          class="absolute inset-0 opacity-20 dark:opacity-10 pointer-events-none"
+          style="background-image: radial-gradient(#fff 1px, transparent 1px); background-size: 14px 14px;"
+      ></div>
 
       <div class="relative h-full flex flex-col text-white">
         <header>
-          <h2 class="text-2xl md:text-3xl font-semibold drop-shadow-sm">Załóż konto i dołącz</h2>
-          <p class="opacity-90 mt-1">Publikuj połowy, śledź łowiska i wydarzenia.</p>
+          <h2 class="text-2xl md:text-3xl font-semibold drop-shadow-sm">Załóż konto i korzystaj w pełni</h2>
+          <p class="opacity-90 mt-1">Rejestracja odblokowuje wszystkie funkcje społeczności.</p>
         </header>
 
-        <div class="mt-6 grid grid-cols-4 sm:grid-cols-6 gap-3 md:gap-4 auto-rows-fr">
-          <div v-for="a in avatars" :key="a.id"
-               class="aspect-square rounded-xl flex items-center justify-center text-sm font-semibold
-                      bg-white/20 text-white backdrop-blur-sm border border-white/30">
-            <span>{{ a.initials }}</span>
-          </div>
+        <div class="mt-6 rounded-2xl bg-white/10 border border-white/20 backdrop-blur-sm p-5">
+          <p class="font-semibold">Po rejestracji zyskujesz:</p>
+          <ul class="mt-3 space-y-2 text-white/90 text-sm">
+            <li>• dodawanie postów oraz komentarzy</li>
+            <li>• ocenianie treści i łowisk</li>
+            <li>• zapisywanie ulubionych łowisk</li>
+            <li>• udział w wydarzeniach i grupach</li>
+            <li>• dostęp do profilu i ustawień konta</li>
+          </ul>
         </div>
 
-        <div class="mt-auto pt-6 text-white/90 text-sm">
-          <ul class="space-y-1">
-            <li>• Twórz galerie połowów</li>
-            <li>• Obserwuj ulubione łowiska</li>
-            <li>• Bierz udział w zawodach PZW</li>
+        <div class="mt-6 rounded-2xl bg-white/10 border border-white/20 backdrop-blur-sm p-5">
+          <p class="font-semibold">Bez konta nadal możesz:</p>
+          <ul class="mt-3 space-y-2 text-white/90 text-sm">
+            <li>• przeglądać posty, mapę i poradniki</li>
+            <li>• sprawdzać szczegóły łowisk</li>
           </ul>
+        </div>
+
+        <div class="mt-auto pt-6 text-white/80 text-xs">
+          Wystarczy nazwa użytkownika i hasło. E-mail jest opcjonalny.
         </div>
       </div>
     </aside>
@@ -167,12 +175,4 @@ async function onSubmit() {
     router.push({ path: '/login', query: { registered: '1' } })
   } catch {}
 }
-
-const avatars = ref([
-  { id: 1, initials: 'AK' }, { id: 2, initials: 'MS' }, { id: 3, initials: 'JP' },
-  { id: 4, initials: 'ŁB' }, { id: 5, initials: 'KO' }, { id: 6, initials: 'ZS' },
-  { id: 7, initials: 'PW' }, { id: 8, initials: 'NM' }, { id: 9, initials: 'TS' },
-  { id: 10, initials: 'EW' }, { id: 11, initials: 'RS' }, { id: 12, initials: 'DK' },
-])
 </script>
-

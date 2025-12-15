@@ -20,7 +20,7 @@
               autocomplete="username"
               required
               class="w-full rounded-xl border border-[var(--color-border)] bg-transparent px-3 py-2.5
-                   outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
+                 outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
           />
         </div>
 
@@ -32,7 +32,7 @@
               autocomplete="current-password"
               required
               class="w-full rounded-xl border border-[var(--color-border)] bg-transparent px-3 py-2.5
-                   outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
+                 outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
           />
         </div>
 
@@ -49,8 +49,8 @@
         <button
             :disabled="auth.status === 'loading'"
             class="w-full rounded-xl py-2.5 font-medium transition
-                 bg-[var(--color-primary)] hover:bg-[var(--color-primary-600)] text-white
-                 disabled:opacity-60 disabled:cursor-not-allowed shadow"
+               bg-[var(--color-primary)] hover:bg-[var(--color-primary-600)] text-white
+               disabled:opacity-60 disabled:cursor-not-allowed shadow"
         >
           {{ auth.status === 'loading' ? 'Logowanie…' : 'Zaloguj' }}
         </button>
@@ -66,35 +66,47 @@
       </form>
     </section>
 
-    <!-- PRAWA -->
+    <!-- PRAWA (NOWE, BEZ KAFELKÓW) -->
     <aside
         class="relative overflow-hidden rounded-2xl p-0 md:p-8 bg-gradient-to-br
-             from-[var(--header-from)] to-[var(--header-to)]"
+           from-[var(--header-from)] to-[var(--header-to)]"
     >
-      <div class="absolute inset-0 opacity-20 dark:opacity-10 pointer-events-none"
-           style="background-image: radial-gradient(#fff 1px, transparent 1px);
-                  background-size: 14px 14px;"></div>
+      <div
+          class="absolute inset-0 opacity-20 dark:opacity-10 pointer-events-none"
+          style="background-image: radial-gradient(#fff 1px, transparent 1px); background-size: 14px 14px;"
+      ></div>
 
       <div class="relative h-full flex flex-col text-white">
         <header>
-          <h2 class="text-2xl md:text-3xl font-semibold drop-shadow-sm">Witaj na Forum Wędkarzy</h2>
-          <p class="opacity-90 mt-1">Dołącz do społeczności, dziel się połowami i poradami.</p>
+          <h2 class="text-2xl md:text-3xl font-semibold drop-shadow-sm">Witaj ponownie</h2>
+          <p class="opacity-90 mt-1">
+            Zaloguj się, aby dodawać treści, zapisywać ulubione łowiska i brać udział w wydarzeniach.
+          </p>
         </header>
 
-        <div class="mt-6 grid grid-cols-4 sm:grid-cols-6 gap-3 md:gap-4 auto-rows-fr">
-          <div v-for="a in avatars" :key="a.id"
-               class="aspect-square rounded-xl flex items-center justify-center text-sm font-semibold
-                      bg-white/20 text-white backdrop-blur-sm border border-white/30">
-            <span>{{ a.initials }}</span>
-          </div>
+        <div class="mt-6 rounded-2xl bg-white/10 border border-white/20 backdrop-blur-sm p-5">
+          <p class="font-semibold">Po zalogowaniu możesz:</p>
+          <ul class="mt-3 space-y-2 text-white/90 text-sm">
+            <li>• dodawać posty oraz komentarze</li>
+            <li>• oceniać treści i łowiska</li>
+            <li>• zarządzać ulubionymi łowiskami</li>
+            <li>• dołączać do wydarzeń i grup</li>
+            <li>• korzystać z profilu i ustawień konta</li>
+          </ul>
         </div>
 
-        <div class="mt-auto pt-6 text-white/90 text-sm">
-          <ul class="space-y-1">
-            <li>• Posty z łowisk w całej Polsce</li>
-            <li>• Poradniki i kalendarz połowów</li>
-            <li>• Wydarzenia i zawody PZW</li>
-          </ul>
+        <div class="mt-6 rounded-2xl bg-white/10 border border-white/20 backdrop-blur-sm p-5">
+          <p class="font-semibold">Nie masz konta?</p>
+          <p class="mt-2 text-white/90 text-sm">
+            Załóż je w minutę i odblokuj pełną funkcjonalność serwisu.
+            <RouterLink to="/register" class="underline underline-offset-4 hover:opacity-90">
+              Przejdź do rejestracji
+            </RouterLink>
+          </p>
+        </div>
+
+        <div class="mt-auto pt-6 text-white/80 text-xs">
+          Jeśli konto jest zablokowane, serwer może zwrócić odmowę logowania (403).
         </div>
       </div>
     </aside>
@@ -117,14 +129,7 @@ const justRegistered = computed(() => route.query.registered === '1')
 async function onSubmit() {
   try {
     await auth.login(username.value, password.value)
-    router.push('/profile') // przekierowanie do profilu po zalogowaniu
+    router.push('/profile')
   } catch {}
 }
-
-const avatars = ref([
-  { id: 1, initials: 'AK' }, { id: 2, initials: 'MS' }, { id: 3, initials: 'JP' },
-  { id: 4, initials: 'ŁB' }, { id: 5, initials: 'KO' }, { id: 6, initials: 'ZS' },
-  { id: 7, initials: 'PW' }, { id: 8, initials: 'NM' }, { id: 9, initials: 'TS' },
-  { id: 10, initials: 'EW' }, { id: 11, initials: 'RS' }, { id: 12, initials: 'DK' },
-])
 </script>

@@ -4,6 +4,7 @@ import { ref, onMounted } from 'vue'
 import { useRouter, RouterLink, RouterView } from 'vue-router'
 import { useAuthStore } from './stores/auth'
 import { useI18n } from 'vue-i18n'
+import logoUrl from './assets/olow.png'
 
 const router = useRouter()
 const auth = useAuthStore()
@@ -48,73 +49,70 @@ async function onLogout() {
 </script>
 
 <template>
-  <div
-      class="min-h-screen flex flex-col bg-[var(--color-bg)] text-[var(--color-text)]"
-  >
+  <div class="min-h-screen flex flex-col bg-[var(--color-bg)] text-[var(--color-text)]">
     <!-- HEADER -->
     <header
-        class="sticky top-0 z-40 border-b border-white/10 bg-gradient-to-r from-[var(--header-from)] to-[var(--header-to)] text-white"
+        class="sticky top-0 z-40 border-b border-white/10
+             bg-gradient-to-r from-[var(--header-from)] to-[var(--header-to)] text-white"
     >
-      <div
-          class="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between"
-      >
-        <nav class="flex items-center gap-6 text-sm font-medium">
-          <!-- Posty -->
-          <RouterLink
-              class="hover:opacity-90 router-link"
-              :to="{ path: '/posts' }"
-          >
-            {{ tr('nav.posts', 'Posty') }}
-          </RouterLink>
+      <div class="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between">
+        <!-- LEWA CZĘŚĆ: LOGO + NAV -->
+        <div class="flex items-center gap-8">
+          <!-- LOGO (NIE JEST LINKIEM) -->
+          <div class="flex items-center gap-3 ml-6 select-none">
+            <img :src="logoUrl" alt="Połów" class="h-12 w-12" />
+            <span class="text-2xl font-semibold tracking-wide">
+              <span class="text-emerald-200 lowercase">p</span>
+              <span class="uppercase">OŁÓW</span>
+            </span>
+          </div>
 
-          <!-- Wydarzenia -->
-          <RouterLink
-              v-if="auth.isAuthenticated"
-              class="hover:opacity-90 router-link"
-              :to="{ path: '/events' }"
-          >
-            {{ tr('nav.events', 'Wydarzenia') }}
-          </RouterLink>
+          <!-- NAWIGACJA -->
+          <nav class="flex items-center gap-6 text-sm font-medium">
+            <RouterLink class="hover:opacity-90 router-link" :to="{ path: '/posts' }">
+              {{ tr('nav.posts', 'Posty') }}
+            </RouterLink>
 
-          <!-- Mapa -->
-          <RouterLink
-              class="hover:opacity-90 router-link"
-              :to="{ path: '/map' }"
-          >
-            {{ tr('nav.map', 'Mapa') }}
-          </RouterLink>
+            <RouterLink
+                v-if="auth.isAuthenticated"
+                class="hover:opacity-90 router-link"
+                :to="{ path: '/events' }"
+            >
+              {{ tr('nav.events', 'Wydarzenia') }}
+            </RouterLink>
 
-          <!-- Poradniki -->
-          <RouterLink
-              class="hover:opacity-90 router-link"
-              :to="{ path: '/guides' }"
-          >
-            {{ tr('nav.guides', 'Poradniki') }}
-          </RouterLink>
+            <RouterLink class="hover:opacity-90 router-link" :to="{ path: '/map' }">
+              {{ tr('nav.map', 'Mapa') }}
+            </RouterLink>
 
-          <!-- Panel Admina: tylko ADMIN / ROOT -->
-          <RouterLink
-              v-if="auth.isAuthenticated && auth.isAdmin"
-              class="hover:opacity-90 router-link text-red-300"
-              :to="{ path: '/admin' }"
-          >
-            Panel admina
-          </RouterLink>
+            <RouterLink class="hover:opacity-90 router-link" :to="{ path: '/guides' }">
+              {{ tr('nav.guides', 'Poradniki') }}
+            </RouterLink>
 
-          <!-- Profil -->
-          <RouterLink
-              v-if="auth.isAuthenticated"
-              class="hover:opacity-90 router-link"
-              :to="{ path: '/profile' }"
-          >
-            {{ tr('nav.profile', 'Profil') }}
-          </RouterLink>
-        </nav>
+            <RouterLink
+                v-if="auth.isAuthenticated && auth.isAdmin"
+                class="hover:opacity-90 router-link text-red-300"
+                :to="{ path: '/admin' }"
+            >
+              Panel admina
+            </RouterLink>
 
+            <RouterLink
+                v-if="auth.isAuthenticated"
+                class="hover:opacity-90 router-link"
+                :to="{ path: '/profile' }"
+            >
+              {{ tr('nav.profile', 'Profil') }}
+            </RouterLink>
+          </nav>
+        </div>
+
+        <!-- PRAWA CZĘŚĆ -->
         <div class="flex items-center gap-3">
           <RouterLink
               v-if="!auth.isAuthenticated"
-              class="px-3 py-1.5 rounded-lg text-sm bg-white/10 hover:bg-white/20 border border-white/25 backdrop-blur transition"
+              class="px-3 py-1.5 rounded-lg text-sm bg-white/10 hover:bg-white/20
+                   border border-white/25 backdrop-blur transition"
               :to="{ path: '/register' }"
           >
             {{ tr('auth.register', 'Rejestracja') }}
@@ -122,7 +120,8 @@ async function onLogout() {
 
           <RouterLink
               v-if="!auth.isAuthenticated"
-              class="px-3 py-1.5 rounded-lg text-sm bg-white/10 hover:bg-white/20 border border-white/25 backdrop-blur transition"
+              class="px-3 py-1.5 rounded-lg text-sm bg-white/10 hover:bg-white/20
+                   border border-white/25 backdrop-blur transition"
               :to="{ path: '/login' }"
           >
             {{ tr('auth.login', 'Zaloguj') }}
@@ -131,25 +130,18 @@ async function onLogout() {
           <button
               v-if="auth.isAuthenticated"
               @click="onLogout"
-              class="px-3 py-1.5 rounded-lg text-sm bg.white/10 hover:bg-white/20 border border-white/25 backdrop-blur transition"
+              class="px-3 py-1.5 rounded-lg text-sm bg-white/10 hover:bg-white/20
+                   border border-white/25 backdrop-blur transition"
           >
             {{ tr('auth.logout', 'Wyloguj') }}
           </button>
 
-          <!-- Tryb -->
-          <div
-              class="flex items-center gap-1 bg-white/10 border border-white/25 rounded-lg p-1"
-          >
-            <button
-                class="px-2 py-1 rounded-md text-xs hover:bg-white/20"
-                @click="applyTheme('dark')"
-            >
+          <!-- TRYB -->
+          <div class="flex items-center gap-1 bg-white/10 border border-white/25 rounded-lg p-1">
+            <button class="px-2 py-1 rounded-md text-xs hover:bg-white/20" @click="applyTheme('dark')">
               Dark
             </button>
-            <button
-                class="px-2 py-1 rounded-md text-xs hover:bg-white/20"
-                @click="applyTheme('light')"
-            >
+            <button class="px-2 py-1 rounded-md text-xs hover:bg-white/20" @click="applyTheme('light')">
               Light
             </button>
           </div>
@@ -166,9 +158,7 @@ async function onLogout() {
 
     <!-- FOOTER -->
     <footer class="border-t border-white/10 text-sm text-white/80">
-      <div
-          class="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between"
-      >
+      <div class="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between">
         <span>Forum Wędkarskie</span>
         <span>{{ new Date().getFullYear() }}</span>
       </div>
