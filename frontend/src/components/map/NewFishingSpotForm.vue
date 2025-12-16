@@ -1,3 +1,4 @@
+<!-- src/components/map/NewFishingSpotForm.vue -->
 <script setup>
 import { ref, onMounted, computed } from 'vue'
 import { apiClient } from '../../utils/axios.js'
@@ -85,17 +86,18 @@ function resetForm() {
   selectedFishIds.value = []
   photos.value = []
   errors.value = {}
+  if (photosInput.value) photosInput.value.value = ''
 }
 
 function extractBackendError(err) {
+  const status = err?.response?.status
   const msg =
       err?.response?.data?.message ||
       err?.response?.data?.error ||
       err?.response?.data?.details ||
       (typeof err?.response?.data === 'string' ? err.response.data : null)
 
-  const status = err?.response?.status
-
+  if (status >= 500) return 'Błąd serwera (500). Spróbuj ponownie później.'
   if (status === 409) return 'Nie można wykonać operacji (konflikt danych).'
   if (status === 400) return 'Błędne dane formularza (400).'
   if (status === 401) return 'Brak autoryzacji (401).'
@@ -119,9 +121,8 @@ async function uploadSpotPic(spotId, file) {
   const fd = new FormData()
   fd.append('file', file)
 
-  await apiClient.post(`/spots/${spotId}/pic`, fd, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-  })
+  // nie ustawiaj ręcznie Content-Type (axios doda boundary)
+  await apiClient.post(`/spots/${spotId}/pic`, fd)
 }
 
 // Minimalny payload zgodny z backendem (bez address obiektu, bez spotType/ownerType)
@@ -171,8 +172,11 @@ async function submit() {
     if (createdId && photos.value.length) {
       try {
         await uploadSpotPic(createdId, photos.value[0])
-      } catch {
-        errors.value = { ...errors.value, form: 'Łowisko dodane, ale nie udało się wysłać zdjęcia.' }
+      } catch (err) {
+        errors.value = {
+          ...errors.value,
+          form: extractBackendError(err) || 'Łowisko dodane, ale nie udało się wysłać zdjęcia.',
+        }
       }
     }
 
@@ -212,7 +216,10 @@ const buttonText = computed(() => (isAdmin.value ? 'Dodaj' : 'Wyślij zgłoszeni
 
       <div class="flex flex-col gap-1">
         <label>Rodzaj łowiska <span class="text-red-300">*</span></label>
-        <select v-model="form.ownerType" class="bg-white text-black border border-white/60 rounded px-2 py-1 text-xs outline-none">
+        <select
+            v-model="form.ownerType"
+            class="bg-white text-black border border-white/60 rounded px-2 py-1 text-xs outline-none"
+        >
           <option value="">Wybierz rodzaj</option>
           <option value="PZW">PZW / koło</option>
           <option value="Komercyjne">Prywatne / komercyjne</option>
@@ -258,7 +265,11 @@ const buttonText = computed(() => (isAdmin.value ? 'Dodaj' : 'Wyślij zgłoszeni
         <label>Zdjęcie główne łowiska (pierwszy plik będzie wysłany)</label>
         <input ref="photosInput" type="file" accept="image/*" multiple class="hidden" @change="onPhotosChange" />
         <div class="flex items-center gap-2">
-          <button type="button" class="px-3 py-1 rounded-full border border-white/60 hover:bg-white/10 text-xs" @click="triggerPhotos">
+          <button
+              type="button"
+              class="px-3 py-1 rounded-full border border-white/60 hover:bg-white/10 text-xs"
+              @click="triggerPhotos"
+          >
             Wybierz zdjęcia
           </button>
           <span class="opacity-80" v-if="photos.length">Wybrano: {{ photos.length }}</span>

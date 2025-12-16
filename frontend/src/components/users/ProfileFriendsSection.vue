@@ -1,3 +1,4 @@
+<!-- src/components/users/ProfileFriendsSection.vue -->
 <template>
   <div
       v-if="isOwner"
@@ -5,7 +6,6 @@
   >
     <h3 class="text-lg font-semibold mb-2">Obserwowani</h3>
 
-    <!-- WYSZUKIWARKA UŻYTKOWNIKÓW -->
     <div class="space-y-2">
       <label class="block text-sm text-[var(--color-muted)]">
         Wyszukaj użytkownika po pseudonimie
@@ -20,8 +20,7 @@
         />
         <button
             type="button"
-            class="px-4 py-2 rounded-lg text-sm font-medium
-                 bg-[var(--color-primary)] text-white hover:bg-[var(--color-primary-600)] disabled:opacity-60"
+            class="px-4 py-2 rounded-lg text-sm font-medium bg-[var(--color-primary)] text-white hover:bg-[var(--color-primary-600)] disabled:opacity-60"
             @click="onSearchUsers"
             :disabled="searchLoading"
         >
@@ -33,7 +32,6 @@
       </p>
     </div>
 
-    <!-- WYNIKI WYSZUKIWANIA -->
     <div
         v-if="searchResults.length"
         class="rounded-xl border border-[var(--color-border)] overflow-hidden"
@@ -62,16 +60,14 @@
           <div class="flex flex-wrap gap-2">
             <RouterLink
                 :to="{ name: 'profile', query: { u: u.username } }"
-                class="px-3 py-1 text-xs rounded-lg border border-[var(--color-border)]
-                     bg-[var(--color-bg)] hover:opacity-90"
+                class="px-3 py-1 text-xs rounded-lg border border-[var(--color-border)] bg-[var(--color-bg)] hover:opacity-90"
             >
               Profil
             </RouterLink>
 
             <button
                 type="button"
-                class="px-3 py-1 text-xs rounded-lg bg-[var(--color-primary)]
-                     text-white hover:bg-[var(--color-primary-600)] disabled:opacity-60"
+                class="px-3 py-1 text-xs rounded-lg bg-[var(--color-primary)] text-white hover:bg-[var(--color-primary-600)] disabled:opacity-60"
                 @click="onFollowUser(u)"
                 :disabled="inviteLoadingId === u.id || isAlreadyFollowed(u)"
                 :title="isAlreadyFollowed(u) ? 'Już obserwujesz' : 'Wyślij zaproszenie'"
@@ -89,7 +85,6 @@
       </div>
     </div>
 
-    <!-- LISTA JUŻ OBSERWOWANYCH -->
     <div class="space-y-2">
       <div class="flex items-center justify-between">
         <h4 class="text-sm font-semibold">Twoi obserwowani</h4>
@@ -97,24 +92,21 @@
 
       <div
           v-if="friendsLoading"
-          class="h-32 rounded-xl border-2 border-[var(--color-border)]
-               flex items-center justify-center text-[var(--color-muted)] text-center px-4"
+          class="h-32 rounded-xl border-2 border-[var(--color-border)] flex items-center justify-center text-[var(--color-muted)] text-center px-4"
       >
         Ładowanie listy obserwowanych...
       </div>
 
       <div
           v-else-if="friends.length === 0"
-          class="h-32 rounded-xl border-2 border-[var(--color-border)]
-               flex items-center justify-center text-[var(--color-muted)] text-center px-4"
+          class="h-32 rounded-xl border-2 border-[var(--color-border)] flex items-center justify-center text-[var(--color-muted)] text-center px-4"
       >
         Brak obserwowanych użytkowników.
       </div>
 
       <div
           v-else
-          class="max-h-48 rounded-xl border-2 border-[var(--color-border)]
-               overflow-y-auto divide-y divide-[var(--color-border)]"
+          class="max-h-48 rounded-xl border-2 border-[var(--color-border)] overflow-y-auto divide-y divide-[var(--color-border)]"
       >
         <div
             v-for="friend in friends"
@@ -136,8 +128,7 @@
           <div class="flex flex-wrap gap-2">
             <RouterLink
                 :to="`/posts?userId=${encodeURIComponent(friend.id)}`"
-                class="px-3 py-1 text-xs rounded-lg bg-[var(--color-primary)]
-                     text-white hover:bg-[var(--color-primary-600)]"
+                class="px-3 py-1 text-xs rounded-lg bg-[var(--color-primary)] text-white hover:bg-[var(--color-primary-600)]"
             >
               Posty
             </RouterLink>
@@ -150,11 +141,6 @@
           </div>
         </div>
       </div>
-
-      <p class="text-[10px] text-[var(--color-muted)]">
-        Backend nie udostępnia endpointu do usunięcia obserwowanego. W modelu API są tylko zaproszenia i operacje na reqId,
-        ale brak listy zaproszeń w danych użytkownika, więc nie da się tego zrealizować na froncie.
-      </p>
     </div>
   </div>
 </template>

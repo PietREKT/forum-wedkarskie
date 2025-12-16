@@ -13,7 +13,6 @@ INSERT INTO fishing_spot (
     location,
     type,
     verification_status,
-    photo_url,
     owner_id
 ) VALUES (
              'Łowisko Test Zdjęcia',
@@ -21,7 +20,6 @@ INSERT INTO fishing_spot (
              ST_SetSRID(ST_MakePoint(21.1500, 52.2500), 4326),
              'PRIVATE',
              'ACCEPTED',
-             'https://upload.wikimedia.org/wikipedia/commons/3/3f/Fishing_lake.jpg',
              '00000000-0000-0000-0000-000000000001'
          );
 

@@ -4,25 +4,6 @@
     <section
         class="relative bg-[var(--color-surface)] text-[var(--color-text)] rounded-2xl shadow p-6 md:p-8"
     >
-      <!-- potwierdzenie zgłoszenia profilu -->
-      <div v-if="reportSuccess" class="absolute top-3 right-4 z-40 pointer-events-none">
-        <div
-            class="rounded-md border border-emerald-500 bg-emerald-100 dark:bg-emerald-900 px-3 py-1.5 text-xs text-emerald-800 dark:text-emerald-100 shadow-lg"
-        >
-          Zgłoszenie profilu zostało wysłane.
-        </div>
-      </div>
-
-      <!-- panel wyboru powodu zgłoszenia -->
-      <ReportPanel
-          v-if="reporting"
-          :reasons="reportReasons"
-          :loading="sendingReport"
-          :error="reportError"
-          @select-reason="sendProfileReport"
-          @cancel="cancelReport"
-      />
-
       <div class="grid grid-cols-1 md:grid-cols-3 gap-8 items-start">
         <!-- Avatar + pseudonim -->
         <div class="flex items-center md:block gap-5">
@@ -48,13 +29,12 @@
 
         <!-- Dane tekstowe + akcje -->
         <div class="md:col-span-2">
-          <h3 class="text-lg font-semibold mb-1">Imię i nazwisko</h3>
-          <p class="text-base mb-4">
+          <h3 class="text-lg font-semibold mb-1" v-if="fullName">Imię i nazwisko</h3>
+          <p class="text-base mb-4" v-if="fullName">
             {{ fullName }}
           </p>
 
           <div class="mt-2 flex flex-wrap gap-3">
-            <!-- posty użytkownika (też dla cudzych profili) -->
             <RouterLink
                 v-if="profileUser?.id"
                 :to="`/posts?userId=${encodeURIComponent(profileUser.id)}`"
@@ -64,23 +44,11 @@
               Posty użytkownika
             </RouterLink>
 
-            <!-- Obserwuj (tylko gdy zalogowany i nie swój profil) -->
             <UserFollowButton
                 v-if="isAuthenticated && !isOwner && displayedUsername"
                 :username="displayedUsername"
             />
 
-            <!-- Zgłoś profil (tylko gdy zalogowany i nie swój profil) -->
-            <button
-                v-if="isAuthenticated && !isOwner && displayedUsername"
-                type="button"
-                class="inline-flex items-center justify-center min-w-[140px] h-9 px-4 rounded-full text-xs font-medium border border-red-500/80 text-red-500/90 bg-[var(--color-bg)] hover:bg-red-500/10"
-                @click="toggleReportPanel"
-            >
-              Zgłoś profil
-            </button>
-
-            <!-- edycja profilu -->
             <button
                 v-if="isOwner"
                 type="button"
@@ -90,7 +58,6 @@
               {{ editMode ? 'Zamknij edycję' : 'Edytuj profil' }}
             </button>
 
-            <!-- odśwież -->
             <button
                 type="button"
                 @click="onRefresh"
@@ -101,7 +68,7 @@
             </button>
           </div>
 
-          <!-- formularz edycji profilu -->
+          <!-- formularz edycji profilu (tylko zdjęcie) -->
           <div
               v-if="editMode && isOwner"
               class="mt-6 border-t border-[var(--color-border)] pt-4 space-y-4"
@@ -111,57 +78,14 @@
             <form class="space-y-4" @submit.prevent="onSaveProfile">
               <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <label class="text-sm space-y-1">
-                  <span class="block text-[var(--color-muted)]">Nowy pseudonim</span>
-                  <input
-                      v-model="editUsername"
-                      type="text"
-                      class="w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-bg)] px-3 py-2 text-sm opacity-60"
-                      autocomplete="off"
-                      disabled
-                  />
-                  <span class="block text-[10px] text-[var(--color-muted)]">
-                    Brak endpointu do zmiany pseudonimu po stronie serwera.
-                  </span>
-                </label>
-
-                <label class="text-sm space-y-1">
                   <span class="block text-[var(--color-muted)]">Nowe zdjęcie</span>
                   <input
                       ref="avatarInput"
                       type="file"
                       accept="image/*"
                       class="block w-full text-sm text-[var(--color-muted)]"
+                      @change="onAvatarChange"
                   />
-                  <span class="block text-[10px] text-[var(--color-muted)]">
-                    Wysyłane jako multipart pod kluczem <b>file</b> na <b>POST /users/me/pic</b>.
-                  </span>
-                </label>
-              </div>
-
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <label class="text-sm space-y-1">
-                  <span class="block text-[var(--color-muted)]">Aktualne hasło</span>
-                  <input
-                      v-model="currentPassword"
-                      type="password"
-                      class="w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-bg)] px-3 py-2 text-sm opacity-60"
-                      autocomplete="current-password"
-                      disabled
-                  />
-                </label>
-
-                <label class="text-sm space-y-1">
-                  <span class="block text-[var(--color-muted)]">Nowe hasło</span>
-                  <input
-                      v-model="newPassword"
-                      type="password"
-                      class="w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-bg)] px-3 py-2 text-sm opacity-60"
-                      autocomplete="new-password"
-                      disabled
-                  />
-                  <span class="block text-[10px] text-[var(--color-muted)]">
-                    Brak endpointu do zmiany hasła po stronie serwera.
-                  </span>
                 </label>
               </div>
 
@@ -171,7 +95,7 @@
                     class="inline-flex items-center rounded-xl px-4 py-2 text-sm font-medium bg-[var(--color-primary)] hover:bg-[var(--color-primary-600)] text-white transition shadow disabled:opacity-60"
                     :disabled="saving || !selectedAvatarFile"
                 >
-                  Zapisz zmiany
+                  Zapisz zdjęcie
                 </button>
                 <button
                     type="button"
@@ -199,12 +123,9 @@
       </div>
     </section>
 
-    <!-- Sekcje profilu -->
     <section class="grid grid-cols-1 md:grid-cols-2 gap-6">
-      <!-- Obserwowani – tylko na swoim profilu i tylko gdy zalogowany -->
       <ProfileFriendsSection v-if="isAuthenticated" />
 
-      <!-- Grupy użytkownika -->
       <div class="bg-[var(--color-surface)] text-[var(--color-text)] rounded-2xl shadow p-6">
         <h3 class="text-lg font-semibold mb-4">Grupy użytkownika</h3>
 
@@ -248,7 +169,6 @@
         </div>
       </div>
 
-      <!-- Łowiska użytkownika -->
       <div class="bg-[var(--color-surface)] text-[var(--color-text)] rounded-2xl shadow p-6">
         <h3 class="text-lg font-semibold mb-4">Łowiska użytkownika</h3>
 
@@ -292,7 +212,6 @@ import { useAuthStore } from '../stores/auth.js'
 import { useUserStore } from '../stores/userStore.js'
 import { apiClient } from '../utils/axios.js'
 import UserFollowButton from '../components/users/UserFollowButton.vue'
-import ReportPanel from '../components/common/ReportPanel.vue'
 import ProfileFriendsSection from '../components/users/ProfileFriendsSection.vue'
 
 const route = useRoute()
@@ -303,7 +222,6 @@ const loading = ref(false)
 const profileError = ref('')
 
 const isAuthenticated = computed(() => !!(userStore.me || auth.user))
-
 const loggedUser = computed(() => userStore.me || auth.user || null)
 
 const targetUsername = computed(() => {
@@ -317,40 +235,52 @@ const displayedUsername = computed(() => targetUsername.value || '')
 const isOwner = computed(() => {
   if (!isAuthenticated.value) return false
   if (!loggedUser.value?.username || !targetUsername.value) return false
-  return loggedUser.value.username === targetUsername.value
+  return String(loggedUser.value.username) === String(targetUsername.value)
 })
 
 const profileUser = ref(null)
 
-const avatarUrl = computed(() => profileUser.value?.avatarUrl || profileUser.value?.profilePicUrl || '')
+const avatarBust = ref(0)
 
-const fullName = computed(() => {
-  const first = profileUser.value?.name || ''
-  const last = profileUser.value?.surname || ''
-  const text = `${first} ${last}`.trim()
-  return text || '—'
+const rawAvatarUrl = computed(() => {
+  return profileUser.value?.avatarUrl || profileUser.value?.profilePicUrl || ''
 })
 
-/* EDYCJA PROFILU (na razie tylko zdjęcie) */
+const avatarUrl = computed(() => {
+  const u = rawAvatarUrl.value
+  if (!u) return ''
+  const sep = u.includes('?') ? '&' : '?'
+  return `${u}${sep}v=${avatarBust.value}`
+})
+
+const fullName = computed(() => {
+  const p = profileUser.value || {}
+  const first = String(p.firstName ?? p.name ?? '').trim()
+  const last = String(p.lastName ?? p.surname ?? '').trim()
+  const joined = [first, last].filter(Boolean).join(' ')
+  return joined || ''
+})
+
 const editMode = ref(false)
-const editUsername = ref('')
-const currentPassword = ref('')
-const newPassword = ref('')
 const saving = ref(false)
 const saveError = ref('')
 const saveSuccess = ref(false)
 const avatarInput = ref(null)
-const selectedAvatarFile = computed(() => avatarInput.value?.files?.[0] || null)
+const selectedAvatarFile = ref(null)
+
+function onAvatarChange(e) {
+  selectedAvatarFile.value = e?.target?.files?.[0] || null
+  saveError.value = ''
+  saveSuccess.value = false
+}
 
 watch(
     () => editMode.value,
     value => {
-      if (value && profileUser.value) {
-        editUsername.value = profileUser.value.username || ''
-        currentPassword.value = ''
-        newPassword.value = ''
+      if (value) {
         saveError.value = ''
         saveSuccess.value = false
+        selectedAvatarFile.value = null
         if (avatarInput.value) avatarInput.value.value = ''
       }
     },
@@ -367,8 +297,6 @@ function cancelEdit() {
 async function uploadAvatar(file) {
   const form = new FormData()
   form.append('file', file)
-
-  // ważne: NIE ustawiaj ręcznie Content-Type, axios sam doda boundary
   const { data } = await apiClient.post('/users/me/pic', form)
   return data
 }
@@ -387,13 +315,15 @@ async function onSaveProfile() {
 
     await uploadAvatar(file)
 
-    // odśwież dane zalogowanego i aktualny profil
     await userStore.fetchMe(true)
+
     if (isOwner.value) {
-      profileUser.value = loggedUser.value
+      profileUser.value = userStore.me || auth.user || profileUser.value
     } else {
       await loadProfileUser()
     }
+
+    avatarBust.value = Date.now()
 
     saveSuccess.value = true
     setTimeout(() => {
@@ -408,42 +338,6 @@ async function onSaveProfile() {
   }
 }
 
-/* ZGŁOSZENIE PROFILU (UI gotowe, backend do podpięcia jeśli brak) */
-const reporting = ref(false)
-const sendingReport = ref(false)
-const reportError = ref('')
-const reportSuccess = ref(false)
-
-const reportReasons = [
-  { key: 'INAPPROPRIATE_PHOTO', label: 'Nieodpowiednie zdjęcie profilowe' },
-  { key: 'INAPPROPRIATE_NICK', label: 'Nieodpowiedni nick' },
-  { key: 'HARASSMENT', label: 'Nękanie / obraźliwe treści' },
-  { key: 'SPAM', label: 'Spam / reklama' },
-  { key: 'OTHER', label: 'Inny powód' },
-]
-
-function toggleReportPanel() {
-  reportError.value = ''
-  reporting.value = !reporting.value
-}
-
-async function sendProfileReport() {
-  sendingReport.value = true
-  reportError.value = ''
-  try {
-    // brak pewnego endpointu -> zostawiamy jako informacja dla backendu
-    reportError.value = 'Brak endpointu do zgłoszeń profili po stronie serwera.'
-  } finally {
-    sendingReport.value = false
-  }
-}
-
-function cancelReport() {
-  reporting.value = false
-  reportError.value = ''
-}
-
-/* GRUPY */
 const groups = ref([])
 const groupsLoading = ref(false)
 const groupsError = ref('')
@@ -462,7 +356,6 @@ async function loadUserGroups() {
       return
     }
 
-    // jeśli backend nie ma takiego endpointu, to wyjdzie błąd -> pokażemy komunikat
     const { data } = await apiClient.get(`/users/${encodeURIComponent(profileUser.value.id)}/groups`)
     const items = Array.isArray(data?.content) ? data.content : Array.isArray(data) ? data : []
     groups.value = items.map(g => ({ id: g.id, name: g.name, memberCount: g.memberCount ?? null }))
@@ -474,7 +367,6 @@ async function loadUserGroups() {
   }
 }
 
-/* ULUBIONE ŁOWISKA */
 const favouriteSpotsState = ref([])
 const favouriteSpots = computed(() => (Array.isArray(favouriteSpotsState.value) ? favouriteSpotsState.value : []))
 
@@ -508,7 +400,6 @@ function spotLocation(spot) {
 }
 
 function spotLink(spot) {
-  // załóżmy, że masz trasę /map (dopasuj jeśli inaczej)
   if (spot?.id) return `/map?spotId=${encodeURIComponent(spot.id)}`
   if (spot?.latitude != null && spot?.longitude != null) {
     return `/map?lat=${encodeURIComponent(spot.latitude)}&lng=${encodeURIComponent(spot.longitude)}`
@@ -516,12 +407,10 @@ function spotLink(spot) {
   return '/map'
 }
 
-/* ŁADOWANIE PROFILU */
 async function searchUserIdByUsername(username) {
   const u = String(username || '').trim()
   if (!u) return null
 
-  // backend u Ciebie używa parametru q
   const { data } = await apiClient.get('/users/search', { params: { q: u } })
   const list = Array.isArray(data) ? data : Array.isArray(data?.content) ? data.content : []
   const found =
@@ -533,7 +422,6 @@ async function searchUserIdByUsername(username) {
 async function loadProfileUser() {
   profileError.value = ''
 
-  // jeśli ktoś nie jest zalogowany i nie poda ?u=... to nie mamy co pokazać
   const u = targetUsername.value
   if (!u) {
     profileUser.value = null
@@ -541,17 +429,16 @@ async function loadProfileUser() {
     return
   }
 
-  // jeśli zalogowany, to pobierz me (żeby działało isOwner + follow listy)
   if (isAuthenticated.value) {
     try {
       await Promise.all([auth.bootstrapSession?.(), userStore.fetchMe(true)])
     } catch {
-      // jeśli sesja padła, traktujemy jak niezalogowany
+      // pomijamy
     }
   }
 
   if (isOwner.value) {
-    profileUser.value = loggedUser.value
+    profileUser.value = userStore.me || auth.user || null
     return
   }
 

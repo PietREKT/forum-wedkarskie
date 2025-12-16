@@ -100,10 +100,52 @@ function publishOpinion() {
   })
 }
 
+/* ZDJĘCIE ŁOWISKA: obsługa różnych pól + cache-bust */
+const photoBust = ref(0)
+
+watch(
+    () => props.spot?.id,
+    () => {
+      photoBust.value = Date.now()
+    },
+    { immediate: true },
+)
+
+function pickPhotoUrl(spot) {
+  if (!spot) return null
+
+  const direct =
+      spot.photoUrl ||
+      spot.picUrl ||
+      spot.pictureUrl ||
+      spot.imageUrl ||
+      spot.mainPhotoUrl ||
+      spot.mainImageUrl
+
+  if (direct) return String(direct)
+
+  const arr =
+      (Array.isArray(spot.photos) && spot.photos) ||
+      (Array.isArray(spot.images) && spot.images) ||
+      (Array.isArray(spot.pictures) && spot.pictures) ||
+      null
+
+  if (arr && arr.length) {
+    const first = arr[0]
+    if (typeof first === 'string') return first
+    if (first?.url) return String(first.url)
+    if (first?.photoUrl) return String(first.photoUrl)
+    if (first?.picUrl) return String(first.picUrl)
+  }
+
+  return null
+}
+
 const spotPhotoUrl = computed(() => {
-  const u = props.spot?.photoUrl
+  const u = pickPhotoUrl(props.spot)
   if (!u) return null
-  return String(u)
+  const sep = u.includes('?') ? '&' : '?'
+  return `${u}${sep}v=${photoBust.value}`
 })
 
 const addOrReportLabel = computed(() => (auth.isAdmin ? 'Dodaj łowisko' : 'Zgłoś łowisko'))
@@ -188,8 +230,13 @@ const toggleFormLabel = computed(() => (showNewSpotForm.value ? 'Ukryj formularz
     </div>
 
     <div v-if="spot && spotPhotoUrl" class="text-xs">
-      <h3 class="font-semibold mb-2">Materiały</h3>
-      <img :src="spotPhotoUrl" alt="Zdjęcie łowiska" class="w-full max-h-40 object-cover rounded border border-white/40" />
+      <h3 class="font-semibold mb-2">Zdjęcie łowiska</h3>
+      <img
+          :src="spotPhotoUrl"
+          alt="Zdjęcie łowiska"
+          class="w-full max-h-48 object-cover rounded border border-white/40"
+          @error="photoBust = Date.now()"
+      />
     </div>
 
     <div v-if="spot" class="text-xs">

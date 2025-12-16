@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
 import { useCommentsStore } from '../../stores/comments'
 import { useAuthStore } from '../../stores/auth'
 import CommentReportModal from './CommentReportModal.vue'
@@ -38,7 +38,6 @@ const deleteConfirmComment = ref(null)
 
 const currentUser = computed(() => auth.user)
 const isAuth = computed(() => !!auth.user)
-const isAdmin = computed(() => !!auth.isAdmin)
 
 const sectionOpen = ref(true)
 
@@ -76,6 +75,24 @@ onMounted(() => {
     comments.fetchNext(props.postId)
   }
 })
+
+/*
+  KLUCZ: po wczytaniu root komentarzy automatycznie dociągnij odpowiedzi.
+  (backend zwraca odpowiedzi dopiero z /comments/{parentId})
+*/
+watch(
+    () => state.value.list,
+    (list) => {
+      if (!list?.length) return
+
+      list
+          .filter(c => !c.parentId) // root
+          .forEach(c => {
+            comments.fetchChildren(props.postId, c.id)
+          })
+    },
+    { immediate: true },
+)
 
 onBeforeUnmount(() => {
   if (statusTimer) clearTimeout(statusTimer)
@@ -137,9 +154,7 @@ async function sendReply() {
   }
 }
 
-/* dzieci / drzewo
-   UWAGA: nie odpalamy fetchChildren w renderze (bo robi spam requestów).
-*/
+/* dzieci / drzewo */
 function ensureChildrenLoaded(parentId) {
   comments.fetchChildren(props.postId, parentId)
 }
@@ -161,7 +176,6 @@ function toggleReplies(id) {
     ...showAllReplies.value,
     [id]: !showAllReplies.value[id],
   }
-  // przy pierwszym rozwinięciu dopiero dociągnij dzieci
   if (showAllReplies.value[id]) {
     ensureChildrenLoaded(id)
   }
@@ -169,8 +183,7 @@ function toggleReplies(id) {
 
 const topLevelComments = computed(() => {
   const list = state.value.list || []
-  const postIdNum = Number(props.postId)
-  return list.filter(c => !c.parentId || c.parentId === postIdNum)
+  return list.filter(c => !c.parentId)
 })
 
 const totalCount = computed(() => state.value.list.length)
@@ -180,10 +193,9 @@ function toggleMenu(id) {
   menuFor.value = menuFor.value === id ? null : id
 }
 
-// edycja/usuwanie: autor LUB admin/root
+// edycja/usuwanie: TYLKO autor (bez admin/root)
 function canEditOrDelete(c) {
   if (!currentUser.value) return false
-  if (isAdmin.value) return true
   return currentUser.value.username === (c?.author?.username || '')
 }
 

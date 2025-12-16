@@ -1,3 +1,4 @@
+// src/stores/fishingSpots.js
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { apiClient } from '../utils/axios.js'
@@ -78,20 +79,26 @@ export const useFishingSpotsStore = defineStore('fishingSpots', () => {
         }
     }
 
+    // FIX: nie blokuj UI na requestach (które u Ciebie potrafią wisieć/500)
     async function selectSpot(spot, { isLoggedIn = false } = {}) {
         if (!spot) {
             clearSelection()
             return
         }
 
+        // od razu ustaw wybór (UI reaguje natychmiast)
         selectedSpot.value = spot
 
-        const tasks = [loadDetails(spot.id), loadOpinions(spot.id), loadEvents(spot.id)]
+        const id = spot.id
+        if (!id) return
 
-        if (isLoggedIn) tasks.push(loadOwnerInfo(spot.id))
+        const tasks = [loadDetails(id), loadOpinions(id), loadEvents(id)]
+
+        if (isLoggedIn) tasks.push(loadOwnerInfo(id))
         else ownerInfo.value = { is_owner: false }
 
-        await Promise.all(tasks)
+        // requesty lecą w tle, bez await (nie zamraża kliknięć)
+        void Promise.allSettled(tasks)
     }
 
     async function loadDetails(id) {
@@ -143,7 +150,6 @@ export const useFishingSpotsStore = defineStore('fishingSpots', () => {
 
         favouritesLoading.value = true
         try {
-            // backend zwraca Page => { content: [...] }
             const { data } = await apiClient.get('/users/me/spots/favourites', { params: { page: 0, size: 500 } })
             const list = normalize(data)
             favouritesIds.value = new Set(list.map((s) => s?.id).filter(Boolean))
@@ -154,7 +160,6 @@ export const useFishingSpotsStore = defineStore('fishingSpots', () => {
         }
     }
 
-    // WAŻNE: backend oczekuje DTO z polem "id", nie "spotId"
     async function addFavourite(id) {
         await apiClient.post('/users/me/spots/favourites/add', { id })
     }

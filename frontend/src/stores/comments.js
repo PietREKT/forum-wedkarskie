@@ -21,6 +21,23 @@ export const useCommentsStore = defineStore('comments', {
             return this.byPost[postId]
         },
 
+        normalizeComment(postId, c) {
+            const postIdNum = Number(postId)
+            const parentIdRaw = c?.parent?.id ?? null
+            const parentIdNum = parentIdRaw != null ? Number(parentIdRaw) : null
+
+            // Backend: root komentarze często mają parent.id == postId
+            // UI: root komentarz ma parentId = null, reply ma parentId = id komentarza-rodzica
+            const isRoot = parentIdNum != null && parentIdNum === postIdNum
+
+            return {
+                ...c,
+                parent: c.parent || null,
+                parentId: isRoot ? null : parentIdRaw,
+                _postId: postId,
+            }
+        },
+
         async fetchNext(postId) {
             const state = this.ensurePostState(postId)
             if (state.loading || !state.hasMore) return
@@ -36,20 +53,14 @@ export const useCommentsStore = defineStore('comments', {
                 const page = res.data || {}
                 const items = page.items || page.content || []
 
-                const mapped = items.map(c => ({
-                    ...c,
-                    parent: c.parent || null,
-                    parentId: c.parent ? c.parent.id : postId,
-                }))
+                const mapped = items.map(c => this.normalizeComment(postId, c))
 
                 if (state.page === 0) {
                     state.list = mapped
                 } else {
                     const existingIds = new Set(state.list.map(c => c.id))
                     mapped.forEach(c => {
-                        if (!existingIds.has(c.id)) {
-                            state.list.push(c)
-                        }
+                        if (!existingIds.has(c.id)) state.list.push(c)
                     })
                 }
 
@@ -70,19 +81,20 @@ export const useCommentsStore = defineStore('comments', {
 
         addToStore(postId, comment) {
             const state = this.ensurePostState(postId)
-            state.list.unshift({
-                ...comment,
-                parent: comment.parent || null,
-                parentId: comment.parent ? comment.parent.id : comment.parentId ?? null,
-            })
+            state.list.unshift(this.normalizeComment(postId, comment))
         },
 
         async add(postId, payload) {
             const form = new FormData()
             form.append('content', payload.content)
 
-            const parentId = payload.parentId != null ? payload.parentId : postId
-            form.append('parentId', parentId)
+            // Backend wymaga:
+            // - root komentarz: parentId = postId
+            // - reply: parentId = id komentarza-rodzica
+            const parentIdForBackend =
+                payload.parentId != null ? payload.parentId : postId
+
+            form.append('parentId', parentIdForBackend)
 
             if (payload.file) {
                 form.append('photos', payload.file)
@@ -96,20 +108,27 @@ export const useCommentsStore = defineStore('comments', {
                 })
 
                 const created = res.data || {}
-                const withParent = {
-                    ...created,
-                    parent: created.parent || { id: parentId },
-                    parentId: created.parent ? created.parent.id : parentId,
+
+                if (payload.parentId != null && !created.parent) {
+                    created.parent = { id: payload.parentId }
                 }
 
-                this.addToStore(postId, withParent)
+                const normalized = this.normalizeComment(postId, created)
+                this.addToStore(postId, normalized)
 
-                this.childrenLoaded[parentId] = true
+                if (payload.parentId != null) {
+                    this.childrenLoaded[payload.parentId] = true
+                }
 
-                return withParent
+                return normalized
             } catch (e) {
                 console.error(e)
-                this.error = 'Nie udało się dodać komentarza.'
+                const status = e?.response?.status
+                if (status === 403) {
+                    this.error = 'Nie możesz dodać komentarza — zostałeś wyciszony.'
+                } else {
+                    this.error = 'Nie udało się dodać komentarza.'
+                }
                 throw e
             }
         },
@@ -128,21 +147,30 @@ export const useCommentsStore = defineStore('comments', {
 
                 const updatedRaw = res.data || {}
                 const existing = state.list.find(c => c.id === id) || {}
-                const updated = {
+
+                const merged = {
                     ...existing,
                     ...updatedRaw,
                     parent: updatedRaw.parent || existing.parent || null,
                 }
-                updated.parentId = updated.parent
-                    ? updated.parent.id
-                    : existing.parentId ?? null
 
-                state.list = state.list.map(c => (c.id === id ? updated : c))
+                const normalized = this.normalizeComment(postId, merged)
 
-                return updated
+                if (normalized.parentId == null && existing.parentId != null) {
+                    normalized.parentId = existing.parentId
+                    normalized.parent = existing.parent || null
+                }
+
+                state.list = state.list.map(c => (c.id === id ? normalized : c))
+                return normalized
             } catch (e) {
                 console.error(e)
-                this.error = 'Nie udało się zaktualizować komentarza.'
+                const status = e?.response?.status
+                if (status === 403) {
+                    this.error = 'Nie możesz edytować — zostałeś wyciszony.'
+                } else {
+                    this.error = 'Nie udało się zaktualizować komentarza.'
+                }
                 throw e
             }
         },
@@ -161,10 +189,7 @@ export const useCommentsStore = defineStore('comments', {
                 }
             }
 
-            // usuń komentarz + jego odpowiedzi
-            state.list = state.list.filter(
-                c => c.id !== id && c.parentId !== id,
-            )
+            state.list = state.list.filter(c => c.id !== id && c.parentId !== id)
         },
 
         async report({ id, reason }) {
@@ -192,21 +217,19 @@ export const useCommentsStore = defineStore('comments', {
 
                 const page = res.data || {}
                 const items = page.items || page.content || []
-
                 if (!items.length) return
 
-                const mapped = items.map(c => ({
-                    ...c,
-                    parent: c.parent || { id: parentId },
-                    parentId,
-                }))
+                const mapped = items.map(c => {
+                    const normalized = this.normalizeComment(postId, c)
+                    normalized.parentId = parentId
+                    normalized.parent = normalized.parent || { id: parentId }
+                    return normalized
+                })
 
                 const state = this.ensurePostState(postId)
                 const existingIds = new Set(state.list.map(c => c.id))
                 mapped.forEach(c => {
-                    if (!existingIds.has(c.id)) {
-                        state.list.push(c)
-                    }
+                    if (!existingIds.has(c.id)) state.list.push(c)
                 })
             } catch (e) {
                 console.error(e)

@@ -1,3 +1,4 @@
+<!-- src/views/FishingMapView.vue -->
 <script setup>
 import { onMounted, onBeforeUnmount, computed, ref, watch } from 'vue'
 import FishingFiltersPanel from '../components/map/FishingFiltersPanel.vue'
@@ -226,7 +227,11 @@ watch(
       </button>
 
       <div class="absolute inset-0 z-10 flex pointer-events-none">
-        <div v-if="sidePanelsVisible" class="pointer-events-auto flex flex-col md:flex-row gap-0 w-full max-w-[640px]">
+        <!-- LEWY PANEL: szerszy i mniej “przykrywa” stronę -->
+        <div
+            v-if="sidePanelsVisible"
+            class="pointer-events-auto flex flex-col md:flex-row gap-0 w-full max-w-[820px]"
+        >
           <FishingFiltersPanel
               class="w-full md:w-1/2"
               v-model:filters="filters"
@@ -245,6 +250,7 @@ watch(
               @select="onSelectSpot"
           />
 
+          <!-- TRYB ADMIN: lista propozycji do akceptacji -->
           <section
               v-else
               class="bg-black/70 backdrop-blur p-4 flex flex-col gap-3 overflow-y-auto min-h-0 text-white w-full md:w-1/2"
@@ -283,7 +289,8 @@ watch(
           </section>
         </div>
 
-        <div v-if="detailsVisible" class="pointer-events-auto ml-auto w-[460px] max-w-full h-full">
+        <!-- PRAWY PANEL: trochę szerszy -->
+        <div v-if="detailsVisible" class="pointer-events-auto ml-auto w-[520px] max-w-full h-full">
           <FishingDetailsPanel
               class="h-full"
               :spot="spotsStore.selectedSpot"

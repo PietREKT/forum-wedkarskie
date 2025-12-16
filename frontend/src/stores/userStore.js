@@ -48,7 +48,6 @@ export const useUserStore = defineStore('userStore', () => {
         error.value = null
     }
 
-    // /users/search?q=...
     async function searchUsers(query) {
         const q = String(query || '').trim()
         if (!q) return []
@@ -158,7 +157,14 @@ export const useUserStore = defineStore('userStore', () => {
         followError.value = null
 
         try {
-            await apiClient.post('/users/friends/invite', { id })
+            // WAŻNE: backend odrzuca application/x-www-form-urlencoded (415),
+            // więc wymuszamy JSON.
+            await apiClient.post(
+                '/users/friends/invite',
+                { id },
+                { headers: { 'Content-Type': 'application/json' } },
+            )
+
             followStatus.value = 'idle'
             await fetchMe(true)
         } catch (err) {
@@ -171,7 +177,6 @@ export const useUserStore = defineStore('userStore', () => {
         }
     }
 
-    // pomocnicze: obserwuj po username (dla przycisku na profilu)
     async function followUserByUsername(username) {
         const u = String(username || '').trim()
         if (!u) return

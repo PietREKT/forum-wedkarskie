@@ -43,10 +43,6 @@ export const usePostsStore = defineStore('posts', () => {
         items.value.splice(idx, 1, updated)
     }
 
-    // reset może przyjąć:
-    // - reset("uuid")
-    // - reset(null)
-    // - reset({ userId: "uuid" })
     function reset(arg = null) {
         let userId = null
 
@@ -158,7 +154,7 @@ export const usePostsStore = defineStore('posts', () => {
         }
 
         const fd = new FormData()
-        fd.append('content', text) // może być pusty string jeśli są zdjęcia
+        fd.append('content', text)
         files.forEach(f => fd.append('photos', f))
 
         try {
@@ -174,8 +170,12 @@ export const usePostsStore = defineStore('posts', () => {
         } catch (e) {
             console.error('createPost error', e)
             const status = e?.response?.status
+
             if (status === 401) {
                 error.value = 'Musisz być zalogowany, aby dodać post.'
+            } else if (status === 403) {
+                // komunikat dla wyciszonego
+                error.value = 'Nie możesz publikować — zostałeś wyciszony.'
             } else {
                 setErrorFromAxios(e, 'Nie udało się utworzyć posta.')
             }
@@ -183,7 +183,6 @@ export const usePostsStore = defineStore('posts', () => {
         }
     }
 
-    // edycja posta (tekst + zdjęcia) – z obejściem "__EMPTY__"
     async function editPost({ id, content, newPhotos = [], attachedPhotos = [] }) {
         clearError()
 
@@ -219,6 +218,8 @@ export const usePostsStore = defineStore('posts', () => {
             const status = e?.response?.status
             if (status === 401) {
                 error.value = 'Musisz być zalogowany, aby edytować post.'
+            } else if (status === 403) {
+                error.value = 'Nie możesz publikować — zostałeś wyciszony.'
             } else {
                 setErrorFromAxios(e, 'Nie udało się zaktualizować posta.')
             }
@@ -244,7 +245,6 @@ export const usePostsStore = defineStore('posts', () => {
         }
     }
 
-    // optymistyczna aktualizacja głosu
     function applyLocalVote(id, direction) {
         const idx = findIndexById(id)
         if (idx === -1) return null
