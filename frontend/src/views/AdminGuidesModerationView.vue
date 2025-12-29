@@ -23,19 +23,38 @@ const rejectItem = ref(null)
 
 function getTutorialId(t) {
   if (!t || typeof t !== 'object') return null
-  return t.id ?? t.tutorialId ?? t.content?.id ?? t.content?.tutorialId ?? null
+  return (
+      t.tutorialId ??
+      t.id ??
+      t.tutorial_id ??
+      t.tutorialID ??
+      t.tutorial?.tutorialId ??
+      t.tutorial?.id ??
+      t.tutorial_content?.tutorialId ??
+      t.tutorial_content?.id ??
+      t.tutorial_content?.contentId ??
+      t.content?.tutorialId ??
+      t.content?.id ??
+      null
+  )
 }
 
 function getTitle(t) {
-  return (t?.title || '').trim() || 'Poradnik wędkarski'
+  const title = (t?.title || t?.tutorial_content?.title || t?.content?.title || '').trim()
+  if (title) return title
+
+  const firstLine = String(t?.tutorial_content?.content || t?.content?.content || '')
+      .split('\n')[0]
+      .trim()
+  return firstLine || 'Poradnik wędkarski'
 }
 
 function getAuthorUsername(t) {
-  return t?.content?.author?.username || 'nieznany'
+  return t?.tutorial_content?.author?.username || t?.content?.author?.username || 'nieznany'
 }
 
 function getContentText(t) {
-  return t?.content?.content || ''
+  return t?.tutorial_content?.content || t?.content?.content || ''
 }
 
 function goBack() {

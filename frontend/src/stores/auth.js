@@ -16,13 +16,11 @@ export const useAuthStore = defineStore('auth', () => {
 
     const isAuthenticated = computed(() => !!user.value)
 
-    // ADMIN lub ROOT – działa też dla ROLE_ADMIN / ROLE_ROOT
     const isAdmin = computed(() => {
         let role = user.value?.role
 
         if (!role) return false
 
-        // jeśli backend zwraca obiekt { name: "ROOT" }
         if (typeof role === 'object' && role.name) {
             role = role.name
         }

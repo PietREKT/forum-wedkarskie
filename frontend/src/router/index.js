@@ -10,7 +10,6 @@ const router = createRouter({
 router.beforeEach((to, from, next) => {
     const auth = useAuthStore()
 
-    // wymaga logowania
     if (to.meta.requiresAuth && !auth.isAuthenticated) {
         return next({
             path: '/login',
@@ -18,7 +17,6 @@ router.beforeEach((to, from, next) => {
         })
     }
 
-    // wymaga admina
     if (to.meta.requiresAdmin && !auth.isAdmin) {
         return next({ path: '/profile' })
     }
