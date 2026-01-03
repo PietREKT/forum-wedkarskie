@@ -64,6 +64,68 @@
         ></textarea>
       </div>
 
+      <!-- ZAPROSZENIA: lista członków wybranej grupy (bez wyszukiwania) -->
+      <div v-if="selectedGroupId" class="space-y-2 rounded-lg border theme-border bg-[var(--color-surface)] p-3">
+        <div class="flex items-center justify-between gap-2">
+          <div class="text-xs font-medium">Zaproś członków grupy</div>
+
+          <div class="flex gap-2">
+            <button
+                type="button"
+                class="px-2 py-1 rounded-lg text-[11px] border theme-border"
+                :disabled="!canInviteFromLoadedGroup"
+                @click="inviteAll"
+                :title="!canInviteFromLoadedGroup ? inviteHint : ''"
+            >
+              Zaproś wszystkich
+            </button>
+
+            <button
+                type="button"
+                class="px-2 py-1 rounded-lg text-[11px] border theme-border"
+                :disabled="form.invitedUsersIds.length === 0"
+                @click="clearInvites"
+            >
+              Wyczyść
+            </button>
+          </div>
+        </div>
+
+        <div v-if="!canInviteFromLoadedGroup" class="text-[11px] text-[var(--color-muted)]">
+          {{ inviteHint }}
+        </div>
+
+        <div v-else class="space-y-2">
+          <div class="text-[11px] text-[var(--color-muted)]">
+            Zaznaczeni: {{ form.invitedUsersIds.length }}
+          </div>
+
+          <ul class="space-y-1 max-h-40 overflow-y-auto pr-1 text-xs">
+            <li
+                v-for="m in inviteCandidates"
+                :key="m.id"
+                class="flex items-center justify-between gap-2 border border-[var(--color-border)] rounded-lg px-2 py-1"
+            >
+              <label class="flex items-center gap-2 cursor-pointer select-none">
+                <input
+                    type="checkbox"
+                    class="accent-[var(--color-primary)]"
+                    :checked="isInvited(m.id)"
+                    @change="toggleInvite(m.id)"
+                />
+                <span class="font-medium">
+                  {{ m.username || (m.name + ' ' + m.surname) }}
+                </span>
+              </label>
+
+              <span class="text-[10px] text-[var(--color-muted)]">
+                {{ m.initials }}
+              </span>
+            </li>
+          </ul>
+        </div>
+      </div>
+
       <button
           type="submit"
           class="px-4 py-2 rounded-lg text-xs font-medium bg-[var(--color-primary)] text-white shadow disabled:opacity-50"
@@ -78,6 +140,9 @@
 
 <script setup>
 import { reactive, watch, computed } from 'vue'
+import { useAuthStore } from '../../stores/auth.js'
+
+const auth = useAuthStore()
 
 const props = defineProps({
   groups: { type: Array, required: true },
@@ -86,6 +151,9 @@ const props = defineProps({
 
   // przekazujesz: store.manageableGroupIds (Set)
   manageableGroupIds: { type: [Object, Array], default: null },
+
+  // wczytane szczegóły grupy (z panelu zarządzania)
+  groupDetails: { type: Object, default: null },
 })
 
 const emit = defineEmits(['save'])
@@ -96,6 +164,7 @@ const empty = {
   spotId: '',
   dateTime: '',
   description: '',
+  invitedUsersIds: [],
 }
 
 const form = reactive({ ...empty })
@@ -134,10 +203,68 @@ const canSubmit = computed(() => {
   return String(form.name || '').trim().length >= 1 && String(form.dateTime || '').trim().length >= 1
 })
 
+// zaproszenia: działają tylko jeśli groupDetails dotyczy wybranej grupy i ma members
+const canInviteFromLoadedGroup = computed(() => {
+  if (!selectedGroupId.value) return false
+  const gd = props.groupDetails
+  if (!gd || !gd.id) return false
+  if (String(gd.id) !== String(selectedGroupId.value)) return false
+  return Array.isArray(gd.members) && gd.members.length > 0
+})
+
+const inviteHint = computed(() => {
+  if (!selectedGroupId.value) return ''
+  if (!props.groupDetails) return 'Aby zapraszać, wybierz grupę do zarządzania w panelu po prawej (wczyta członków).'
+  if (String(props.groupDetails?.id) !== String(selectedGroupId.value)) {
+    return 'Aby zapraszać, w panelu po prawej wybierz do zarządzania tę samą grupę, którą wybrałeś w formularzu.'
+  }
+  if (!Array.isArray(props.groupDetails?.members) || props.groupDetails.members.length === 0) {
+    return 'Brak listy członków w szczegółach grupy.'
+  }
+  return ''
+})
+
+const inviteCandidates = computed(() => {
+  if (!canInviteFromLoadedGroup.value) return []
+  const meId = auth.user?.id
+  return (props.groupDetails?.members || []).filter(m => String(m.id) !== String(meId))
+})
+
+function isInvited(id) {
+  return (form.invitedUsersIds || []).some(x => String(x) === String(id))
+}
+
+function toggleInvite(id) {
+  const arr = Array.isArray(form.invitedUsersIds) ? form.invitedUsersIds : []
+  const sid = String(id)
+  if (arr.some(x => String(x) === sid)) {
+    form.invitedUsersIds = arr.filter(x => String(x) !== sid)
+  } else {
+    form.invitedUsersIds = [...arr, id]
+  }
+}
+
+function inviteAll() {
+  if (!canInviteFromLoadedGroup.value) return
+  form.invitedUsersIds = inviteCandidates.value.map(m => m.id)
+}
+
+function clearInvites() {
+  form.invitedUsersIds = []
+}
+
 watch(
     () => props.isSaving,
     (saving, prev) => {
       if (prev && !saving) Object.assign(form, empty)
+    },
+)
+
+watch(
+    () => form.groupId,
+    () => {
+      // zmiana grupy -> czyścimy listę zaproszeń (żeby nie zapraszać do złej grupy)
+      form.invitedUsersIds = []
     },
 )
 

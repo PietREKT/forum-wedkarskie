@@ -7,9 +7,13 @@
     <div class="grid gap-4 lg:grid-cols-[2fr_3fr_2fr] md:grid-cols-2 grid-cols-1">
       <EventsList
           :events="events"
+          :invites="eventInvites"
+          :invites-loading="store.isLoadingEventInvites"
           :selected-id="selectedEventId"
           :is-loading="store.isLoadingEvents"
           @select="store.selectEvent"
+          @accept-invite="handleAcceptEventInvite"
+          @reject-invite="handleRejectEventInvite"
       />
 
       <section class="space-y-6">
@@ -18,6 +22,7 @@
             :spots="spots"
             :is-saving="store.isSavingEvent"
             :manageable-group-ids="store.manageableGroupIds"
+            :group-details="groupDetails"
             @save="handleSaveEvent"
         />
 
@@ -78,11 +83,14 @@ const selectedEventId = computed(() => store.selectedEventId)
 const groupDetails = computed(() => store.groupDetails)
 const groupCandidates = computed(() => store.groupCandidates)
 
+const eventInvites = computed(() => store.eventInvites || [])
+
 async function reloadAll() {
   await Promise.all([
     store.fetchEvents(),
     store.fetchGroups(),
     store.fetchSpots(),
+    auth.isAuthenticated ? store.fetchEventInvites() : Promise.resolve(),
   ])
 }
 
@@ -99,6 +107,17 @@ watch(
     },
 )
 
+async function handleAcceptEventInvite(inviteId) {
+  if (!inviteId) return
+  await store.acceptEventInvite(inviteId)
+  await store.fetchEvents()
+}
+
+async function handleRejectEventInvite(inviteId) {
+  if (!inviteId) return
+  await store.rejectEventInvite(inviteId)
+}
+
 async function handleSaveEvent(payload) {
   await store.createEvent({
     name: payload.name,
@@ -106,6 +125,7 @@ async function handleSaveEvent(payload) {
     dateTime: payload.dateTime,
     spotId: payload.spotId || null,
     groupId: payload.groupId || null,
+    invitedUsersIds: Array.isArray(payload.invitedUsersIds) ? payload.invitedUsersIds : [],
   })
   await store.fetchEvents()
 }

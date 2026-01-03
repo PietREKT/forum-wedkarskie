@@ -66,6 +66,19 @@ function mapInviteDto(dto) {
         status: 'PENDING',
     }
 }
+function mapEventInviteDto(dto) {
+    if (!dto) return null
+
+    const from = dto.from || dto.inviter || dto.sender || null
+
+    return {
+        inviteId: dto.inviteId ?? dto.id ?? dto.requestId ?? dto.invitationId ?? null,
+        eventId: dto.eventId ?? dto.event?.id ?? null,
+        eventName: dto.eventName ?? dto.event?.name ?? dto.name ?? 'Wydarzenie',
+        fromUsername: from?.username ?? '',
+        createdAt: dto.createdAt ?? dto.created_at ?? null,
+    }
+}
 
 function mapGroupDetailsDto(dto) {
     if (!dto) return null
@@ -214,6 +227,9 @@ export const useEventsStore = defineStore('events', {
         groupDetails: null,
         groupCandidates: [],
 
+        eventInvites: [],
+        isLoadingEventInvites: false,
+
         isLoadingGroupDetails: false,
         isLoadingGroupCandidates: false,
         isCreatingGroup: false,
@@ -288,6 +304,32 @@ export const useEventsStore = defineStore('events', {
         setGroupAction(type, message) {
             this.lastGroupAction = { type, message, ts: Date.now() }
         },
+
+        async fetchEventInvites() {
+            this.isLoadingEventInvites = true
+            try {
+                const { data } = await apiClient.get('/users/me/events/invites', { params: { page: 0, size: 50 } })
+                this.eventInvites = pageContent(data).map(mapEventInviteDto).filter(Boolean)
+            } catch (err) {
+                console.error('fetchEventInvites error', err)
+                this.eventInvites = []
+            } finally {
+                this.isLoadingEventInvites = false
+            }
+        },
+
+        async acceptEventInvite(inviteId) {
+            if (!inviteId) return
+            await apiClient.patch('/users/me/events/invites/accept', { inviteId })
+            this.eventInvites = (this.eventInvites || []).filter(x => String(x.inviteId) !== String(inviteId))
+        },
+
+        async rejectEventInvite(inviteId) {
+            if (!inviteId) return
+            await apiClient.patch('/users/me/events/invites/reject', { inviteId })
+            this.eventInvites = (this.eventInvites || []).filter(x => String(x.inviteId) !== String(inviteId))
+        },
+
 
         async fetchEvents() {
             this.isLoadingEvents = true

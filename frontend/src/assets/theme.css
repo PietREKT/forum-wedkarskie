@@ -7,6 +7,7 @@
     /* Tła i teksty  */
     --color-bg:            #e9eef5;
     --color-surface:       #ffffff;
+    --color-bg-elevated:   #f3f6fb;
     --color-border:        #cfd8e3;
     --color-text:          #1f2937;
     --color-muted:         #667085;
@@ -34,6 +35,7 @@
     /* Tła i teksty */
     --color-bg:            #0f1115;
     --color-surface:       #161a22;
+    --color-bg-elevated:   #1b2230;
     --color-border:        #232a36;
     --color-text:          #e6e9ef;
     --color-muted:         #9aa3b2;

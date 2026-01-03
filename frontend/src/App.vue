@@ -5,6 +5,7 @@ import { useRouter, RouterLink, RouterView } from 'vue-router'
 import { useAuthStore } from './stores/auth'
 import { useI18n } from 'vue-i18n'
 import logoUrl from './assets/olow.png'
+import NotificationsBell from './components/NotificationsBell.vue'
 
 const router = useRouter()
 const auth = useAuthStore()
@@ -109,6 +110,8 @@ async function onLogout() {
 
         <!-- PRAWA CZĘŚĆ -->
         <div class="flex items-center gap-3">
+          <NotificationsBell v-if="auth.isAuthenticated" />
+
           <RouterLink
               v-if="!auth.isAuthenticated"
               class="px-3 py-1.5 rounded-lg text-sm bg-white/10 hover:bg-white/20
