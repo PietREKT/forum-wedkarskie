@@ -16,9 +16,14 @@ const deleteSaving = ref(false)
 const deleteError = ref(null)
 
 const isAdmin = computed(() => auth.isAdmin)
+const isLoggedIn = computed(() => !!auth.isAuthenticated)
 
-// obsługa 401 dla niezalogowanych
+// 401
 const unauthorized = ref(false)
+
+// głosowanie
+const voteSaving = ref(false)
+const voteError = ref(null)
 
 const methodLabels = {
   FLOAT: 'Spławik',
@@ -37,15 +42,12 @@ const showDeleteConfirm = ref(false)
 function getTutorialText(t) {
   return t?.content ?? t?.tutorial_content?.content ?? ''
 }
-
 function getTutorialRating(t) {
   return t?.rating ?? t?.tutorial_content?.rating ?? t?.content?.rating ?? null
 }
-
 function getTutorialVote(t) {
   return t?.loggedUserVote ?? t?.tutorial_content?.loggedUserVote ?? t?.content?.loggedUserVote ?? null
 }
-
 function getAuthorUsername(t) {
   return (
       t?.author?.username ??
@@ -59,6 +61,7 @@ async function loadTutorial() {
   loading.value = true
   error.value = null
   deleteError.value = null
+  voteError.value = null
   unauthorized.value = false
 
   try {
@@ -97,7 +100,6 @@ function askDelete() {
   if (!isAdmin.value) return
   showDeleteConfirm.value = true
 }
-
 function cancelDelete() {
   showDeleteConfirm.value = false
 }
@@ -141,11 +143,7 @@ function resolvePhotoUrl(path) {
 }
 
 function getAttachedPhotos(t) {
-  const a =
-      t?.attachedPhotos ??
-      t?.tutorial_content?.attachedPhotos ??
-      t?.content?.attachedPhotos ??
-      []
+  const a = t?.attachedPhotos ?? t?.tutorial_content?.attachedPhotos ?? t?.content?.attachedPhotos ?? []
   return Array.isArray(a) ? a : []
 }
 
@@ -154,17 +152,89 @@ const photoUrls = computed(() => {
   return raw.map(resolvePhotoUrl).filter(Boolean)
 })
 
-const ratingText = computed(() => {
+// W tej implementacji to nie są gwiazdki 1..5, tylko bilans głosów (up/down)
+const ratingValue = computed(() => {
   const r = getTutorialRating(tutorial.value)
   if (r == null) return null
-  return `${r}/5`
+  const n = Number(r)
+  return Number.isFinite(n) ? n : null
 })
 
-const voteText = computed(() => {
-  const v = getTutorialVote(tutorial.value)
-  if (!v) return null
-  return String(v)
+const ratingLabel = computed(() => {
+  if (ratingValue.value == null) return null
+  return `Bilans głosów: ${ratingValue.value}`
 })
+
+const userVote = computed(() => {
+  const v = getTutorialVote(tutorial.value)
+  return v ? String(v) : 'NO_VOTE'
+})
+
+const userVoteLabel = computed(() => {
+  const v = userVote.value
+  if (v === 'UPVOTE') return '+'
+  if (v === 'DOWNVOTE') return '-'
+  return null
+})
+
+const canUpvote = computed(() => isLoggedIn.value && userVote.value !== 'UPVOTE')
+const canDownvote = computed(() => isLoggedIn.value && userVote.value !== 'DOWNVOTE')
+
+async function voteUp() {
+  voteError.value = null
+  if (!isLoggedIn.value) {
+    voteError.value = 'Zaloguj się, aby oddać głos.'
+    return
+  }
+  if (voteSaving.value) return
+  if (userVote.value === 'UPVOTE') return
+
+  voteSaving.value = true
+  try {
+    const id = route.params.id
+    await apiClient.patch(`/tutorials/${id}/upvote`)
+    await loadTutorial()
+  } catch (e) {
+    console.error('Błąd głosowania (upvote)', e)
+    const status = e?.response?.status
+    if (status === 401) {
+      unauthorized.value = true
+      tutorial.value = null
+      return
+    }
+    voteError.value = 'Nie udało się oddać głosu.'
+  } finally {
+    voteSaving.value = false
+  }
+}
+
+async function voteDown() {
+  voteError.value = null
+  if (!isLoggedIn.value) {
+    voteError.value = 'Zaloguj się, aby oddać głos.'
+    return
+  }
+  if (voteSaving.value) return
+  if (userVote.value === 'DOWNVOTE') return
+
+  voteSaving.value = true
+  try {
+    const id = route.params.id
+    await apiClient.patch(`/tutorials/${id}/downvote`)
+    await loadTutorial()
+  } catch (e) {
+    console.error('Błąd głosowania (downvote)', e)
+    const status = e?.response?.status
+    if (status === 401) {
+      unauthorized.value = true
+      tutorial.value = null
+      return
+    }
+    voteError.value = 'Nie udało się oddać głosu.'
+  } finally {
+    voteSaving.value = false
+  }
+}
 
 onMounted(loadTutorial)
 </script>
@@ -176,6 +246,7 @@ onMounted(loadTutorial)
         <h1 class="text-2xl font-semibold">
           {{ title }}
         </h1>
+
         <p class="text-xs opacity-70 mt-1">
           Autor:
           <span class="font-medium">
@@ -184,12 +255,43 @@ onMounted(loadTutorial)
         </p>
 
         <div class="mt-1 flex flex-wrap items-center gap-2 text-xs opacity-80">
-          <span v-if="ratingText">
-            Ocena: <span class="font-medium">{{ ratingText }}</span>
+          <span v-if="ratingLabel">
+            {{ ratingLabel }}
           </span>
-          <span v-if="voteText" class="opacity-70">
-            (Twój głos: {{ voteText }})
+          <span v-if="userVoteLabel" class="opacity-70">
+            (Twój głos: {{ userVoteLabel }})
           </span>
+          <span v-else class="opacity-70">
+            (Nie oddałeś głosu)
+          </span>
+        </div>
+
+        <div class="mt-2 flex flex-wrap items-center gap-2">
+          <button
+              type="button"
+              class="px-3 py-1.5 text-xs rounded-md border bg-[var(--color-bg)] hover:bg-black/5 disabled:opacity-50"
+              :disabled="voteSaving || unauthorized || !canUpvote"
+              @click.prevent="voteUp"
+          >
+            Głosuj +
+          </button>
+
+          <button
+              type="button"
+              class="px-3 py-1.5 text-xs rounded-md border bg-[var(--color-bg)] hover:bg-black/5 disabled:opacity-50"
+              :disabled="voteSaving || unauthorized || !canDownvote"
+              @click.prevent="voteDown"
+          >
+            Głosuj -
+          </button>
+
+          <span v-if="voteSaving" class="text-xs opacity-70">
+            Zapisywanie…
+          </span>
+        </div>
+
+        <div v-if="voteError" class="text-xs text-red-400 mt-1">
+          {{ voteError }}
         </div>
       </div>
 
