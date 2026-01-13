@@ -149,6 +149,11 @@ function getThumbUrl(t) {
   return p ? resolvePhotoUrl(p) : null
 }
 
+// FIX: backend w listach może zwracać tutorialId zamiast id
+function getTutorialId(t) {
+  return t?.id ?? t?.tutorialId ?? t?.tutorial_content?.id ?? null
+}
+
 // komunikat po wysłaniu
 const submittedInfo = ref(false)
 watch(
@@ -156,7 +161,7 @@ watch(
     (v) => {
       submittedInfo.value = v === '1' || v === 'true'
     },
-    { immediate: true }
+    { immediate: true },
 )
 
 function dismissSubmitted() {
@@ -351,8 +356,8 @@ onMounted(() => {
       <div class="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
         <RouterLink
             v-for="t in paginatedTutorials"
-            :key="t.id ?? JSON.stringify(t)"
-            :to="`/guides/${t.id}`"
+            :key="getTutorialId(t) ?? JSON.stringify(t)"
+            :to="`/guides/${getTutorialId(t)}`"
             class="block border border-gray-300 rounded-2xl overflow-hidden bg-[var(--color-bg-elevated)] shadow-sm hover:shadow-md hover:border-gray-400 transition flex flex-col"
         >
           <div v-if="getThumbUrl(t)" class="border-b border-gray-200">

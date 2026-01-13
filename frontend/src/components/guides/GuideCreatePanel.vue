@@ -112,6 +112,9 @@ function buildContentWithMeta(original) {
 async function submitForm() {
   if (!isLoggedIn.value) return
 
+  // blokada podwójnego submitu
+  if (saving.value) return
+
   if (!form.value.title.trim()) {
     error.value = 'Tytuł poradnika nie może być pusty.'
     return
@@ -131,16 +134,26 @@ async function submitForm() {
   try {
     const finalContent = buildContentWithMeta(form.value.content)
 
-    await guides.createTutorial({
+    // createTutorial rzuca błąd jeśli backend nie zwróci id/status nie jest 200/201
+    const res = await guides.createTutorial({
       title: form.value.title,
       content: finalContent,
       photos: form.value.photos,
     })
 
+    if (!res?.id) {
+      throw new Error('Brak id poradnika w odpowiedzi.')
+    }
+
     router.push({ path: '/guides', query: { submitted: '1' } })
   } catch (e) {
     console.error('Błąd tworzenia poradnika', e)
-    error.value = 'Nie udało się utworzyć poradnika (błąd po stronie serwera).'
+    const status = e?.response?.status
+    if (status === 401) {
+      error.value = 'Zaloguj się ponownie, aby dodać poradnik.'
+    } else {
+      error.value = 'Nie udało się utworzyć poradnika (błąd po stronie serwera).'
+    }
   } finally {
     saving.value = false
   }

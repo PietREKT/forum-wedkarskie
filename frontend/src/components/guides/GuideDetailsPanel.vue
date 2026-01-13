@@ -17,6 +17,9 @@ const deleteError = ref(null)
 
 const isAdmin = computed(() => auth.isAdmin)
 
+// obsługa 401 dla niezalogowanych
+const unauthorized = ref(false)
+
 const methodLabels = {
   FLOAT: 'Spławik',
   SPINNING: 'Spinning',
@@ -31,10 +34,32 @@ function methodLabel(m) {
 
 const showDeleteConfirm = ref(false)
 
+function getTutorialText(t) {
+  return t?.content ?? t?.tutorial_content?.content ?? ''
+}
+
+function getTutorialRating(t) {
+  return t?.rating ?? t?.tutorial_content?.rating ?? t?.content?.rating ?? null
+}
+
+function getTutorialVote(t) {
+  return t?.loggedUserVote ?? t?.tutorial_content?.loggedUserVote ?? t?.content?.loggedUserVote ?? null
+}
+
+function getAuthorUsername(t) {
+  return (
+      t?.author?.username ??
+      t?.tutorial_content?.author?.username ??
+      t?.content?.author?.username ??
+      'nieznany'
+  )
+}
+
 async function loadTutorial() {
   loading.value = true
   error.value = null
   deleteError.value = null
+  unauthorized.value = false
 
   try {
     const id = route.params.id
@@ -42,6 +67,12 @@ async function loadTutorial() {
     tutorial.value = resp.data
   } catch (e) {
     console.error('Błąd pobierania poradnika', e)
+    const status = e?.response?.status
+    if (status === 401) {
+      unauthorized.value = true
+      tutorial.value = null
+      return
+    }
     error.value = 'Nie udało się pobrać poradnika.'
   } finally {
     loading.value = false
@@ -57,7 +88,7 @@ const title = computed(() => {
   if (tutorial.value.title && tutorial.value.title.trim().length > 0) {
     return tutorial.value.title
   }
-  const raw = tutorial.value.content?.content || ''
+  const raw = getTutorialText(tutorial.value) || ''
   const firstLine = raw.split('\n')[0].trim()
   return firstLine.length ? firstLine : 'Poradnik wędkarski'
 })
@@ -109,20 +140,28 @@ function resolvePhotoUrl(path) {
   return `${base}/${path}`
 }
 
+function getAttachedPhotos(t) {
+  const a =
+      t?.attachedPhotos ??
+      t?.tutorial_content?.attachedPhotos ??
+      t?.content?.attachedPhotos ??
+      []
+  return Array.isArray(a) ? a : []
+}
+
 const photoUrls = computed(() => {
-  const raw = tutorial.value?.content?.attachedPhotos
-  if (!Array.isArray(raw)) return []
+  const raw = getAttachedPhotos(tutorial.value)
   return raw.map(resolvePhotoUrl).filter(Boolean)
 })
 
 const ratingText = computed(() => {
-  const r = tutorial.value?.content?.rating
+  const r = getTutorialRating(tutorial.value)
   if (r == null) return null
   return `${r}/5`
 })
 
 const voteText = computed(() => {
-  const v = tutorial.value?.content?.loggedUserVote
+  const v = getTutorialVote(tutorial.value)
   if (!v) return null
   return String(v)
 })
@@ -140,7 +179,7 @@ onMounted(loadTutorial)
         <p class="text-xs opacity-70 mt-1">
           Autor:
           <span class="font-medium">
-            {{ tutorial?.content?.author?.username || 'nieznany' }}
+            {{ getAuthorUsername(tutorial) }}
           </span>
         </p>
 
@@ -204,11 +243,18 @@ onMounted(loadTutorial)
       Ładowanie poradnika…
     </div>
 
-    <div v-if="error" class="rounded-md border border-red-500/60 bg-red-500/10 px-4 py-3 text-sm">
+    <div
+        v-else-if="unauthorized"
+        class="rounded-md border border-amber-500/60 bg-amber-500/10 px-4 py-3 text-sm"
+    >
+      Zaloguj się, aby zobaczyć poradnik.
+    </div>
+
+    <div v-else-if="error" class="rounded-md border border-red-500/60 bg-red-500/10 px-4 py-3 text-sm">
       {{ error }}
     </div>
 
-    <div v-if="!loading && !error && tutorial" class="space-y-4">
+    <div v-else-if="tutorial" class="space-y-4">
       <div v-if="tutorial.methods && tutorial.methods.length" class="flex flex-wrap gap-2">
         <span
             v-for="m in tutorial.methods"
@@ -258,7 +304,7 @@ onMounted(loadTutorial)
       </div>
 
       <article class="border border-gray-300 rounded-2xl p-4 bg-[var(--color-bg-elevated)] text-sm leading-relaxed whitespace-pre-wrap shadow-sm">
-        {{ tutorial.content?.content }}
+        {{ getTutorialText(tutorial) }}
       </article>
     </div>
   </section>

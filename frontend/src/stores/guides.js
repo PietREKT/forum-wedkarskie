@@ -14,12 +14,23 @@ function truncate(text, max = 200) {
     return text.slice(0, max) + '…'
 }
 
+// backend może zwracać tutorialId zamiast id
+function getTutorialId(obj) {
+    if (!obj || typeof obj !== 'object') return null
+    return obj.id ?? obj.tutorialId ?? obj.tutorial_id ?? obj.tutorial_content?.id ?? null
+}
+
 function isTutorialDtoLike(item) {
     return !!(item && typeof item === 'object' && item.content && typeof item.content === 'object')
 }
 
 function normalizeFromDto(dto, listItem) {
-    const id = listItem?.id ?? dto?.content?.id ?? dto?.id ?? null
+    // dto ma często { content: {...} } albo top-level; lista może mieć tutorialId
+    const id =
+        getTutorialId(listItem) ??
+        getTutorialId(dto?.content) ??
+        getTutorialId(dto) ??
+        null
 
     const fromList = (listItem?.title || '').trim()
     const fromDtoTitle = (dto?.title || '').trim()
@@ -38,6 +49,7 @@ function normalizeFromDto(dto, listItem) {
         fishMentioned: Array.isArray(dto?.fishMentioned) ? dto.fishMentioned : [],
         rating: listItem?.rating ?? dto?.content?.rating ?? dto?.rating ?? null,
         snippet: dto?.content?.content || '',
+        // treść poradnika jest w dto.content.content
         content: dto?.content?.content || '',
         attachedPhotos: attached,
         thumbnailPath,
@@ -46,19 +58,20 @@ function normalizeFromDto(dto, listItem) {
 }
 
 function normalizeFromListOnly(listItem) {
+    const id = getTutorialId(listItem)
     const title = (listItem?.title || '').trim() || 'Poradnik wędkarski'
     return {
-        id: listItem?.id ?? null,
+        id,
         title: truncate(title, 80),
         author: null,
         authorUsername: 'nieznany',
-        methods: [],
-        fishMentioned: [],
+        methods: Array.isArray(listItem?.methods) ? listItem.methods : [],
+        fishMentioned: Array.isArray(listItem?.fishMentioned) ? listItem.fishMentioned : [],
         rating: listItem?.rating ?? null,
-        snippet: '',
+        snippet: listItem?.snippet ?? '',
         content: '',
         attachedPhotos: [],
-        thumbnailPath: null,
+        thumbnailPath: listItem?.thumbnailPath ?? null,
         raw: listItem,
     }
 }
@@ -87,7 +100,7 @@ export const useGuidesStore = defineStore('guides', {
                     const resp = await apiClient.get('/tutorials/fish', { params: { fishId } })
                     const list = mapResponseToList(resp.data)
                     this.tutorials = list.map(item =>
-                        isTutorialDtoLike(item) ? normalizeFromDto(item, null) : normalizeFromListOnly(item)
+                        isTutorialDtoLike(item) ? normalizeFromDto(item, null) : normalizeFromListOnly(item),
                     )
                     return
                 }
@@ -96,7 +109,7 @@ export const useGuidesStore = defineStore('guides', {
                     const resp = await apiClient.get('/tutorials/method', { params: { method } })
                     const list = mapResponseToList(resp.data)
                     this.tutorials = list.map(item =>
-                        isTutorialDtoLike(item) ? normalizeFromDto(item, null) : normalizeFromListOnly(item)
+                        isTutorialDtoLike(item) ? normalizeFromDto(item, null) : normalizeFromListOnly(item),
                     )
                     return
                 }
@@ -104,12 +117,17 @@ export const useGuidesStore = defineStore('guides', {
                 const resp = await apiClient.get('/tutorials')
                 const baseList = mapResponseToList(resp.data)
 
-                const detailPromises = baseList.map(item =>
-                    apiClient
-                        .get(`/tutorials/${item.id}`)
-                        .then(r => normalizeFromDto(r.data, item))
-                        .catch(() => normalizeFromListOnly(item))
-                )
+                const detailPromises = baseList.map(async (item) => {
+                    const id = getTutorialId(item)
+                    if (!id) return normalizeFromListOnly(item)
+
+                    try {
+                        const r = await apiClient.get(`/tutorials/${id}`)
+                        return normalizeFromDto(r.data, item)
+                    } catch {
+                        return normalizeFromListOnly(item)
+                    }
+                })
 
                 this.tutorials = await Promise.all(detailPromises)
             } catch (e) {
@@ -141,9 +159,20 @@ export const useGuidesStore = defineStore('guides', {
                 fd.append('photos', photo)
             }
 
-            await apiClient.post('/tutorials/create', fd, {
+            const resp = await apiClient.post('/tutorials/create', fd, {
                 headers: { 'Content-Type': 'multipart/form-data' },
             })
+
+            const status = resp?.status
+            const data = resp?.data
+            const createdId = getTutorialId(data) ?? getTutorialId(data?.content) ?? null
+
+            // sukces tylko jeśli backend faktycznie zwrócił id
+            if (!((status === 200 || status === 201) && createdId)) {
+                throw new Error('Nie udało się utworzyć poradnika (brak id w odpowiedzi).')
+            }
+
+            return { id: createdId, raw: data }
         },
 
         async loadUnverifiedTutorials() {
